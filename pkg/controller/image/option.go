@@ -7,6 +7,8 @@ type Config struct {
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
 	Register   Repository       `yaml:"register"`
 	Images     []string         `yaml:"images"`
+
+	Agent AgentOption `yaml:"agent"`
 }
 
 type DefaultOption struct {
@@ -36,4 +38,8 @@ type MysqlOptions struct {
 	Password string `yaml:"password"`
 	Port     int    `yaml:"port"`
 	Name     string `yaml:"name"`
+}
+
+type AgentOption struct {
+	Name string `yaml:"name"`
 }

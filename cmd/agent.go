@@ -33,13 +33,13 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", "8090"),
+		Addr:    fmt.Sprintf(":%d", 8090),
 		Handler: opts.HttpEngine,
 	}
 
 	runers := []func(context.Context, int) error{opts.Controller.Agent().Run}
 	for _, runner := range runers {
-		if err := runner(context.TODO(), 1); err != nil {
+		if err := runner(context.TODO(), 5); err != nil {
 			klog.Fatal("failed to start manager: ", err)
 		}
 	}

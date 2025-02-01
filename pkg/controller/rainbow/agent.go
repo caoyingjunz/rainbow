@@ -3,10 +3,11 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/caoyingjunz/rainbow/pkg/db"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/caoyingjunz/rainbow/pkg/db"
 )
 
 type AgentGetter interface {
@@ -26,20 +27,26 @@ func NewAgent(f db.ShareDaoFactory, name string) *Agent {
 }
 
 func (s *Agent) Run(ctx context.Context, workers int) error {
-	for i := 0; i < workers; i++ {
-		go wait.UntilWithContext(ctx, s.worker, 10*time.Second)
+	if len(s.name) == 0 {
+		return fmt.Errorf("agent name missing")
 	}
 
-	<-ctx.Done()
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, s.worker, 2*time.Second)
+	}
+
 	return nil
 }
 
 func (s *Agent) worker(ctx context.Context) {
-	for s.processNextWorkItem(ctx) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.processNextWorkItem()
 	}
 }
 
-func (s *Agent) processNextWorkItem(ctx context.Context) bool {
+func (s *Agent) processNextWorkItem() {
 	fmt.Println("now", time.Now())
-	return true
 }

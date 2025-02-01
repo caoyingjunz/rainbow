@@ -2,6 +2,9 @@ default:
   push_kubernetes: false
   push_images: false
 
+agent:
+  name: test-agent
+
 mysql:
   host: peng
   user: root
