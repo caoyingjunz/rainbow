@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/caoyingjunz/pixiulib/config"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/rainbow/api/server/router"
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
-	"github.com/caoyingjunz/rainbow/pkg/controller/image"
 )
 
 var (
@@ -18,7 +24,7 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	opts, err := options.NewOptions()
+	opts, err := options.NewOptions(*filePath)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -26,33 +32,37 @@ func main() {
 		klog.Fatal(err)
 	}
 
-	klog.Info("starting rainbow agent")
-	if err = opts.Run(); err != nil {
-		klog.Fatal("failed to starting rainbow agent: ", err)
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", "8090"),
+		Handler: opts.HttpEngine,
 	}
 
-	c := config.New()
-	c.SetConfigFile(*filePath)
-	c.SetConfigType("yaml")
-
-	var cfg image.Config
-	if err := c.Binding(&cfg); err != nil {
-		klog.Fatal(err)
+	runers := []func(context.Context, int) error{opts.Controller.RainbowAgent().Run}
+	for _, runner := range runers {
+		if err := runner(context.TODO(), 5); err != nil {
+			klog.Fatal("failed to start manager: ", err)
+		}
 	}
-	img := image.Image{
-		Cfg: cfg,
-	}
+	// 安装 http 路由
+	router.InstallRouters(opts)
 
-	if err := img.Complete(); err != nil {
-		klog.Fatal(err)
-	}
-	defer img.Close()
+	go func() {
+		err = srv.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			klog.Fatal("failed to listen rainbow agent: ", err)
+		}
+	}()
 
-	if err := img.Validate(); err != nil {
-		klog.Fatal(err)
-	}
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	klog.Info("shutting rainbow agent down ...")
 
-	if err := img.PushImages(); err != nil {
-		klog.Fatal(err)
+	// The context is used to inform the server it has 5 seconds to finish the request
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		klog.Fatalf("rainbow agent forced to shutdown: %v", err)
 	}
 }

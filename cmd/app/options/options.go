@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 	"github.com/caoyingjunz/pixiulib/config"
+	"github.com/caoyingjunz/rainbow/pkg/controller"
 	"github.com/caoyingjunz/rainbow/pkg/controller/image"
 	rainbowdb "github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/gin-gonic/gin"
@@ -27,13 +28,15 @@ type Options struct {
 	db      *gorm.DB
 	Factory rainbowdb.ShareDaoFactory
 
+	Controller controller.RainbowInterface
+
 	ConfigFile string
 }
 
-func NewOptions() (*Options, error) {
+func NewOptions(configFile string) (*Options, error) {
 	return &Options{
 		HttpEngine: gin.Default(),
-		ConfigFile: defaultConfigFile,
+		ConfigFile: configFile,
 	}, nil
 }
 
@@ -62,6 +65,7 @@ func (o *Options) Complete() error {
 		return err
 	}
 
+	o.Controller = controller.New(o.ComponentConfig, o.Factory)
 	return nil
 }
 
@@ -90,8 +94,4 @@ func (o *Options) register() error {
 
 	o.Factory, err = rainbowdb.NewDaoFactory(db, true)
 	return err
-}
-
-func (o *Options) Run() error {
-	return nil
 }
