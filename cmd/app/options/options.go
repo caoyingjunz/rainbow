@@ -91,3 +91,7 @@ func (o *Options) register() error {
 	o.Factory, err = rainbowdb.NewDaoFactory(db, true)
 	return err
 }
+
+func (o *Options) Run() error {
+	return nil
+}

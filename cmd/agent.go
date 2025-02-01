@@ -6,6 +6,7 @@ import (
 	"github.com/caoyingjunz/pixiulib/config"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/rainbow/cmd/app/options"
 	"github.com/caoyingjunz/rainbow/pkg/controller/image"
 )
 
@@ -16,6 +17,19 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
+
+	opts, err := options.NewOptions()
+	if err != nil {
+		klog.Fatal(err)
+	}
+	if err = opts.Complete(); err != nil {
+		klog.Fatal(err)
+	}
+
+	klog.Info("starting rainbow agent")
+	if err = opts.Run(); err != nil {
+		klog.Fatal("failed to starting rainbow agent: ", err)
+	}
 
 	c := config.New()
 	c.SetConfigFile(*filePath)
