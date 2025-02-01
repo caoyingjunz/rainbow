@@ -65,7 +65,7 @@ func (o *Options) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig, o.Factory)
+	o.Controller = controller.New("test", o.Factory)
 	return nil
 }
 

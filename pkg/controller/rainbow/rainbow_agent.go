@@ -17,10 +17,11 @@ type Interface interface {
 
 type RainbowAgent struct {
 	factory db.ShareDaoFactory
+	name    string
 }
 
-func NewRainbowAgent(f db.ShareDaoFactory) *RainbowAgent {
-	return &RainbowAgent{factory: f}
+func NewRainbowAgent(f db.ShareDaoFactory, name string) *RainbowAgent {
+	return &RainbowAgent{factory: f, name: name}
 }
 
 func (s *RainbowAgent) Run(ctx context.Context, workers int) error {

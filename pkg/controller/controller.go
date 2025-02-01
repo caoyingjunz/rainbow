@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"github.com/caoyingjunz/rainbow/pkg/controller/image"
 	"github.com/caoyingjunz/rainbow/pkg/controller/rainbow"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 )
@@ -12,14 +11,16 @@ type RainbowInterface interface {
 
 type rain struct {
 	factory db.ShareDaoFactory
+	name    string
 }
 
 func (p *rain) RainbowAgent() rainbow.Interface {
-	return rainbow.NewRainbowAgent(p.factory)
+	return rainbow.NewRainbowAgent(p.factory, p.name)
 }
 
-func New(cfg image.Config, f db.ShareDaoFactory) RainbowInterface {
+func New(name string, f db.ShareDaoFactory) RainbowInterface {
 	return &rain{
 		factory: f,
+		name:    name,
 	}
 }

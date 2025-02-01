@@ -21,14 +21,14 @@ import (
 )
 
 type ShareDaoFactory interface {
-	Driver() DriverInterface
+	Agent() AgentInterface
 }
 
 type shareDaoFactory struct {
 	db *gorm.DB
 }
 
-func (f *shareDaoFactory) Driver() DriverInterface { return newDriver(f.db) }
+func (f *shareDaoFactory) Agent() AgentInterface { return newAgent(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {
