@@ -1,7 +1,9 @@
 package image
 
 type Config struct {
-	Default    DefaultOption    `yaml:"default"`
+	Default DefaultOption `yaml:"default"`
+	Mysql   MysqlOptions  `yaml:"mysql"`
+
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
 	Register   Repository       `yaml:"register"`
 	Images     []string         `yaml:"images"`
@@ -26,4 +28,12 @@ type RepositoryOption struct {
 	Password  string `yaml:"password"`
 	Registry  string `yaml:"registry"`
 	Namespace string `yaml:"namespace"`
+}
+
+type MysqlOptions struct {
+	Host     string `yaml:"host"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Port     int    `yaml:"port"`
+	Name     string `yaml:"name"`
 }
