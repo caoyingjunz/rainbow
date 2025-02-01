@@ -34,4 +34,5 @@ require (
 	gorm.io/driver/mysql v1.4.1 // indirect
 	gorm.io/gorm v1.23.8 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
+	k8s.io/apimachinery v0.24.8 // indirect
 )
