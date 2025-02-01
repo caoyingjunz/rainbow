@@ -9,9 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/caoyingjunz/pixiulib/exec"
-	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+
+	"github.com/caoyingjunz/pixiulib/exec"
 	"k8s.io/klog/v2"
 )
 
@@ -184,7 +185,7 @@ func (img *Image) doPushImage(imageToPush string) error {
 
 	klog.Infof("starting pull image %s", imageToPush)
 	// start pull
-	reader, err := img.docker.ImagePull(context.TODO(), imageToPush, image.PullOptions{})
+	reader, err := img.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
 	if err != nil {
 		klog.Errorf("failed to pull %s: %v", imageToPush, err)
 		return err
