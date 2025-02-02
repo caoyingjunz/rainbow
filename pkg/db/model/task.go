@@ -12,8 +12,10 @@ type Task struct {
 	rainbow.Model
 
 	AgentName string `json:"name"`
+	Status    string `json:"status"`
+	Content   string `json:"content"`
 }
 
-func (a *Task) TableName() string {
+func (t *Task) TableName() string {
 	return "tasks"
 }

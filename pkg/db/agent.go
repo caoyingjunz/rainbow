@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
-	"github.com/caoyingjunz/rainbow/pkg/db/model"
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
+
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 )
 
 type AgentInterface interface {

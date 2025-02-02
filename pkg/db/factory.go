@@ -22,6 +22,7 @@ import (
 
 type ShareDaoFactory interface {
 	Agent() AgentInterface
+	Task() TaskInterface
 }
 
 type shareDaoFactory struct {
@@ -29,6 +30,7 @@ type shareDaoFactory struct {
 }
 
 func (f *shareDaoFactory) Agent() AgentInterface { return newAgent(f.db) }
+func (f *shareDaoFactory) Task() TaskInterface   { return newTask(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {

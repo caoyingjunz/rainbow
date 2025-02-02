@@ -2,15 +2,16 @@ package options
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/caoyingjunz/pixiulib/config"
-	"github.com/caoyingjunz/rainbow/pkg/controller"
-	"github.com/caoyingjunz/rainbow/pkg/controller/image"
-	rainbowdb "github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"k8s.io/klog/v2"
-	"os"
+
+	"github.com/caoyingjunz/rainbow/pkg/controller"
+	rainbowdb "github.com/caoyingjunz/rainbow/pkg/db"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 type Options struct {
-	ComponentConfig image.Config
+	ComponentConfig Config
 
 	HttpEngine *gin.Engine
 
