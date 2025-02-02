@@ -1,4 +1,4 @@
-package image
+package plugin
 
 import (
 	"context"
@@ -9,11 +9,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-
-	"github.com/caoyingjunz/pixiulib/exec"
 	"k8s.io/klog/v2"
+
+	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
 
 const (
@@ -37,8 +38,8 @@ type Image struct {
 	exec   exec.Interface
 	docker *client.Client
 
-	Cfg        Config
-	Repository Repository
+	Cfg        options.Config
+	Repository options.Repository
 }
 
 func (img *Image) Validate() error {

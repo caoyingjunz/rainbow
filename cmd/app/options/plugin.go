@@ -1,4 +1,4 @@
-package image
+package options
 
 type Config struct {
 	Default DefaultOption `yaml:"default"`
