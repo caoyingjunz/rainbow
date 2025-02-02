@@ -59,6 +59,7 @@ func (s *AgentController) getNextWorkItems(ctx context.Context) {
 			klog.Error("failed to list tasks %v", err)
 			continue
 		}
+
 		if len(tasks) == 0 {
 			continue
 		}

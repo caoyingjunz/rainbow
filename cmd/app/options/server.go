@@ -14,14 +14,7 @@ import (
 	rainbowdb "github.com/caoyingjunz/rainbow/pkg/db"
 )
 
-const (
-	defaultConfigFile = "/etc/rainbow/config.yaml"
-
-	maxIdleConns = 10
-	maxOpenConns = 100
-)
-
-type Options struct {
+type ServerOptions struct {
 	ComponentConfig Config
 	ConfigFile      string
 
@@ -32,15 +25,15 @@ type Options struct {
 	Controller controller.RainbowInterface
 }
 
-func NewOptions(configFile string) (*Options, error) {
-	return &Options{
+func NewServerOptions(configFile string) (*ServerOptions, error) {
+	return &ServerOptions{
 		HttpEngine: gin.Default(),
 		ConfigFile: configFile,
 	}, nil
 }
 
 // Complete completes all the required options
-func (o *Options) Complete() error {
+func (o *ServerOptions) Complete() error {
 	// 配置文件优先级: 默认配置，环境变量，命令行
 	if len(o.ConfigFile) == 0 {
 		// Try to read config file path from env.
@@ -68,7 +61,7 @@ func (o *Options) Complete() error {
 	return nil
 }
 
-func (o *Options) register() error {
+func (o *ServerOptions) register() error {
 	sqlConfig := o.ComponentConfig.Mysql
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local",
 		sqlConfig.User,

@@ -17,14 +17,16 @@ limitations under the License.
 package router
 
 import (
-	"github.com/caoyingjunz/rainbow/cmd/app/options"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
 
-type RegisterFunc func(o *options.Options)
+type RegisterFunc func(o *options.ServerOptions)
 
-func InstallRouters(o *options.Options) {
+func InstallRouters(o *options.ServerOptions) {
 	fs := []RegisterFunc{}
 
 	install(o, fs...)
@@ -33,7 +35,7 @@ func InstallRouters(o *options.Options) {
 	o.HttpEngine.GET("/healthz", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 }
 
-func install(o *options.Options, fs ...RegisterFunc) {
+func install(o *options.ServerOptions, fs ...RegisterFunc) {
 	for _, f := range fs {
 		f(o)
 	}

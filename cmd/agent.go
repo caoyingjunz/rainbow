@@ -12,7 +12,6 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/rainbow/api/server/router"
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
 
@@ -43,8 +42,6 @@ func main() {
 			klog.Fatal("failed to start manager: ", err)
 		}
 	}
-	// 安装 http 路由
-	router.InstallRouters(opts)
 
 	go func() {
 		err = srv.ListenAndServe()
