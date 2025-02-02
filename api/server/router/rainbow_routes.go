@@ -30,6 +30,10 @@ func (cr *rainbowRouter) createRegistry(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+	if err = cr.c.Server().CreateRegistry(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
 
 	httputils.SetSuccess(c, resp)
 }
