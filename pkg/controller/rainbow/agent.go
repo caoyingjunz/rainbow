@@ -20,21 +20,21 @@ type Interface interface {
 	Run(ctx context.Context, workers int) error
 }
 
-type Agent struct {
+type AgentController struct {
 	factory db.ShareDaoFactory
 	name    string
 	queue   workqueue.RateLimitingInterface
 }
 
-func NewAgent(f db.ShareDaoFactory, name string) *Agent {
-	return &Agent{
+func NewAgent(f db.ShareDaoFactory, name string) *AgentController {
+	return &AgentController{
 		factory: f,
 		name:    name,
 		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
 	}
 }
 
-func (s *Agent) Run(ctx context.Context, workers int) error {
+func (s *AgentController) Run(ctx context.Context, workers int) error {
 	// 注册 rainbow 代理
 	if err := s.RegisterAgentIfNotExist(ctx); err != nil {
 		return err
@@ -49,7 +49,7 @@ func (s *Agent) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
-func (s *Agent) getNextWorkItems(ctx context.Context) {
+func (s *AgentController) getNextWorkItems(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -69,12 +69,12 @@ func (s *Agent) getNextWorkItems(ctx context.Context) {
 	}
 }
 
-func (s *Agent) worker(ctx context.Context) {
+func (s *AgentController) worker(ctx context.Context) {
 	for s.processNextWorkItem(ctx) {
 	}
 }
 
-func (s *Agent) processNextWorkItem(ctx context.Context) bool {
+func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	key, quit := s.queue.Get()
 	if quit {
 		return false
@@ -86,15 +86,21 @@ func (s *Agent) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (s *Agent) sync(ctx context.Context, taskId int64) error {
+func (s *AgentController) sync(ctx context.Context, taskId int64) error {
+	task, err := s.factory.Task().Get(ctx, taskId)
+	if err != nil {
+		return fmt.Errorf("failted to get task %d %v", taskId, err)
+	}
+
+	fmt.Println("task:", task)
 	return nil
 }
 
 // TODO
-func (s *Agent) handleErr(ctx context.Context, err error, key interface{}) {
+func (s *AgentController) handleErr(ctx context.Context, err error, key interface{}) {
 }
 
-func (s *Agent) RegisterAgentIfNotExist(ctx context.Context) error {
+func (s *AgentController) RegisterAgentIfNotExist(ctx context.Context) error {
 	if len(s.name) == 0 {
 		return fmt.Errorf("agent name missing")
 	}
