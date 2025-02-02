@@ -27,7 +27,10 @@ import (
 type RegisterFunc func(o *options.ServerOptions)
 
 func InstallRouters(o *options.ServerOptions) {
-	fs := []RegisterFunc{}
+	fs := []RegisterFunc{
+		NewMiddlewares,
+		NewRouter,
+	}
 
 	install(o, fs...)
 
