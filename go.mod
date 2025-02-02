@@ -3,7 +3,7 @@ module github.com/caoyingjunz/rainbow
 go 1.17
 
 require (
-	github.com/caoyingjunz/pixiulib v1.0.0
+	github.com/caoyingjunz/pixiulib v1.0.1-0.20250202143815-b9478878b1b2
 	github.com/docker/docker v23.0.3+incompatible
 	github.com/gin-gonic/gin v1.8.1
 	gorm.io/driver/mysql v1.4.1
