@@ -22,9 +22,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
-		taskRoute.PUT("/:taskId", cr.updateTask)
-		taskRoute.DELETE("/:taskId", cr.deleteTask)
-		taskRoute.GET("/:taskId", cr.getTask)
+		taskRoute.PUT("/:Id", cr.updateTask)
+		taskRoute.DELETE("/:Id", cr.deleteTask)
+		taskRoute.GET("/:Id", cr.getTask)
 		taskRoute.GET("", cr.listTasks)
 	}
 
