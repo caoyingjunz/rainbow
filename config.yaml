@@ -5,6 +5,9 @@ default:
 agent:
   name: test-agent
 
+plugin:
+  callback: 127.0.0.1:8090
+
 mysql:
   host: peng
   user: root
@@ -13,14 +16,10 @@ mysql:
   name: rainbow
 
 register:
-  target:
-    username: test
-    password: test
-    registry: harbor.cloud.pixiuio.com
-  source:
-    username: test
-    password: test
-    registry: harbor.cloud.pixiuio.com
+  repository: registry.cn-hangzhou.aliyuncs.com
+  namespace: pixiucloud
+  username: aliyun9626582710
+  password: kubevulpes123
 
 kubernetes:
   version: v1.23.6

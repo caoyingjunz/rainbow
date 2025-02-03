@@ -1,0 +1,18 @@
+default:
+  push_kubernetes: false
+  push_images: true
+
+plugin:
+  callback: 127.0.0.1:8090
+
+register:
+  repository: harbor.cloud.pixiuio.com
+  namespace: pixiucloud
+  username: test
+  password: test
+
+kubernetes:
+  version: v1.23.6
+
+images:
+  - docker.io/nginx:latest
