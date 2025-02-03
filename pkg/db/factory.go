@@ -23,14 +23,16 @@ import (
 type ShareDaoFactory interface {
 	Agent() AgentInterface
 	Task() TaskInterface
+	Registry() RegistryInterface
 }
 
 type shareDaoFactory struct {
 	db *gorm.DB
 }
 
-func (f *shareDaoFactory) Agent() AgentInterface { return newAgent(f.db) }
-func (f *shareDaoFactory) Task() TaskInterface   { return newTask(f.db) }
+func (f *shareDaoFactory) Agent() AgentInterface       { return newAgent(f.db) }
+func (f *shareDaoFactory) Task() TaskInterface         { return newTask(f.db) }
+func (f *shareDaoFactory) Registry() RegistryInterface { return newRegistry(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {
