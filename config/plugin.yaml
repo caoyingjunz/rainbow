@@ -1,19 +1,9 @@
 default:
   push_kubernetes: false
-  push_images: false
-
-agent:
-  name: test-agent
+  push_images: true
 
 plugin:
   callback: 127.0.0.1:8090
-
-mysql:
-  host: peng
-  user: root
-  password: Pixiu868686
-  port: 3306
-  name: rainbow
 
 register:
   repository: harbor.cloud.pixiuio.com

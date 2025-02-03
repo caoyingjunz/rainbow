@@ -34,12 +34,13 @@ type KubeadmImage struct {
 
 type Image struct {
 	KubernetesVersion string
+	Callback          string
 
 	exec   exec.Interface
 	docker *client.Client
 
-	Cfg        options.Config
-	Repository options.Repository
+	Cfg      options.Config
+	Register options.Register
 }
 
 func (img *Image) Validate() error {
@@ -168,14 +169,8 @@ func (img *Image) getImages() ([]string, error) {
 func (img *Image) parseTargetImage(imageToPush string) (string, error) {
 	// real image to push
 	parts := strings.Split(imageToPush, "/")
-	if len(parts) < 2 {
-		return "", fmt.Errorf("invaild image format: %s", imageToPush)
-	}
 
-	if img.Repository.Target.Registry == "" {
-		return img.Repository.Target.Namespace + "/" + parts[len(parts)-1], nil
-	}
-	return img.Repository.Target.Registry + "/" + img.Repository.Target.Namespace + "/" + parts[len(parts)-1], nil
+	return img.Register.Repository + "/" + img.Register.Namespace + "/" + parts[len(parts)-1], nil
 }
 
 func (img *Image) doPushImage(imageToPush string) error {
@@ -251,9 +246,9 @@ func (img *Image) PushImages() error {
 	errCh := make(chan error, diff)
 
 	// 登陆
-	cmd := []string{"docker", "login", "-u", img.Repository.Target.Username, "-p", img.Repository.Target.Password}
-	if img.Repository.Target.Registry != "" {
-		cmd = append(cmd, img.Repository.Target.Registry)
+	cmd := []string{"docker", "login", "-u", img.Register.Username, "-p", img.Register.Password}
+	if img.Register.Repository != "" {
+		cmd = append(cmd, img.Register.Repository)
 	}
 	out, err := img.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {

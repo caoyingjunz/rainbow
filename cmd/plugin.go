@@ -21,12 +21,14 @@ func main() {
 	c := config.New()
 	c.SetConfigFile(*pluginFile)
 	c.SetConfigType("yaml")
+
 	var cfg options.Config
 	if err := c.Binding(&cfg); err != nil {
 		klog.Fatal(err)
 	}
 	img := plugin.Image{
-		Cfg: cfg,
+		Cfg:      cfg,
+		Register: cfg.Register,
 	}
 	if err := img.Complete(); err != nil {
 		klog.Fatal(err)

@@ -5,8 +5,10 @@ type Config struct {
 	Mysql   MysqlOptions  `yaml:"mysql"`
 
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
-	Register   Repository       `yaml:"register"`
 	Images     []string         `yaml:"images"`
+
+	Plugin   PluginOption `yaml:"plugin"`
+	Register Register     `yaml:"register"`
 
 	Agent AgentOption `yaml:"agent"`
 }
@@ -20,16 +22,15 @@ type KubernetesOption struct {
 	Version string `yaml:"version"`
 }
 
-type Repository struct {
-	Target RepositoryOption `yaml:"target"`
-	Source RepositoryOption `yaml:"source"`
+type PluginOption struct {
+	Callback string `yaml:"callback"`
 }
 
-type RepositoryOption struct {
-	Username  string `yaml:"username"`
-	Password  string `yaml:"password"`
-	Registry  string `yaml:"registry"`
-	Namespace string `yaml:"namespace"`
+type Register struct {
+	Repository string `yaml:"repository"`
+	Namespace  string `yaml:"namespace"`
+	Username   string `yaml:"username"`
+	Password   string `yaml:"password"`
 }
 
 type MysqlOptions struct {
