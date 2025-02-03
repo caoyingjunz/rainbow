@@ -1,6 +1,6 @@
 default:
   push_kubernetes: false
-  push_images: true
+  push_images: false
 
 agent:
   name: test-agent
@@ -16,10 +16,10 @@ mysql:
   name: rainbow
 
 register:
-  repository: registry.cn-hangzhou.aliyuncs.com
+  repository: harbor.cloud.pixiuio.com
   namespace: pixiucloud
-  username: aliyun9626582710
-  password: kubevulpes123
+  username: test
+  password: test
 
 kubernetes:
   version: v1.23.6
