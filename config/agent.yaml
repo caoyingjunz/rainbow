@@ -1,6 +1,9 @@
 agent:
   name: test-agent
 
+plugin:
+  callback: 127.0.0.1:8090
+
 mysql:
   host: peng
   user: root

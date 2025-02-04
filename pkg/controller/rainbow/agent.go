@@ -22,15 +22,18 @@ type Interface interface {
 
 type AgentController struct {
 	factory db.ShareDaoFactory
-	name    string
 	queue   workqueue.RateLimitingInterface
+
+	name     string
+	callback string
 }
 
-func NewAgent(f db.ShareDaoFactory, name string) *AgentController {
+func NewAgent(f db.ShareDaoFactory, name string, callback string) *AgentController {
 	return &AgentController{
-		factory: f,
-		name:    name,
-		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
+		factory:  f,
+		name:     name,
+		callback: callback,
+		queue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
 	}
 }
 

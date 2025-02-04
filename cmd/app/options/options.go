@@ -64,7 +64,7 @@ func (o *Options) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig.Agent.Name, o.Factory)
+	o.Controller = controller.New(o.ComponentConfig.Agent.Name, o.ComponentConfig.Plugin.Callback, o.Factory)
 	return nil
 }
 
