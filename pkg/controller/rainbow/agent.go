@@ -3,7 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -14,6 +14,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/template"
+	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
 type AgentGetter interface {
@@ -132,13 +133,32 @@ func (s *AgentController) sync(ctx context.Context, taskId int64) error {
 		return err
 	}
 
-	f := "/tmp/plugin.yaml"
-	if err = ioutil.WriteFile(f, cfg, 0640); err != nil {
+	taskIdStr := fmt.Sprintf("%d", taskId)
+
+	destDir := filepath.Join(baseDir, taskIdStr)
+	if err = util.EnsureDirectoryExists(destDir); err != nil {
+		return err
+	}
+	if !util.IsDirectoryExists(destDir + "/plugin") {
+		if err = util.Copy(pluginProject, destDir); err != nil {
+			return err
+		}
+	}
+	if err = util.WriteIntoFile(string(cfg), destDir+"/plugin/config.yaml"); err != nil {
 		return err
 	}
 
+	git := util.NewGit(destDir+"/plugin", taskIdStr, taskIdStr)
+	if err = git.Push(); err != nil {
+		return err
+	}
 	return nil
 }
+
+const (
+	baseDir       = "/tmp"
+	pluginProject = baseDir + "/plugin"
+)
 
 // TODO
 func (s *AgentController) handleErr(ctx context.Context, err error, key interface{}) {

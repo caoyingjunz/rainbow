@@ -8,13 +8,19 @@ import (
 type Git struct {
 	RepoDir  string
 	Branch   string
+	Title    string
 	executor exec.Interface
 }
 
-func NewGit(repoDir string, branch string) *Git {
+func NewGit(repoDir string, branch string, title string) *Git {
 	return &Git{
 		RepoDir:  repoDir,
 		Branch:   branch,
+		Title:    title,
 		executor: exec.New(),
 	}
+}
+
+func (g *Git) Push() error {
+	return nil
 }
