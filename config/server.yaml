@@ -1,0 +1,6 @@
+mysql:
+  host: peng
+  user: root
+  password: Pixiu868686
+  port: 3306
+  name: rainbow

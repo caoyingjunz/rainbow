@@ -92,8 +92,18 @@ func (s *AgentController) sync(ctx context.Context, taskId int64) error {
 	if err != nil {
 		return fmt.Errorf("failted to get task %d %v", taskId, err)
 	}
+	registry, err := s.factory.Registry().Get(ctx, task.RegisterId)
+	if err != nil {
+		return fmt.Errorf("failed to get registry %v", err)
+	}
+	images, err := s.factory.Image().ListWithTask(ctx, taskId)
+	if err != nil {
+		return fmt.Errorf("failed to get images %v", err)
+	}
 
 	fmt.Println("task:", task)
+	fmt.Println("registry:", registry)
+	fmt.Println("images:", images)
 	return nil
 }
 
