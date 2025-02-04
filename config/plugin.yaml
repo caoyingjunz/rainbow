@@ -5,7 +5,7 @@ default:
 plugin:
   callback: 127.0.0.1:8090
 
-register:
+registry:
   repository: harbor.cloud.pixiuio.com
   namespace: pixiucloud
   username: test

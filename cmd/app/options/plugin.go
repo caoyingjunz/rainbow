@@ -8,7 +8,7 @@ type Config struct {
 	Images     []string         `yaml:"images"`
 
 	Plugin   PluginOption `yaml:"plugin"`
-	Register Register     `yaml:"register"`
+	Register Register     `yaml:"registry"`
 
 	Agent AgentOption `yaml:"agent"`
 }

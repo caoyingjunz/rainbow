@@ -15,7 +15,7 @@ mysql:
   port: 3306
   name: rainbow
 
-register:
+registry:
   repository: harbor.cloud.pixiuio.com
   namespace: pixiucloud
   username: test
