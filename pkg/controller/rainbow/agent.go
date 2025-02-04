@@ -3,14 +3,16 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"k8s.io/klog/v2"
 	"time"
 
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
+	"github.com/caoyingjunz/rainbow/pkg/template"
 )
 
 type AgentGetter interface {
@@ -103,10 +105,34 @@ func (s *AgentController) sync(ctx context.Context, taskId int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to get images %v", err)
 	}
+	var img []string
+	for _, image := range images {
+		img = append(img, image.Name)
+	}
 
-	fmt.Println("task:", task)
-	fmt.Println("registry:", registry)
-	fmt.Println("images:", images)
+	tplCfg := template.PluginTemplateConfig{
+		Default: template.DefaultOption{
+			PushImages: true,
+		},
+		Plugin: template.PluginOption{
+			Callback: s.callback,
+		},
+		Register: template.Register{
+			Repository: registry.Repository,
+			Namespace:  registry.Namespace,
+			Username:   registry.Username,
+			Password:   registry.Password,
+		},
+		Images: img,
+	}
+
+	cfg, err := yaml.Marshal(tplCfg)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("task:", string(cfg))
+
 	return nil
 }
 
