@@ -11,9 +11,11 @@ func init() {
 type Task struct {
 	rainbow.Model
 
-	AgentName string `json:"name"`
-	Status    string `json:"status"`
-	Content   string `json:"content"`
+	UserId     int64  `json:"user_id"`
+	RegisterId int64  `json:"register_id"`
+	AgentName  string `json:"agent_name"`
+	Status     string `json:"status"`
+	Content    string `json:"content"`
 }
 
 func (t *Task) TableName() string {
