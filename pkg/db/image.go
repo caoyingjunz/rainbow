@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"gorm.io/gorm/clause"
 	"time"
 
 	"gorm.io/gorm"
@@ -14,6 +15,9 @@ type ImageInterface interface {
 	Delete(ctx context.Context, imageId int64) error
 	Get(ctx context.Context, imageId int64) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
+
+	CreateInBatch(ctx context.Context, objects []model.Image) error
+	DeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
 }
 
@@ -36,7 +40,29 @@ func (a *image) Create(ctx context.Context, object *model.Image) (*model.Image, 
 	return object, nil
 }
 
+func (a *image) CreateInBatch(ctx context.Context, objects []model.Image) error {
+	for _, object := range objects {
+		if _, err := a.Create(ctx, &object); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (a *image) Delete(ctx context.Context, imageId int64) error {
+	var audit model.Image
+	if err := a.db.Clauses(clause.Returning{}).Where("id = ?", imageId).Delete(&audit).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *image) DeleteInBatch(ctx context.Context, taskId int64) error {
+	var audit []model.Image
+	if err := a.db.WithContext(ctx).Where("task_id = ?", taskId).Delete(&audit).Error; err != nil {
+		return err
+	}
 	return nil
 }
 

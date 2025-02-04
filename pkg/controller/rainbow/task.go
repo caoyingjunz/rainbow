@@ -18,8 +18,29 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		return err
 	}
 
+	if len(req.Images) == 0 {
+		return nil
+	}
 	taskId := object.Id
-	fmt.Println("taskId", taskId)
 
-	return err
+	var images []model.Image
+	for _, i := range req.Images {
+		images = append(images, model.Image{
+			TaskId: taskId,
+			Name:   i,
+		})
+	}
+
+	if err = s.factory.Image().CreateInBatch(ctx, images); err != nil {
+		_ = s.DeleteTaskWithImages(ctx, taskId)
+		return fmt.Errorf("failed to create tasks images %v", err)
+	}
+
+	return nil
+}
+
+func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
+	_ = s.factory.Image().DeleteInBatch(ctx, taskId)
+	_ = s.factory.Task().Delete(ctx, taskId)
+	return nil
 }
