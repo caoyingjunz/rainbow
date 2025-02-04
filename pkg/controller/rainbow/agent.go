@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -131,7 +132,10 @@ func (s *AgentController) sync(ctx context.Context, taskId int64) error {
 		return err
 	}
 
-	fmt.Println("task:", string(cfg))
+	f := "/tmp/plugin.yaml"
+	if err = ioutil.WriteFile(f, cfg, 0640); err != nil {
+		return err
+	}
 
 	return nil
 }
