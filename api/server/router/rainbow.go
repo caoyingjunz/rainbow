@@ -36,4 +36,10 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		registryRoute.GET("/:Id", cr.getRegistry)
 		registryRoute.GET("", cr.listRegistries)
 	}
+
+	agentRoute := httpEngine.Group("/rainbow/agents")
+	{
+		agentRoute.GET("/:Id", cr.getAgent)
+		agentRoute.GET("", cr.listAgents)
+	}
 }

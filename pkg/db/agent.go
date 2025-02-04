@@ -43,7 +43,7 @@ func (a *agent) Delete(ctx context.Context, agentId int64) error {
 
 func (a *agent) Get(ctx context.Context, agentId int64) (*model.Agent, error) {
 	var audit model.Agent
-	if err := a.db.WithContext(ctx).Where("id = ?", agentId).First(audit).Error; err != nil {
+	if err := a.db.WithContext(ctx).Where("id = ?", agentId).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
