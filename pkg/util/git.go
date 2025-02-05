@@ -45,11 +45,52 @@ func (g *Git) Checkout() error {
 		cmd = g.executor.Command("git", "checkout", "remotes/origin/master", "-b", g.Branch)
 	}
 	cmd.SetDir(g.RepoDir)
-	_, err = cmd.CombinedOutput()
-	return err
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v %s", err, string(out))
+	}
+	return nil
 }
 
 func (g *Git) Push() error {
+	if err := g.Add(); err != nil {
+		return err
+	}
+	if err := g.Commit(); err != nil {
+		return err
+	}
+
+	cmd := g.executor.Command("git", "push", "origin", "HEAD")
+	cmd.SetDir(g.RepoDir)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v %s", err, string(out))
+	}
+	return nil
+}
+
+func (g *Git) Add() error {
+	cmd := g.executor.Command("git", "add", ".")
+	cmd.SetDir(g.RepoDir)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v %s", err, string(out))
+	}
+
+	return nil
+}
+
+func (g *Git) Commit() error {
+	cmd := g.executor.Command("git", "commit", "-m", g.Title)
+	cmd.SetDir(g.RepoDir)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v %s", err, string(out))
+	}
 	return nil
 }
 
