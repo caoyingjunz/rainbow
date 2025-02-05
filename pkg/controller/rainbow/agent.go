@@ -161,7 +161,7 @@ func (s *AgentController) sync(ctx context.Context, taskId int64, resourceVersio
 		}
 	}
 
-	git := util.NewGit(destDir+"/plugin", "stable/"+taskIdStr, taskIdStr+"-"+time.Now().String())
+	git := util.NewGit(destDir+"/plugin", taskIdStr, taskIdStr+"-"+time.Now().String())
 	if err = git.Checkout(); err != nil {
 		return err
 	}
