@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 type TaskInterface interface {
@@ -17,8 +18,9 @@ type TaskInterface interface {
 	Get(ctx context.Context, taskId int64) (*model.Task, error)
 	List(ctx context.Context, opts ...Options) ([]model.Task, error)
 
+	GetOne(ctx context.Context, taskId int64, resourceVersion int64) (*model.Task, error)
 	AssignToAgent(ctx context.Context, taskId int64, agentName string) error
-	ListWithAgent(ctx context.Context, agentName string, opts ...Options) ([]model.Task, error)
+	ListWithAgent(ctx context.Context, agentName string, process int, opts ...Options) ([]model.Task, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -67,6 +69,23 @@ func (a *task) Get(ctx context.Context, agentId int64) (*model.Task, error) {
 	return &audit, nil
 }
 
+func (a *task) GetOne(ctx context.Context, taskId int64, resourceVersion int64) (*model.Task, error) {
+	updates := make(map[string]interface{})
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+	updates["process"] = 1
+
+	f := a.db.WithContext(ctx).Model(&model.Task{}).Where("id = ? and resource_version = ?", taskId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return nil, f.Error
+	}
+	if f.RowsAffected == 0 {
+		return nil, errors.ErrRecordNotUpdate
+	}
+
+	return a.Get(ctx, taskId)
+}
+
 func (a *task) List(ctx context.Context, opts ...Options) ([]model.Task, error) {
 	var audits []model.Task
 	tx := a.db.WithContext(ctx)
@@ -80,13 +99,13 @@ func (a *task) List(ctx context.Context, opts ...Options) ([]model.Task, error) 
 	return audits, nil
 }
 
-func (a *task) ListWithAgent(ctx context.Context, agentName string, opts ...Options) ([]model.Task, error) {
+func (a *task) ListWithAgent(ctx context.Context, agentName string, process int, opts ...Options) ([]model.Task, error) {
 	var audits []model.Task
 	tx := a.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Where("agent_name = ?", agentName).Find(&audits).Error; err != nil {
+	if err := tx.Where("agent_name = ? and process = ?", agentName, process).Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

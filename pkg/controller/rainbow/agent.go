@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -11,10 +12,12 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/pixiulib/strutil"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/template"
 	"github.com/caoyingjunz/rainbow/pkg/util"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 type AgentGetter interface {
@@ -61,18 +64,18 @@ func (s *AgentController) getNextWorkItems(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		tasks, err := s.factory.Task().ListWithAgent(ctx, s.name)
+		// 获取未处理
+		tasks, err := s.factory.Task().ListWithAgent(ctx, s.name, 0)
 		if err != nil {
 			klog.Error("failed to list tasks %v", err)
 			continue
 		}
-
 		if len(tasks) == 0 {
 			continue
 		}
 
 		for _, task := range tasks {
-			s.queue.Add(task.Id)
+			s.queue.Add(fmt.Sprintf("%d/%d", task.Id, task.ResourceVersion))
 		}
 	}
 }
@@ -89,30 +92,32 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	}
 	defer s.queue.Done(key)
 
-	err := s.sync(ctx, key.(int64))
-	s.handleErr(ctx, err, key)
+	taskId, resourceVersion, err := KeyFunc(key)
+	if err != nil {
+		s.handleErr(ctx, err, key)
+	} else {
+		s.handleErr(ctx, s.sync(ctx, taskId, resourceVersion), key)
+	}
 	return true
 }
 
-func (s *AgentController) sync(ctx context.Context, taskId int64) error {
-	task, err := s.factory.Task().Get(ctx, taskId)
-	if err != nil {
-		return fmt.Errorf("failted to get task %d %v", taskId, err)
-	}
+func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task) (*template.PluginTemplateConfig, error) {
+	taskId := task.Id
+
 	registry, err := s.factory.Registry().Get(ctx, task.RegisterId)
 	if err != nil {
-		return fmt.Errorf("failed to get registry %v", err)
+		return nil, fmt.Errorf("failed to get registry %v", err)
 	}
 	images, err := s.factory.Image().ListWithTask(ctx, taskId)
 	if err != nil {
-		return fmt.Errorf("failed to get images %v", err)
+		return nil, fmt.Errorf("failed to get images %v", err)
 	}
 	var img []string
 	for _, image := range images {
 		img = append(img, image.Name)
 	}
 
-	tplCfg := template.PluginTemplateConfig{
+	return &template.PluginTemplateConfig{
 		Default: template.DefaultOption{
 			PushImages: true,
 		},
@@ -126,8 +131,19 @@ func (s *AgentController) sync(ctx context.Context, taskId int64) error {
 			Password:   registry.Password,
 		},
 		Images: img,
+	}, nil
+}
+
+func (s *AgentController) sync(ctx context.Context, taskId int64, resourceVersion int64) error {
+	task, err := s.factory.Task().GetOne(ctx, taskId, resourceVersion)
+	if err != nil {
+		if errors.IsNotUpdated(err) {
+			return nil
+		}
+		return fmt.Errorf("failted to get one task %d %v", taskId, err)
 	}
 
+	tplCfg, err := s.makePluginConfig(ctx, *task)
 	cfg, err := yaml.Marshal(tplCfg)
 	if err != nil {
 		return err
@@ -144,11 +160,14 @@ func (s *AgentController) sync(ctx context.Context, taskId int64) error {
 			return err
 		}
 	}
+
+	git := util.NewGit(destDir+"/plugin", taskIdStr, taskIdStr)
+	if err = git.Checkout(); err != nil {
+		return err
+	}
 	if err = util.WriteIntoFile(string(cfg), destDir+"/plugin/config.yaml"); err != nil {
 		return err
 	}
-
-	git := util.NewGit(destDir+"/plugin", taskIdStr, taskIdStr)
 	if err = git.Push(); err != nil {
 		return err
 	}
@@ -162,6 +181,10 @@ const (
 
 // TODO
 func (s *AgentController) handleErr(ctx context.Context, err error, key interface{}) {
+	if err == nil {
+		return
+	}
+	klog.Error(err)
 }
 
 func (s *AgentController) RegisterAgentIfNotExist(ctx context.Context) error {
@@ -176,4 +199,26 @@ func (s *AgentController) RegisterAgentIfNotExist(ctx context.Context) error {
 	}
 	_, err = s.factory.Agent().Create(ctx, &model.Agent{Name: s.name})
 	return err
+}
+
+func KeyFunc(key interface{}) (int64, int64, error) {
+	str, ok := key.(string)
+	if !ok {
+		return 0, 0, fmt.Errorf("failed to convert %v to string", key)
+	}
+	parts := strings.Split(str, "/")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("parts length not 2")
+	}
+
+	taskId, err := strutil.ParseInt64(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to Parse taskId to Int64 %v", err)
+	}
+	resourceVersion, err := strutil.ParseInt64(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to Parse resourceVersion to Int64 %v", err)
+	}
+
+	return taskId, resourceVersion, nil
 }
