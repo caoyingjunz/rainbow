@@ -175,7 +175,7 @@ func (s *AgentController) sync(ctx context.Context, taskId int64, resourceVersio
 }
 
 const (
-	baseDir       = "/tmp"
+	baseDir       = "/data"
 	pluginProject = baseDir + "/plugin"
 )
 
