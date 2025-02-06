@@ -1,4 +1,4 @@
-package options
+package config
 
 type Config struct {
 	Default DefaultOption `yaml:"default"`
@@ -24,6 +24,7 @@ type KubernetesOption struct {
 
 type PluginOption struct {
 	Callback string `yaml:"callback"`
+	TaskId   int64  `yaml:"task_id"`
 }
 
 type Register struct {
@@ -42,5 +43,6 @@ type MysqlOptions struct {
 }
 
 type AgentOption struct {
-	Name string `yaml:"name"`
+	Name    string `yaml:"name"`
+	DataDir string `yaml:"data_dir"`
 }

@@ -10,12 +10,13 @@ import (
 	"gorm.io/gorm"
 	"k8s.io/klog/v2"
 
+	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/controller"
 	rainbowdb "github.com/caoyingjunz/rainbow/pkg/db"
 )
 
 type ServerOptions struct {
-	ComponentConfig Config
+	ComponentConfig rainbowconfig.Config
 	ConfigFile      string
 
 	db      *gorm.DB
@@ -57,7 +58,7 @@ func (o *ServerOptions) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig.Agent.Name, o.ComponentConfig.Plugin.Callback, o.Factory)
+	o.Controller = controller.New(o.ComponentConfig.Agent.Name, o.ComponentConfig.Plugin.Callback, o.ComponentConfig, o.Factory)
 	return nil
 }
 

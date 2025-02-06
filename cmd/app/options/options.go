@@ -10,19 +10,21 @@ import (
 	"gorm.io/gorm"
 	"k8s.io/klog/v2"
 
+	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/controller"
 	rainbowdb "github.com/caoyingjunz/rainbow/pkg/db"
 )
 
 const (
 	defaultConfigFile = "/etc/rainbow/config.yaml"
+	defaultDataDir    = "/data"
 
 	maxIdleConns = 10
 	maxOpenConns = 100
 )
 
 type Options struct {
-	ComponentConfig Config
+	ComponentConfig rainbowconfig.Config
 	ConfigFile      string
 
 	db      *gorm.DB
@@ -64,7 +66,7 @@ func (o *Options) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig.Agent.Name, o.ComponentConfig.Plugin.Callback, o.Factory)
+	o.Controller = controller.New(o.ComponentConfig.Agent.Name, o.ComponentConfig.Plugin.Callback, o.ComponentConfig, o.Factory)
 	return nil
 }
 

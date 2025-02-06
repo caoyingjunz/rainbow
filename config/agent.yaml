@@ -1,5 +1,6 @@
 agent:
   name: test-agent
+  data_dir: /tmp
 
 plugin:
   callback: 127.0.0.1:8090
