@@ -58,7 +58,7 @@ func (o *ServerOptions) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig.Agent.Name, o.ComponentConfig.Plugin.Callback, o.ComponentConfig, o.Factory)
+	o.Controller = controller.New(o.ComponentConfig, o.Factory)
 	return nil
 }
 

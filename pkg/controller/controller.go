@@ -12,25 +12,21 @@ type RainbowInterface interface {
 }
 
 type rain struct {
-	factory  db.ShareDaoFactory
-	cfg      rainbowconfig.Config
-	name     string
-	callback string
+	factory db.ShareDaoFactory
+	cfg     rainbowconfig.Config
 }
 
 func (p *rain) Agent() rainbow.Interface {
-	return rainbow.NewAgent(p.factory, p.cfg, p.name, p.callback)
+	return rainbow.NewAgent(p.factory, p.cfg)
 }
 
 func (p *rain) Server() rainbow.ServerInterface {
 	return rainbow.NewServer(p.factory)
 }
 
-func New(name string, callback string, cfg rainbowconfig.Config, f db.ShareDaoFactory) RainbowInterface {
+func New(cfg rainbowconfig.Config, f db.ShareDaoFactory) RainbowInterface {
 	return &rain{
-		factory:  f,
-		cfg:      cfg,
-		name:     name,
-		callback: callback,
+		factory: f,
+		cfg:     cfg,
 	}
 }

@@ -28,10 +28,6 @@ type Interface interface {
 	Run(ctx context.Context, workers int) error
 }
 
-const (
-	defaultBaseDir = "/data"
-)
-
 type AgentController struct {
 	factory db.ShareDaoFactory
 	cfg     rainbowconfig.Config
@@ -43,13 +39,13 @@ type AgentController struct {
 	baseDir  string
 }
 
-func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, name string, callback string) *AgentController {
+func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config) *AgentController {
 	return &AgentController{
 		factory:  f,
 		cfg:      cfg,
-		name:     name,
+		name:     cfg.Agent.Name,
 		baseDir:  cfg.Agent.DataDir,
-		callback: callback,
+		callback: cfg.Plugin.Callback,
 		queue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
 	}
 }
