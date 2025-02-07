@@ -224,7 +224,7 @@ func (s *AgentController) RegisterAgentIfNotExist(ctx context.Context) error {
 	if err == nil {
 		return nil
 	}
-	_, err = s.factory.Agent().Create(ctx, &model.Agent{Name: s.name, Status: model.RunAgentType})
+	_, err = s.factory.Agent().Create(ctx, &model.Agent{Name: s.name, Status: model.RunAgentType, Type: model.PublicAgentType})
 	return err
 }
 
