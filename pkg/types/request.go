@@ -15,4 +15,12 @@ type (
 		Username   string `json:"username"`
 		Password   string `json:"password"`
 	}
+
+	CreateImageRequest struct {
+		TaskId int64 `json:"task_id"`
+	}
+
+	UpdateImageRequest struct {
+		TaskId int64 `json:"task_id"`
+	}
 )

@@ -42,4 +42,12 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		agentRoute.GET("/:Id", cr.getAgent)
 		agentRoute.GET("", cr.listAgents)
 	}
+
+	imageRoute := httpEngine.Group("/rainbow/images")
+	{
+		imageRoute.POST("", cr.createImage)
+		imageRoute.PUT("", cr.updateImage)
+		imageRoute.GET("/:Id", cr.getImage)
+		imageRoute.GET("", cr.listImages)
+	}
 }

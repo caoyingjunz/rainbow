@@ -12,13 +12,18 @@ type ServerGetter interface {
 
 type ServerInterface interface {
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
-	ListRegistries(ctx context.Context) (interface{}, error)
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
+	ListRegistries(ctx context.Context) (interface{}, error)
 
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)
+
+	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
+	UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error
+	GetImag(ctx context.Context, imageId int64) (interface{}, error)
+	ListImages(ctx context.Context) (interface{}, error)
 }
 
 type ServerController struct {
