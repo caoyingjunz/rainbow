@@ -32,11 +32,17 @@ func main() {
 		klog.Fatal(err)
 	}
 
+	runers := []func(context.Context, int) error{opts.Controller.Server().Run}
+	for _, runner := range runers {
+		if err = runner(context.TODO(), 5); err != nil {
+			klog.Fatal("failed to rainbow agent: ", err)
+		}
+	}
+
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", 8090),
 		Handler: opts.HttpEngine,
 	}
-
 	// 安装 http 路由
 	router.InstallRouters(opts)
 

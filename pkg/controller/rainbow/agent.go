@@ -56,7 +56,7 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 		return err
 	}
 
-	go s.syncStatus(ctx)
+	go s.report(ctx)
 
 	go s.getNextWorkItems(ctx)
 
@@ -67,7 +67,7 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
-func (s *AgentController) syncStatus(ctx context.Context) {
+func (s *AgentController) report(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
