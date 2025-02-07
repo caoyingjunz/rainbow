@@ -61,6 +61,10 @@ func (o *Options) Complete() error {
 		klog.Fatal(err)
 	}
 
+	if len(o.ComponentConfig.Agent.DataDir) == 0 {
+		o.ComponentConfig.Agent.DataDir = defaultDataDir
+	}
+
 	// 注册依赖组件
 	if err := o.register(); err != nil {
 		return err

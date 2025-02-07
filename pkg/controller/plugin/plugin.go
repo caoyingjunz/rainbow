@@ -62,9 +62,9 @@ func (img *PluginController) Validate() error {
 	}
 
 	// 检查 docker 的客户端是否正常
-	//if _, err := img.docker.Ping(context.Background()); err != nil {
-	//	return err
-	//}
+	if _, err := img.docker.Ping(context.Background()); err != nil {
+		return err
+	}
 
 	return nil
 }
