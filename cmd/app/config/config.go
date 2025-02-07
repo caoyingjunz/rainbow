@@ -8,7 +8,7 @@ type Config struct {
 	Images     []string         `yaml:"images"`
 
 	Plugin   PluginOption `yaml:"plugin"`
-	Register Register     `yaml:"registry"`
+	Registry Registry     `yaml:"registry"`
 
 	Agent AgentOption `yaml:"agent"`
 }
@@ -27,7 +27,7 @@ type PluginOption struct {
 	TaskId   int64  `yaml:"task_id"`
 }
 
-type Register struct {
+type Registry struct {
 	Repository string `yaml:"repository"`
 	Namespace  string `yaml:"namespace"`
 	Username   string `yaml:"username"`

@@ -1,9 +1,10 @@
 package router
 
 import (
+	"github.com/gin-gonic/gin"
+
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
 	"github.com/caoyingjunz/rainbow/pkg/controller"
-	"github.com/gin-gonic/gin"
 )
 
 type rainbowRouter struct {
@@ -46,7 +47,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	imageRoute := httpEngine.Group("/rainbow/images")
 	{
 		imageRoute.POST("", cr.createImage)
-		imageRoute.PUT("", cr.updateImage)
+		imageRoute.PUT("/:Id", cr.updateImage)
 		imageRoute.GET("/:Id", cr.getImage)
 		imageRoute.GET("", cr.listImages)
 	}

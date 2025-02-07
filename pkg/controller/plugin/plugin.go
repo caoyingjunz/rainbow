@@ -8,13 +8,15 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/rainbow/cmd/app/options"
+	"github.com/caoyingjunz/rainbow/cmd/app/config"
+	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
 const (
@@ -32,18 +34,19 @@ type KubeadmImage struct {
 	Images []string `json:"images"`
 }
 
-type Image struct {
+type PluginController struct {
 	KubernetesVersion string
 	Callback          string
 
-	exec   exec.Interface
-	docker *client.Client
+	httpClient util.HttpInterface
+	exec       exec.Interface
+	docker     *client.Client
 
-	Cfg      options.Config
-	Register options.Register
+	Cfg      config.Config
+	Registry config.Registry
 }
 
-func (img *Image) Validate() error {
+func (img *PluginController) Validate() error {
 	if img.Cfg.Default.PushKubernetes {
 		if len(img.KubernetesVersion) == 0 {
 			return fmt.Errorf("failed to find kubernetes version")
@@ -59,14 +62,14 @@ func (img *Image) Validate() error {
 	}
 
 	// 检查 docker 的客户端是否正常
-	if _, err := img.docker.Ping(context.Background()); err != nil {
-		return err
-	}
+	//if _, err := img.docker.Ping(context.Background()); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
 
-func (img *Image) Complete() error {
+func (img *PluginController) Complete() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
@@ -83,8 +86,6 @@ func (img *Image) Complete() error {
 		}
 	}
 
-	img.exec = exec.New()
-
 	if img.Cfg.Default.PushKubernetes {
 		//cmd := []string{"sudo", "apt-get", "install", "-y", fmt.Sprintf("kubeadm=%s-00", img.Cfg.Kubernetes.Version[1:])}
 		cmd := []string{"sudo", "curl", "-LO", fmt.Sprintf("https://dl.k8s.io/release/%s/bin/linux/amd64/kubeadm", img.Cfg.Kubernetes.Version)}
@@ -100,16 +101,19 @@ func (img *Image) Complete() error {
 			return fmt.Errorf("failed to install kubeadm %v %v", string(out), err)
 		}
 	}
+
+	img.exec = exec.New()
+	img.httpClient = util.NewHttpClient(5*time.Second, img.Callback)
 	return nil
 }
 
-func (img *Image) Close() {
+func (img *PluginController) Close() {
 	if img.docker != nil {
 		_ = img.docker.Close()
 	}
 }
 
-func (img *Image) getKubeadmVersion() (string, error) {
+func (img *PluginController) getKubeadmVersion() (string, error) {
 	if _, err := img.exec.LookPath(Kubeadm); err != nil {
 		return "", fmt.Errorf("failed to find %s %v", Kubeadm, err)
 	}
@@ -129,7 +133,7 @@ func (img *Image) getKubeadmVersion() (string, error) {
 	return kubeadmVersion.ClientVersion.GitVersion, nil
 }
 
-func (img *Image) cleanImages(in []byte) []byte {
+func (img *PluginController) cleanImages(in []byte) []byte {
 	inStr := string(in)
 	if !strings.Contains(inStr, IgnoreKey) {
 		return in
@@ -149,7 +153,7 @@ func (img *Image) cleanImages(in []byte) []byte {
 	return []byte(newInStr)
 }
 
-func (img *Image) getImages() ([]string, error) {
+func (img *PluginController) getImages() ([]string, error) {
 	cmd := []string{Kubeadm, "config", "images", "list", "--kubernetes-version", img.KubernetesVersion, "-o", "json"}
 	out, err := img.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
@@ -166,14 +170,14 @@ func (img *Image) getImages() ([]string, error) {
 	return kubeadmImage.Images, nil
 }
 
-func (img *Image) parseTargetImage(imageToPush string) (string, error) {
+func (img *PluginController) parseTargetImage(imageToPush string) (string, error) {
 	// real image to push
 	parts := strings.Split(imageToPush, "/")
 
-	return img.Register.Repository + "/" + img.Register.Namespace + "/" + parts[len(parts)-1], nil
+	return img.Registry.Repository + "/" + img.Registry.Namespace + "/" + parts[len(parts)-1], nil
 }
 
-func (img *Image) doPushImage(imageToPush string) error {
+func (img *PluginController) doPushImage(imageToPush string) error {
 	targetImage, err := img.parseTargetImage(imageToPush)
 	if err != nil {
 		return err
@@ -205,7 +209,7 @@ func (img *Image) doPushImage(imageToPush string) error {
 	klog.Infof("complete push image %s", imageToPush)
 	return nil
 }
-func (img *Image) getImagesFromFile() ([]string, error) {
+func (img *PluginController) getImagesFromFile() ([]string, error) {
 	var imgs []string
 	for _, i := range img.Cfg.Images {
 		imageStr := strings.TrimSpace(i)
@@ -222,7 +226,7 @@ func (img *Image) getImagesFromFile() ([]string, error) {
 	return imgs, nil
 }
 
-func (img *Image) PushImages() error {
+func (img *PluginController) Run() error {
 	var images []string
 
 	if img.Cfg.Default.PushKubernetes {
@@ -246,9 +250,9 @@ func (img *Image) PushImages() error {
 	errCh := make(chan error, diff)
 
 	// 登陆
-	cmd := []string{"docker", "login", "-u", img.Register.Username, "-p", img.Register.Password}
-	if img.Register.Repository != "" {
-		cmd = append(cmd, img.Register.Repository)
+	cmd := []string{"docker", "login", "-u", img.Registry.Username, "-p", img.Registry.Password}
+	if img.Registry.Repository != "" {
+		cmd = append(cmd, img.Registry.Repository)
 	}
 	out, err := img.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
@@ -275,5 +279,9 @@ func (img *Image) PushImages() error {
 	default:
 	}
 
+	return nil
+}
+
+func (img *PluginController) ReportStatus() error {
 	return nil
 }

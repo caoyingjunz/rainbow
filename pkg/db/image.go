@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"gorm.io/gorm/clause"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 type ImageInterface interface {
 	Create(ctx context.Context, object *model.Image) (*model.Image, error)
+	Update(ctx context.Context, imageId int64, resourceVersion int64, updates map[string]interface{}) error
 	Delete(ctx context.Context, imageId int64) error
 	Get(ctx context.Context, imageId int64) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
@@ -38,6 +40,21 @@ func (a *image) Create(ctx context.Context, object *model.Image) (*model.Image, 
 		return nil, err
 	}
 	return object, nil
+}
+
+func (a *image) Update(ctx context.Context, imageId int64, resourceVersion int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := a.db.WithContext(ctx).Model(&model.Image{}).Where("id = ? and resource_version = ?", imageId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
 }
 
 func (a *image) CreateInBatch(ctx context.Context, objects []model.Image) error {

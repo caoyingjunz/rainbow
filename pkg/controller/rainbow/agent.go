@@ -129,8 +129,9 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		},
 		Plugin: template.PluginOption{
 			Callback: s.callback,
+			TaskId:   taskId,
 		},
-		Register: template.Register{
+		Registry: template.Registry{
 			Repository: registry.Repository,
 			Namespace:  registry.Namespace,
 			Username:   registry.Username,

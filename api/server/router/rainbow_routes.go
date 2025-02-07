@@ -1,9 +1,9 @@
 package router
 
 import (
-	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/gin-gonic/gin"
 
+	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
@@ -146,14 +146,16 @@ func (cr *rainbowRouter) updateImage(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		req types.UpdateImageRequest
-		err error
+		idMeta types.IdMeta
+		req    types.UpdateImageRequest
+		err    error
 	)
-	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
 
+	req.Id = idMeta.ID
 	if err = cr.c.Server().UpdateImage(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -174,7 +176,7 @@ func (cr *rainbowRouter) getImage(c *gin.Context) {
 		return
 	}
 
-	if resp.Result, err = cr.c.Server().GetImag(c, idMeta.ID); err != nil {
+	if resp.Result, err = cr.c.Server().GetImage(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -185,8 +187,16 @@ func (cr *rainbowRouter) getImage(c *gin.Context) {
 func (cr *rainbowRouter) listImages(c *gin.Context) {
 	resp := httputils.NewResponse()
 
-	var err error
-	if resp.Result, err = cr.c.Server().ListImages(c); err != nil {
+	var (
+		taskMeta types.TaskMeta
+		err      error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &taskMeta); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().ListImages(c, taskMeta.TaskId); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

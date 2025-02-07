@@ -4,7 +4,7 @@ type PluginTemplateConfig struct {
 	Default    DefaultOption    `yaml:"default"`
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
 	Plugin     PluginOption     `yaml:"plugin"`
-	Register   Register         `yaml:"registry"`
+	Registry   Registry         `yaml:"registry"`
 	Images     []string         `yaml:"images"`
 }
 
@@ -19,9 +19,10 @@ type KubernetesOption struct {
 
 type PluginOption struct {
 	Callback string `yaml:"callback"`
+	TaskId   int64  `yaml:"task_id"`
 }
 
-type Register struct {
+type Registry struct {
 	Repository string `yaml:"repository"`
 	Namespace  string `yaml:"namespace"`
 	Username   string `yaml:"username"`

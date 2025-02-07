@@ -17,10 +17,18 @@ type (
 	}
 
 	CreateImageRequest struct {
-		TaskId int64 `json:"task_id"`
+		TaskId  int64  `json:"task_id"`
+		Name    string `json:"name"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
 	}
 
 	UpdateImageRequest struct {
-		TaskId int64 `json:"task_id"`
+		Id              int64  `json:"id"`
+		TaskId          int64  `json:"task_id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Name            string `json:"name"`
+		Status          string `json:"status"`
+		Message         string `json:"message"`
 	}
 )

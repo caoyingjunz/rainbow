@@ -4,6 +4,7 @@ default:
 
 plugin:
   callback: 127.0.0.1:8090
+  task_id: 123456
 
 registry:
   repository: harbor.cloud.pixiuio.com

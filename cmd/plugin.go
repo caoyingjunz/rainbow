@@ -6,7 +6,7 @@ import (
 	"github.com/caoyingjunz/pixiulib/config"
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/rainbow/cmd/app/options"
+	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/controller/plugin"
 )
 
@@ -22,22 +22,21 @@ func main() {
 	c.SetConfigFile(*pluginFile)
 	c.SetConfigType("yaml")
 
-	var cfg options.Config
+	var cfg rainbowconfig.Config
 	if err := c.Binding(&cfg); err != nil {
 		klog.Fatal(err)
 	}
-	img := plugin.Image{
-		Cfg:      cfg,
-		Register: cfg.Register,
-	}
-	if err := img.Complete(); err != nil {
+	pc := plugin.PluginController{Cfg: cfg, Registry: cfg.Registry}
+	if err := pc.Complete(); err != nil {
 		klog.Fatal(err)
 	}
-	defer img.Close()
-	if err := img.Validate(); err != nil {
+	defer pc.Close()
+
+	if err := pc.Validate(); err != nil {
 		klog.Fatal(err)
 	}
-	if err := img.PushImages(); err != nil {
+
+	if err := pc.Run(); err != nil {
 		klog.Fatal(err)
 	}
 }
