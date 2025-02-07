@@ -72,7 +72,18 @@ func (s *AgentController) syncStatus(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		err := s.factory.Agent().UpdateByName(ctx, s.name, map[string]interface{}{"last_transition_time": time.Now(), "status": model.RunAgentType})
+		newAgent, err := s.factory.Agent().GetByName(ctx, s.name)
+		if err != nil {
+			klog.Error("failed to get agent status %v", err)
+			continue
+		}
+
+		updates := map[string]interface{}{"last_transition_time": time.Now()}
+		if newAgent.Status == model.ErrorAgentType {
+			updates["status"] = model.RunAgentType
+		}
+
+		err = s.factory.Agent().UpdateByName(ctx, s.name, updates)
 		if err != nil {
 			klog.Error("failed to sync agent status %v", err)
 		}
