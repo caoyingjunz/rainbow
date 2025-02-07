@@ -22,7 +22,7 @@ type ServerInterface interface {
 
 	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
 	UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error
-	GetImag(ctx context.Context, imageId int64) (interface{}, error)
+	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context) (interface{}, error)
 }
 
