@@ -40,14 +40,15 @@ func (c *httpClient) Get(url string, val interface{}) error {
 		return fmt.Errorf("error resp %s", resp.Status)
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	if val != nil {
+		d, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(d, val); err != nil {
+			return err
+		}
 	}
-	if err = json.Unmarshal(data, val); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -72,14 +73,15 @@ func (c *httpClient) Post(url string, val interface{}, data map[string]interface
 		return fmt.Errorf("error resp %s", resp.Status)
 	}
 
-	d, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	if val != nil {
+		d, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(d, val); err != nil {
+			return err
+		}
 	}
-	if err = json.Unmarshal(d, val); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -104,12 +106,14 @@ func (c *httpClient) Put(url string, val interface{}, data map[string]interface{
 		return fmt.Errorf("error resp %s", resp.Status)
 	}
 
-	d, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(d, val); err != nil {
-		return err
+	if val != nil {
+		d, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(d, val); err != nil {
+			return err
+		}
 	}
 
 	return nil

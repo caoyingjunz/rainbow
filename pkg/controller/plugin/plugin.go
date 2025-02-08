@@ -295,11 +295,16 @@ func (p *PluginController) Run() error {
 func (p *PluginController) ReportImage() error {
 	url := p.Callback + "/rainbow/agents"
 
-	var result []model.Agent
+	var result struct {
+		Code   int
+		Result []model.Agent
+	}
 	if err := p.httpClient.Get(url, &result); err != nil {
 		fmt.Println("err", err)
 		return err
 	}
+
+	fmt.Println("result", result)
 
 	return nil
 }
