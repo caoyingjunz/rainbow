@@ -18,6 +18,7 @@ import (
 const (
 	defaultConfigFile = "/etc/rainbow/config.yaml"
 	defaultDataDir    = "/data"
+	defaultListen     = 8090
 
 	maxIdleConns = 10
 	maxOpenConns = 100
@@ -63,6 +64,9 @@ func (o *Options) Complete() error {
 
 	if len(o.ComponentConfig.Agent.DataDir) == 0 {
 		o.ComponentConfig.Agent.DataDir = defaultDataDir
+	}
+	if o.ComponentConfig.Default.Listen == 0 {
+		o.ComponentConfig.Default.Listen = defaultListen
 	}
 
 	// 注册依赖组件

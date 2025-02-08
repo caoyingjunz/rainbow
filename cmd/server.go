@@ -40,7 +40,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", 8090),
+		Addr:    fmt.Sprintf(":%d", opts.ComponentConfig.Default.Listen),
 		Handler: opts.HttpEngine,
 	}
 	// 安装 http 路由

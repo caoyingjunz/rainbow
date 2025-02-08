@@ -1,4 +1,5 @@
 default:
+  listen: 8090
   push_kubernetes: false
   push_images: false
 

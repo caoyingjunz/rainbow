@@ -14,6 +14,7 @@ type Config struct {
 }
 
 type DefaultOption struct {
+	Listen         int  `yaml:"listen"`
 	PushKubernetes bool `yaml:"push_kubernetes"`
 	PushImages     bool `yaml:"push_images"`
 }
