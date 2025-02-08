@@ -12,7 +12,7 @@ type Registry struct {
 	rainbow.Model
 
 	// 所属用户
-	UserId     int64  `gorm:"index:idx_user" json:"user_id"`
+	UserId     string `gorm:"index:idx_user" json:"user_id"`
 	Repository string `json:"repository"`
 	Namespace  string `json:"namespace"`
 	Username   string `json:"username"`
