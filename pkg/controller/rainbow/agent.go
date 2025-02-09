@@ -68,7 +68,7 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 }
 
 func (s *AgentController) report(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {

@@ -32,6 +32,9 @@ func main() {
 		klog.Fatal(err)
 	}
 
+	// 安装 http 路由
+	router.InstallRouters(opts)
+
 	runers := []func(context.Context, int) error{opts.Controller.Server().Run}
 	for _, runner := range runers {
 		if err = runner(context.TODO(), 5); err != nil {
@@ -43,9 +46,6 @@ func main() {
 		Addr:    fmt.Sprintf(":%d", opts.ComponentConfig.Default.Listen),
 		Handler: opts.HttpEngine,
 	}
-	// 安装 http 路由
-	router.InstallRouters(opts)
-
 	go func() {
 		err = srv.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {

@@ -309,6 +309,7 @@ func (p *PluginController) ReportImage() error {
 	return nil
 }
 
-func (p *PluginController) ReportTask() error {
+func (p *PluginController) SyncTaskStatus(status string) error {
+
 	return nil
 }

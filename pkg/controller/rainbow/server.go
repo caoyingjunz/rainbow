@@ -19,6 +19,7 @@ type ServerInterface interface {
 	ListRegistries(ctx context.Context) (interface{}, error)
 
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
+	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)

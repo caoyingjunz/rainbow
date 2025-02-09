@@ -27,7 +27,33 @@ func (cr *rainbowRouter) createTask(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) updateTask(c *gin.Context) {}
+func (cr *rainbowRouter) updateTask(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) UpdateTaskStatus(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		req    types.UpdateTaskStatusRequest
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	req.TaskId = idMeta.ID
+	if err = cr.c.Server().UpdateTaskStatus(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
 
 func (cr *rainbowRouter) deleteTask(c *gin.Context) {}
 

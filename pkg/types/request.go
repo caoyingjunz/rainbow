@@ -8,6 +8,19 @@ type (
 		AgentName  string   `json:"agent_name"`
 	}
 
+	UpdateTaskRequest struct {
+		UserId          int64  `json:"user_id"`
+		ResourceVersion int64  `json:"resource_version"`
+		RegisterId      int64  `json:"register_id"`
+		AgentName       string `json:"agent_name"`
+		Status          string `json:"status"`
+	}
+
+	UpdateTaskStatusRequest struct {
+		TaskId int64  `json:"task_id"`
+		Status string `json:"status"`
+	}
+
 	CreateRegistryRequest struct {
 		UserId     string `json:"user_id"`
 		Repository string `json:"repository"`

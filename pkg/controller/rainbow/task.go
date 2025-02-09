@@ -39,6 +39,11 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	return nil
 }
 
+func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
+	fmt.Println("ddd", req)
+	return nil
+}
+
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
 	_ = s.factory.Image().DeleteInBatch(ctx, taskId)
 	_ = s.factory.Task().Delete(ctx, taskId)
