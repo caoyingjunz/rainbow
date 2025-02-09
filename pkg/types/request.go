@@ -17,8 +17,9 @@ type (
 	}
 
 	UpdateTaskStatusRequest struct {
-		TaskId int64  `json:"task_id"`
-		Status string `json:"status"`
+		TaskId  int64  `json:"task_id"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
 	}
 
 	CreateRegistryRequest struct {

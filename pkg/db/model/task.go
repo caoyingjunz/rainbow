@@ -14,8 +14,9 @@ type Task struct {
 	UserId     int64  `json:"user_id"`
 	RegisterId int64  `json:"register_id"`
 	AgentName  string `json:"agent_name"`
-	Status     string `json:"status"`
 	Process    int    `json:"process"`
+	Status     string `json:"status"`
+	Message    string `json:"message"`
 }
 
 func (t *Task) TableName() string {

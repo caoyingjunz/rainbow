@@ -40,7 +40,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
-	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status})
+	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message})
 }
 
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {

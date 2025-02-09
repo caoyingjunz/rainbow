@@ -16,7 +16,6 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/config"
-	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
@@ -38,6 +37,8 @@ type KubeadmImage struct {
 type PluginController struct {
 	KubernetesVersion string
 	Callback          string
+	TaskId            int64
+	Synced            bool
 
 	httpClient util.HttpInterface
 	exec       exec.Interface
@@ -50,6 +51,8 @@ type PluginController struct {
 func NewPluginController(cfg config.Config) *PluginController {
 	return &PluginController{
 		Callback:   cfg.Plugin.Callback,
+		TaskId:     cfg.Plugin.TaskId,
+		Synced:     cfg.Plugin.Synced,
 		httpClient: util.NewHttpClient(5*time.Second, cfg.Plugin.Callback),
 	}
 }
@@ -77,9 +80,7 @@ func (p *PluginController) Validate() error {
 	return nil
 }
 
-func (p *PluginController) Complete() error {
-	p.ReportImage()
-
+func (p *PluginController) doComplete() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
@@ -115,6 +116,18 @@ func (p *PluginController) Complete() error {
 	p.exec = exec.New()
 	p.Registry = p.Cfg.Registry
 	return nil
+}
+
+func (p *PluginController) Complete() error {
+	_ = p.SyncTaskStatus("初始化", "初始化同步环境")
+
+	status, msg := "初始化成功", "初始化环境完成"
+	var err error
+	if err = p.doComplete(); err != nil {
+		status, msg = "初始化失败", err.Error()
+	}
+	_ = p.SyncTaskStatus(status, msg)
+	return err
 }
 
 func (p *PluginController) Close() {
@@ -292,24 +305,24 @@ func (p *PluginController) Run() error {
 	return nil
 }
 
-func (p *PluginController) ReportImage() error {
-	url := p.Callback + "/rainbow/agents"
-
-	var result struct {
-		Code   int
-		Result []model.Agent
-	}
-	if err := p.httpClient.Get(url, &result); err != nil {
-		fmt.Println("err", err)
-		return err
+func (p *PluginController) SyncTaskStatus(status, msg string) error {
+	if !p.Synced {
+		return nil
 	}
 
-	fmt.Println("result", result)
-
-	return nil
+	return p.httpClient.Put(
+		fmt.Sprintf("%s/rainbow/tasks/%d/status", p.Callback, p.TaskId),
+		nil,
+		map[string]interface{}{"status": status, "message": msg})
 }
 
-func (p *PluginController) SyncTaskStatus(status string) error {
+func (p *PluginController) SyncImageStatus(status, msg string) error {
+	if !p.Synced {
+		return nil
+	}
 
-	return nil
+	return p.httpClient.Put(
+		fmt.Sprintf("%s/rainbow/images/%d/status", p.Callback, p.TaskId),
+		nil,
+		map[string]interface{}{"status": status, "message": msg})
 }
