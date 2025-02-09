@@ -44,4 +44,10 @@ type (
 		Status          string `json:"status"`
 		Message         string `json:"message"`
 	}
+
+	UpdateImageStatusRequest struct {
+		Id      int64  `json:"id"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
 )

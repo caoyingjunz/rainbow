@@ -26,6 +26,13 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 	return s.factory.Image().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
 
+func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
+	return s.factory.Image().UpdateDirectly(ctx, req.Id, map[string]interface{}{
+		"status":  req.Status,
+		"message": req.Message,
+	})
+}
+
 func (s *ServerController) ListImages(ctx context.Context, taskId int64) (interface{}, error) {
 	if taskId == 0 {
 		return s.factory.Image().List(ctx)

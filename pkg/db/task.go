@@ -18,6 +18,8 @@ type TaskInterface interface {
 	Get(ctx context.Context, taskId int64) (*model.Task, error)
 	List(ctx context.Context, opts ...Options) ([]model.Task, error)
 
+	UpdateDirectly(ctx context.Context, taskId int64, updates map[string]interface{}) error
+
 	GetOne(ctx context.Context, taskId int64, resourceVersion int64) (*model.Task, error)
 	AssignToAgent(ctx context.Context, taskId int64, agentName string) error
 	ListWithAgent(ctx context.Context, agentName string, process int, opts ...Options) ([]model.Task, error)
@@ -47,6 +49,19 @@ func (a *task) Update(ctx context.Context, taskId int64, resourceVersion int64, 
 	updates["resource_version"] = resourceVersion + 1
 
 	f := a.db.WithContext(ctx).Model(&model.Task{}).Where("id = ? and resource_version = ?", taskId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
+}
+
+func (a *task) UpdateDirectly(ctx context.Context, taskId int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	f := a.db.WithContext(ctx).Model(&model.Task{}).Where("id = ?", taskId).Updates(updates)
 	if f.Error != nil {
 		return f.Error
 	}

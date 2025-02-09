@@ -29,6 +29,8 @@ type ServerInterface interface {
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, taskId int64) (interface{}, error)
 
+	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
+
 	Run(ctx context.Context, workers int) error
 }
 
