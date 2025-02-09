@@ -26,6 +26,7 @@ func main() {
 	if err := c.Binding(&cfg); err != nil {
 		klog.Fatal(err)
 	}
+
 	pc := plugin.NewPluginController(cfg)
 	if err := pc.Complete(); err != nil {
 		klog.Fatal(err)

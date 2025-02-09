@@ -18,7 +18,7 @@ type ImageInterface interface {
 	Get(ctx context.Context, imageId int64) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
-	UpdateDirectly(ctx context.Context, imageId int64, updates map[string]interface{}) error
+	UpdateDirectly(ctx context.Context, name string, taskId int64, updates map[string]interface{}) error
 
 	CreateInBatch(ctx context.Context, objects []model.Image) error
 	DeleteInBatch(ctx context.Context, taskId int64) error
@@ -59,9 +59,9 @@ func (a *image) Update(ctx context.Context, imageId int64, resourceVersion int64
 	return nil
 }
 
-func (a *image) UpdateDirectly(ctx context.Context, imageId int64, updates map[string]interface{}) error {
+func (a *image) UpdateDirectly(ctx context.Context, name string, taskId int64, updates map[string]interface{}) error {
 	updates["gmt_modified"] = time.Now()
-	f := a.db.WithContext(ctx).Model(&model.Image{}).Where("id = ?", imageId).Updates(updates)
+	f := a.db.WithContext(ctx).Model(&model.Image{}).Where("name = ? and task_id = ?", name, taskId).Updates(updates)
 	if f.Error != nil {
 		return f.Error
 	}

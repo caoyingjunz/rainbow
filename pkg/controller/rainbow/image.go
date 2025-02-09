@@ -27,7 +27,7 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 }
 
 func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
-	return s.factory.Image().UpdateDirectly(ctx, req.Id, map[string]interface{}{
+	return s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{
 		"status":  req.Status,
 		"message": req.Message,
 	})

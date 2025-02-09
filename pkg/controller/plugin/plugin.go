@@ -46,10 +46,71 @@ type PluginController struct {
 
 	Cfg      config.Config
 	Registry config.Registry
+	Images   []string
+
+	Runners []Runner
+}
+
+type Runner interface {
+	GetName() string
+	Run() error
+}
+
+type login struct {
+	name string
+	p    *PluginController
+}
+
+func (l *login) GetName() string {
+	return l.name
+}
+
+func (l *login) Run() error {
+	cmd := []string{"docker", "login", "-u", l.p.Registry.Username, "-p", l.p.Registry.Password}
+	if l.p.Registry.Repository != "" {
+		cmd = append(cmd, l.p.Registry.Repository)
+	}
+	out, err := l.p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to login in image %v %v", string(out), err)
+	}
+	return nil
+}
+
+type image struct {
+	name string
+	p    *PluginController
+}
+
+func (i *image) GetName() string {
+	return i.name
+}
+
+func (i *image) Run() error {
+	var images []string
+	if i.p.Cfg.Default.PushKubernetes {
+		kubeImages, err := i.p.getImages()
+		if err != nil {
+			return fmt.Errorf("获取 k8s 镜像失败: %v", err)
+		}
+		images = append(images, kubeImages...)
+	}
+
+	if i.p.Cfg.Default.PushImages {
+		fileImages, err := i.p.getImagesFromFile()
+		if err != nil {
+			return fmt.Errorf("")
+		}
+		images = append(images, fileImages...)
+	}
+
+	i.p.Images = images
+	return nil
 }
 
 func NewPluginController(cfg config.Config) *PluginController {
 	return &PluginController{
+		Cfg:        cfg,
 		Callback:   cfg.Plugin.Callback,
 		TaskId:     cfg.Plugin.TaskId,
 		Synced:     cfg.Plugin.Synced,
@@ -116,6 +177,10 @@ func (p *PluginController) doComplete() error {
 	p.exec = exec.New()
 	p.Registry = p.Cfg.Registry
 
+	p.Runners = []Runner{
+		&login{name: "Registry登陆", p: p},
+		&image{name: "解析镜像", p: p},
+	}
 	return p.Validate()
 }
 
@@ -251,46 +316,29 @@ func (p *PluginController) getImagesFromFile() ([]string, error) {
 }
 
 func (p *PluginController) Run() error {
-	var images []string
-
-	if p.Cfg.Default.PushKubernetes {
-		kubeImages, err := p.getImages()
-		if err != nil {
-			return fmt.Errorf("获取 k8s 镜像失败: %v", err)
+	for _, runner := range p.Runners {
+		name := runner.GetName()
+		if err := runner.Run(); err != nil {
+			_ = p.SyncTaskStatus(name, name+"失败")
+			return err
 		}
-		images = append(images, kubeImages...)
+		_ = p.SyncTaskStatus(name, name+"完成")
 	}
 
-	if p.Cfg.Default.PushImages {
-		fileImages, err := p.getImagesFromFile()
-		if err != nil {
-			return fmt.Errorf("")
-		}
-		images = append(images, fileImages...)
-	}
-
-	klog.V(2).Infof("get images: %v", images)
-	diff := len(images)
+	diff := len(p.Images)
 	errCh := make(chan error, diff)
-
-	// 登陆
-	cmd := []string{"docker", "login", "-u", p.Registry.Username, "-p", p.Registry.Password}
-	if p.Registry.Repository != "" {
-		cmd = append(cmd, p.Registry.Repository)
-	}
-	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to login in image %v %v", string(out), err)
-	}
 
 	var wg sync.WaitGroup
 	wg.Add(diff)
-	for _, i := range images {
+	for _, i := range p.Images {
 		go func(imageToPush string) {
 			defer wg.Done()
+			_ = p.SyncImageStatus(imageToPush, "进行中", "")
 			if err := p.doPushImage(imageToPush); err != nil {
+				_ = p.SyncImageStatus(imageToPush, "异常", err.Error())
 				errCh <- err
 			}
+			_ = p.SyncImageStatus(imageToPush, "完成", "")
 		}(i)
 	}
 	wg.Wait()
@@ -310,20 +358,18 @@ func (p *PluginController) SyncTaskStatus(status, msg string) error {
 	if !p.Synced {
 		return nil
 	}
-
 	return p.httpClient.Put(
 		fmt.Sprintf("%s/rainbow/tasks/%d/status", p.Callback, p.TaskId),
 		nil,
 		map[string]interface{}{"status": status, "message": msg})
 }
 
-func (p *PluginController) SyncImageStatus(status, msg string) error {
+func (p *PluginController) SyncImageStatus(name, status, msg string) error {
 	if !p.Synced {
 		return nil
 	}
-
 	return p.httpClient.Put(
-		fmt.Sprintf("%s/rainbow/images/%d/status", p.Callback, p.TaskId),
+		fmt.Sprintf("%s/rainbow/images/status", p.Callback),
 		nil,
-		map[string]interface{}{"status": status, "message": msg})
+		map[string]interface{}{"status": status, "message": msg, "task_id": p.TaskId, "name": name})
 }

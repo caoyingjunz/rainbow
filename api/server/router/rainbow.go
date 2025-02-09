@@ -53,6 +53,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		imageRoute.GET("/:Id", cr.getImage)
 		imageRoute.GET("", cr.listImages)
 
-		imageRoute.PUT("/:Id/status", cr.UpdateImageStatus)
+		imageRoute.PUT("/status", cr.UpdateImageStatus)
 	}
 }
