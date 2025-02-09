@@ -324,6 +324,7 @@ func (p *PluginController) Run() error {
 		}
 		_ = p.SyncTaskStatus(name, name+"完成")
 	}
+	_ = p.SyncTaskStatus("推送镜像中", "")
 
 	diff := len(p.Images)
 	errCh := make(chan error, diff)
@@ -351,6 +352,7 @@ func (p *PluginController) Run() error {
 	default:
 	}
 
+	_ = p.SyncTaskStatus("镜像推送完成", "")
 	return nil
 }
 
