@@ -78,8 +78,13 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	agents, err := s.factory.Agent().List(ctx)
+	if err != nil {
+		return err
+	}
 
 	fmt.Println("tasks", tasks)
+	fmt.Println("agents", agents)
 	return nil
 }
 
