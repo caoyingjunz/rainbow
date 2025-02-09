@@ -32,10 +32,6 @@ func main() {
 	}
 	defer pc.Close()
 
-	if err := pc.Validate(); err != nil {
-		klog.Fatal(err)
-	}
-
 	if err := pc.Run(); err != nil {
 		klog.Fatal(err)
 	}

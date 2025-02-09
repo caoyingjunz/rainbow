@@ -115,7 +115,8 @@ func (p *PluginController) doComplete() error {
 
 	p.exec = exec.New()
 	p.Registry = p.Cfg.Registry
-	return nil
+
+	return p.Validate()
 }
 
 func (p *PluginController) Complete() error {
