@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+	"fmt"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -59,7 +60,28 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
-func (s *ServerController) schedule(ctx context.Context) {}
+func (s *ServerController) schedule(ctx context.Context) {
+	klog.Infof("starting scheduler controller")
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := s.doSchedule(ctx); err != nil {
+			klog.Error("failed to do schedule %v", err)
+		}
+	}
+}
+
+func (s *ServerController) doSchedule(ctx context.Context) error {
+	tasks, err := s.factory.Task().ListWithNoAgent(ctx, 0)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("tasks", tasks)
+	return nil
+}
 
 func (s *ServerController) monitor(ctx context.Context) {
 	klog.Infof("starting agent monitor")
