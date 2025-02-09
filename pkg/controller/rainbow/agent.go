@@ -79,7 +79,7 @@ func (s *AgentController) report(ctx context.Context) {
 		}
 
 		updates := map[string]interface{}{"last_transition_time": time.Now()}
-		if newAgent.Status == model.ErrorAgentType {
+		if newAgent.Status == model.UnknownAgentType {
 			updates["status"] = model.RunAgentType
 		}
 
@@ -224,7 +224,7 @@ func (s *AgentController) RegisterAgentIfNotExist(ctx context.Context) error {
 	if err == nil {
 		return nil
 	}
-	_, err = s.factory.Agent().Create(ctx, &model.Agent{Name: s.name, Status: model.RunAgentType, Type: model.PublicAgentType})
+	_, err = s.factory.Agent().Create(ctx, &model.Agent{Name: s.name, Status: model.RunAgentType, Type: model.PublicAgentType, Message: "Agent started posting status."})
 	return err
 }
 

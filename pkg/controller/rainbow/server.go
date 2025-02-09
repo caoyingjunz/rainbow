@@ -71,10 +71,10 @@ func (s *ServerController) monitor(ctx context.Context) {
 		for _, agent := range agents {
 			diff := time.Now().Sub(agent.LastTransitionTime)
 			if diff > time.Minute*5 {
-				if agent.Status == model.ErrorAgentType {
+				if agent.Status == model.UnknownAgentType {
 					continue
 				}
-				err = s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"status": model.ErrorAgentType})
+				err = s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"status": model.UnknownAgentType, "message": "Agent stopped posting status."})
 				if err != nil {
 					klog.Error("failed to sync agent %s status %v", agent.Name, err)
 				}
