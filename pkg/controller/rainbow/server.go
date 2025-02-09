@@ -54,9 +54,12 @@ func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) 
 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.monitor(ctx)
+	go s.schedule(ctx)
 
 	return nil
 }
+
+func (s *ServerController) schedule(ctx context.Context) {}
 
 func (s *ServerController) monitor(ctx context.Context) {
 	klog.Infof("starting agent monitor")
