@@ -24,30 +24,6 @@ func NewHttpClient(timeout time.Duration, url string) *httpClient {
 	return &httpClient{timeout: timeout, url: url}
 }
 
-func (c *httpClient) NewRequest(method string, body map[string]interface{}) (*http.Request, error) {
-	client := &http.Client{Timeout: c.timeout}
-
-	var (
-		req *http.Request
-		err error
-	)
-	if method == http.MethodPost {
-		jsonData, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-		req, err = http.NewRequest(method, c.url, bytes.NewBuffer(jsonData))
-	} else {
-		req, err = http.NewRequest(method, c.url, nil)
-	}
-
-	return req, err
-}
-
-func (c *httpClient) Do() error {
-	return nil
-}
-
 func (c *httpClient) Get(url string, val interface{}) error {
 	client := &http.Client{Timeout: c.timeout}
 	req, err := http.NewRequest("", url, nil)
