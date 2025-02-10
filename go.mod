@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	gorm.io/driver/mysql v1.4.1
 	gorm.io/gorm v1.23.8
-	k8s.io/apimachinery v0.24.8
+	k8s.io/apimachinery v0.23.5
 	k8s.io/klog/v2 v2.90.1
 )
 
