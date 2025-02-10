@@ -5,7 +5,7 @@ ENV GOPROXY=https://goproxy.cn
 COPY ../go.mod ./
 COPY ../go.sum ./
 COPY .. .
-RUN CGO_ENABLED=0 go build -ldflags "-s -w -X 'main.version=${VERSION}'" -o rainbow ./cmd/server.go
+RUN CGO_ENABLED=0 go build -ldflags "-s -w -X 'main.version=${VERSION}'" -o rainbow cmd/server.go
 
 FROM busybox as runner
 LABEL MAINTAINER="PIXIU"
