@@ -100,7 +100,6 @@ func (cr *rainbowRouter) deleteRegistry(c *gin.Context) {
 	}
 
 	httputils.SetSuccess(c, resp)
-
 }
 
 func (cr *rainbowRouter) getRegistry(c *gin.Context) {
