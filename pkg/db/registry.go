@@ -37,7 +37,7 @@ func (a *registry) Create(ctx context.Context, object *model.Registry) (*model.R
 }
 
 func (a *registry) Delete(ctx context.Context, registryId int64) error {
-	return nil
+	return a.db.WithContext(ctx).Where("id = ?", registryId).Delete(&model.Registry{}).Error
 }
 
 func (a *registry) Get(ctx context.Context, registryId int64) (*model.Registry, error) {

@@ -16,6 +16,7 @@ type ServerGetter interface {
 
 type ServerInterface interface {
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
+	DeleteRegistry(ctx context.Context, registryId int64) error
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
 	ListRegistries(ctx context.Context) (interface{}, error)
 

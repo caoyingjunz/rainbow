@@ -82,7 +82,26 @@ func (cr *rainbowRouter) createRegistry(c *gin.Context) {
 
 func (cr *rainbowRouter) updateRegistry(c *gin.Context) {}
 
-func (cr *rainbowRouter) deleteRegistry(c *gin.Context) {}
+func (cr *rainbowRouter) deleteRegistry(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().DeleteRegistry(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+
+}
 
 func (cr *rainbowRouter) getRegistry(c *gin.Context) {
 	resp := httputils.NewResponse()

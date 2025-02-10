@@ -19,6 +19,10 @@ func (s *ServerController) CreateRegistry(ctx context.Context, req *types.Create
 	return err
 }
 
+func (s *ServerController) DeleteRegistry(ctx context.Context, registryId int64) error {
+	return s.factory.Registry().Delete(ctx, registryId)
+}
+
 func (s *ServerController) ListRegistries(ctx context.Context) (interface{}, error) {
 	return s.factory.Registry().List(ctx)
 }
