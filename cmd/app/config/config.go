@@ -7,6 +7,8 @@ type Config struct {
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
 	Images     []string         `yaml:"images"`
 
+	Server ServerOption `yaml:"server"`
+
 	Plugin   PluginOption `yaml:"plugin"`
 	Registry Registry     `yaml:"registry"`
 
@@ -14,9 +16,20 @@ type Config struct {
 }
 
 type DefaultOption struct {
-	Listen         int  `yaml:"listen"`
+	Listen int    `yaml:"listen"`
+	Mode   string `yaml:"mode"` // debug 和 release 模式
+
 	PushKubernetes bool `yaml:"push_kubernetes"`
 	PushImages     bool `yaml:"push_images"`
+}
+
+type ServerOption struct {
+	Auth Auth `yaml:"auth"`
+}
+
+type Auth struct {
+	AccessKey string `yaml:"access_key"`
+	SecretKey string `yaml:"secret_key"`
 }
 
 type KubernetesOption struct {
