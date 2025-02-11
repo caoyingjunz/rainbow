@@ -4,3 +4,8 @@ mysql:
   password: Pixiu868686
   port: 3306
   name: rainbow
+
+server:
+  auth:
+    access_key: access_key
+    secret_key: secret_key

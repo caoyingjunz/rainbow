@@ -3,6 +3,11 @@ default:
   push_kubernetes: false
   push_images: false
 
+server:
+  auth:
+    access_key: access_key
+    secret_key: secret_key
+
 agent:
   name: test-agent
   data_dir: /tmp
