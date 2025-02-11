@@ -18,6 +18,7 @@ import (
 const (
 	defaultConfigFile = "/etc/rainbow/config.yaml"
 	defaultDataDir    = "/data"
+	defaultMode       = "release"
 	defaultListen     = 8090
 
 	maxIdleConns = 10

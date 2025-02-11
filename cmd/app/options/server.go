@@ -53,6 +53,10 @@ func (o *ServerOptions) Complete() error {
 		klog.Fatal(err)
 	}
 
+	if len(o.ComponentConfig.Default.Mode) == 0 {
+		o.ComponentConfig.Default.Mode = defaultMode
+	}
+
 	// 注册依赖组件
 	if err := o.register(); err != nil {
 		return err
