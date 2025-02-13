@@ -16,11 +16,14 @@ type ServerGetter interface {
 
 type ServerInterface interface {
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
+	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
 	ListRegistries(ctx context.Context) (interface{}, error)
 
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
+	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error
+	ListTasks(ctx context.Context, userId string) (interface{}, error)
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
@@ -108,7 +111,7 @@ func (s *ServerController) monitor(ctx context.Context) {
 				if agent.Status == model.UnknownAgentType {
 					continue
 				}
-				err = s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"status": model.UnknownAgentType, "message": "Agent stopped posting status."})
+				err = s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"status": model.UnknownAgentType, "message": "Agent stopped posting status"})
 				if err != nil {
 					klog.Error("failed to sync agent %s status %v", agent.Name, err)
 				}

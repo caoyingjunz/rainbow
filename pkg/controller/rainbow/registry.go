@@ -19,6 +19,16 @@ func (s *ServerController) CreateRegistry(ctx context.Context, req *types.Create
 	return err
 }
 
+func (s *ServerController) UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error {
+	return s.factory.Registry().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+		"user_id":    req.UserId,
+		"repository": req.Repository,
+		"namespace":  req.Namespace,
+		"username":   req.Username,
+		"password":   req.Password,
+	})
+}
+
 func (s *ServerController) DeleteRegistry(ctx context.Context, registryId int64) error {
 	return s.factory.Registry().Delete(ctx, registryId)
 }

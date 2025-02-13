@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -11,6 +12,7 @@ import (
 
 type RegistryInterface interface {
 	Create(ctx context.Context, object *model.Registry) (*model.Registry, error)
+	Update(ctx context.Context, registryId int64, resourceVersion int64, updates map[string]interface{}) error
 	Delete(ctx context.Context, registryId int64) error
 	Get(ctx context.Context, registryId int64) (*model.Registry, error)
 	List(ctx context.Context, opts ...Options) ([]model.Registry, error)
@@ -34,6 +36,21 @@ func (a *registry) Create(ctx context.Context, object *model.Registry) (*model.R
 		return nil, err
 	}
 	return object, nil
+}
+
+func (a *registry) Update(ctx context.Context, registryId int64, resourceVersion int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := a.db.WithContext(ctx).Model(&model.Registry{}).Where("id = ? and resource_version = ?", registryId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
 }
 
 func (a *registry) Delete(ctx context.Context, registryId int64) error {

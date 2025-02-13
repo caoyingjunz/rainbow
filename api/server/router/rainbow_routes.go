@@ -30,6 +30,22 @@ func (cr *rainbowRouter) createTask(c *gin.Context) {
 func (cr *rainbowRouter) updateTask(c *gin.Context) {
 	resp := httputils.NewResponse()
 
+	var (
+		req    types.UpdateTaskRequest
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	req.Id = idMeta.ID
+	if err = cr.c.Server().UpdateTask(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
 	httputils.SetSuccess(c, resp)
 }
 
@@ -59,7 +75,25 @@ func (cr *rainbowRouter) deleteTask(c *gin.Context) {}
 
 func (cr *rainbowRouter) getTask(c *gin.Context) {}
 
-func (cr *rainbowRouter) listTasks(c *gin.Context) {}
+func (cr *rainbowRouter) listTasks(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		userMeta types.UserMeta
+		err      error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &userMeta); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().ListTasks(c, userMeta.UserId); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
 
 func (cr *rainbowRouter) createRegistry(c *gin.Context) {
 	resp := httputils.NewResponse()
@@ -80,7 +114,26 @@ func (cr *rainbowRouter) createRegistry(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) updateRegistry(c *gin.Context) {}
+func (cr *rainbowRouter) updateRegistry(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		req    types.UpdateRegistryRequest
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.Id = idMeta.ID
+	if err = cr.c.Server().UpdateRegistry(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
 
 func (cr *rainbowRouter) deleteRegistry(c *gin.Context) {
 	resp := httputils.NewResponse()

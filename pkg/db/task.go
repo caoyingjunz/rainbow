@@ -24,6 +24,7 @@ type TaskInterface interface {
 	AssignToAgent(ctx context.Context, taskId int64, agentName string) error
 	ListWithAgent(ctx context.Context, agentName string, process int, opts ...Options) ([]model.Task, error)
 	ListWithNoAgent(ctx context.Context, process int, opts ...Options) ([]model.Task, error)
+	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Task, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -135,6 +136,19 @@ func (a *task) ListWithNoAgent(ctx context.Context, process int, opts ...Options
 		tx = opt(tx)
 	}
 	if err := tx.Where("agent_name = ? and process = ?", "", process).Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *task) ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Task, error) {
+	var audits []model.Task
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Where("user_id = ?", userId).Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

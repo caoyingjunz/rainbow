@@ -1,5 +1,6 @@
 default:
   listen: 8090
+  mode: debug
   push_kubernetes: false
   push_images: false
 

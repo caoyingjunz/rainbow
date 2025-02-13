@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -10,6 +11,7 @@ import (
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
 	object, err := s.factory.Task().Create(ctx, &model.Task{
+		Name:       req.Name,
 		UserId:     req.UserId,
 		RegisterId: req.RegisterId,
 		AgentName:  req.AgentName,
@@ -37,6 +39,52 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	}
 
 	return nil
+}
+
+func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error {
+	if err := s.factory.Task().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+		"register_id": req.RegisterId,
+	}); err != nil {
+		return err
+	}
+
+	old, err := s.factory.Image().ListWithTask(ctx, req.Id)
+	if err != nil {
+		return err
+	}
+	var oldImages []string
+	for _, o := range old {
+		oldImages = append(oldImages, o.Name)
+	}
+	oldImageMap := sets.NewString(oldImages...)
+
+	var addImages []string
+	for _, n := range req.Images {
+		if oldImageMap.Has(n) {
+			continue
+		}
+		addImages = append(addImages, n)
+	}
+	var images []model.Image
+	for _, i := range addImages {
+		images = append(images, model.Image{
+			TaskId: req.Id,
+			Name:   i,
+		})
+	}
+	if err = s.factory.Image().CreateInBatch(ctx, images); err != nil {
+		return fmt.Errorf("failed to create tasks images %v", err)
+	}
+
+	return nil
+}
+
+func (s *ServerController) ListTasks(ctx context.Context, userId string) (interface{}, error) {
+	if len(userId) == 0 {
+		return s.factory.Task().List(ctx)
+	}
+
+	return s.factory.Task().ListWithUser(ctx, userId)
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {

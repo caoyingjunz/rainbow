@@ -11,7 +11,8 @@ func init() {
 type Task struct {
 	rainbow.Model
 
-	UserId     int64  `json:"user_id"`
+	Name       string `json:"name"`
+	UserId     string `json:"user_id"`
 	RegisterId int64  `json:"register_id"`
 	AgentName  string `json:"agent_name"`
 	Process    int    `json:"process"`
