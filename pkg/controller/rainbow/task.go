@@ -28,8 +28,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	var images []model.Image
 	for _, i := range req.Images {
 		images = append(images, model.Image{
-			TaskId: taskId,
-			Name:   i,
+			TaskId:   taskId,
+			TaskName: req.Name,
+			Name:     i,
 		})
 	}
 

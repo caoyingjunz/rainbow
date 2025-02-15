@@ -9,9 +9,10 @@ import (
 
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
 	_, err := s.factory.Image().Create(ctx, &model.Image{
-		TaskId: req.TaskId,
-		Name:   req.Name,
-		Status: req.Status,
+		Name:     req.Name,
+		TaskId:   req.TaskId,
+		TaskName: req.TaskName,
+		Status:   req.Status,
 	})
 
 	return err
@@ -20,6 +21,7 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error {
 	updates := make(map[string]interface{})
 	updates["task_id"] = req.TaskId
+	updates["task_name"] = req.TaskName
 	updates["name"] = req.Name
 	updates["status"] = req.Status
 	updates["message"] = req.Message
@@ -33,12 +35,18 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 	})
 }
 
-func (s *ServerController) ListImages(ctx context.Context, taskId int64) (interface{}, error) {
-	if taskId == 0 {
+func (s *ServerController) ListImages(ctx context.Context, taskId int64, userId string) (interface{}, error) {
+	if taskId == 0 && len(userId) == 0 {
 		return s.factory.Image().List(ctx)
 	}
+	if taskId != 0 && len(userId) != 0 {
+		return s.factory.Image().ListWithUserAndTask(ctx, taskId, userId)
+	}
 
-	return s.factory.Image().ListWithTask(ctx, taskId)
+	if taskId != 0 {
+		return s.factory.Image().ListWithTask(ctx, taskId)
+	}
+	return s.factory.Image().ListWithUser(ctx, userId)
 }
 
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {

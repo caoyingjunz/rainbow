@@ -23,6 +23,8 @@ type ImageInterface interface {
 	CreateInBatch(ctx context.Context, objects []model.Image) error
 	DeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
+	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Image, error)
+	ListWithUserAndTask(ctx context.Context, taskId int64, userId string, opts ...Options) ([]model.Image, error)
 }
 
 func newImage(db *gorm.DB) ImageInterface {
@@ -126,6 +128,31 @@ func (a *image) ListWithTask(ctx context.Context, taskId int64, opts ...Options)
 		tx = opt(tx)
 	}
 	if err := tx.Where("task_id = ?", taskId).Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *image) ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Image, error) {
+	var audits []model.Image
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Where("user_id = ?", userId).Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+func (a *image) ListWithUserAndTask(ctx context.Context, taskId int64, userId string, opts ...Options) ([]model.Image, error) {
+	var audits []model.Image
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Where("user_id = ? and task_id = ?", userId, taskId).Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

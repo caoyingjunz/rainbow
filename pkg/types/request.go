@@ -27,6 +27,7 @@ type (
 	}
 
 	CreateRegistryRequest struct {
+		Name       string `json:"name"`
 		UserId     string `json:"user_id"`
 		Repository string `json:"repository"`
 		Namespace  string `json:"namespace"`
@@ -37,6 +38,7 @@ type (
 	UpdateRegistryRequest struct {
 		Id              int64  `json:"id"`
 		ResourceVersion int64  `json:"resource_version"`
+		Name            string `json:"name"`
 		UserId          string `json:"user_id"`
 		Repository      string `json:"repository"`
 		Namespace       string `json:"namespace"`
@@ -45,15 +47,17 @@ type (
 	}
 
 	CreateImageRequest struct {
-		TaskId  int64  `json:"task_id"`
-		Name    string `json:"name"`
-		Status  string `json:"status"`
-		Message string `json:"message"`
+		TaskId   int64  `json:"task_id"`
+		TaskName string `json:"task_name"`
+		Name     string `json:"name"`
+		Status   string `json:"status"`
+		Message  string `json:"message"`
 	}
 
 	UpdateImageRequest struct {
 		Id              int64  `json:"id"`
 		TaskId          int64  `json:"task_id"`
+		TaskName        string `json:"task_name"`
 		ResourceVersion int64  `json:"resource_version"`
 		Name            string `json:"name"`
 		Status          string `json:"status"`
@@ -61,9 +65,10 @@ type (
 	}
 
 	UpdateImageStatusRequest struct {
-		Name    string `json:"name"`
-		TaskId  int64  `json:"task_id"`
-		Status  string `json:"status"`
-		Message string `json:"message"`
+		Name     string `json:"name"`
+		TaskId   int64  `json:"task_id"`
+		TaskName string `json:"task_name"`
+		Status   string `json:"status"`
+		Message  string `json:"message"`
 	}
 )

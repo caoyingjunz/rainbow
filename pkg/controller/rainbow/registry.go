@@ -9,6 +9,7 @@ import (
 
 func (s *ServerController) CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
 	_, err := s.factory.Registry().Create(ctx, &model.Registry{
+		Name:       req.Name,
 		UserId:     req.UserId,
 		Repository: req.Repository,
 		Namespace:  req.Namespace,
