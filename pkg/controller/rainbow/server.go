@@ -2,7 +2,6 @@ package rainbow
 
 import (
 	"context"
-	"fmt"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -66,7 +65,6 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 
 func (s *ServerController) schedule(ctx context.Context) {
 	klog.Infof("starting scheduler controller")
-
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -78,17 +76,29 @@ func (s *ServerController) schedule(ctx context.Context) {
 }
 
 func (s *ServerController) doSchedule(ctx context.Context) error {
-	tasks, err := s.factory.Task().ListWithNoAgent(ctx, 0)
+	item, err := s.factory.Task().GetOneForSchedule(ctx)
 	if err != nil {
 		return err
 	}
-	agents, err := s.factory.Agent().List(ctx)
+	if item == nil {
+		return err
+	}
+	agents, err := s.factory.Agent().ListForSchedule(ctx)
 	if err != nil {
+		return err
+	}
+	if len(agents) == 0 {
+		return nil
+	}
+
+	// TODO: 根据负载调度
+	targetAgent := agents[0]
+	if err = s.factory.Task().Update(ctx, item.Id, item.ResourceVersion, map[string]interface{}{
+		"agent_name": targetAgent.Name,
+	}); err != nil {
 		return err
 	}
 
-	fmt.Println("tasks", tasks)
-	fmt.Println("agents", agents)
 	return nil
 }
 

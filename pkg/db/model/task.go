@@ -16,6 +16,7 @@ type Task struct {
 	RegisterId int64  `json:"register_id"`
 	AgentName  string `json:"agent_name"`
 	Process    int    `json:"process"`
+	Mode       int64  `json:"mode"`
 	Status     string `json:"status"`
 	Message    string `json:"message"`
 }

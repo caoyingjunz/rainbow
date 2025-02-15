@@ -19,6 +19,7 @@ type AgentInterface interface {
 	GetByName(ctx context.Context, agentName string) (*model.Agent, error)
 	UpdateByName(ctx context.Context, agentName string, updates map[string]interface{}) error
 	List(ctx context.Context, opts ...Options) ([]model.Agent, error)
+	ListForSchedule(ctx context.Context, opts ...Options) ([]model.Agent, error)
 }
 
 func newAgent(db *gorm.DB) AgentInterface {
@@ -94,6 +95,19 @@ func (a *agent) List(ctx context.Context, opts ...Options) ([]model.Agent, error
 		tx = opt(tx)
 	}
 	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *agent) ListForSchedule(ctx context.Context, opts ...Options) ([]model.Agent, error) {
+	var audits []model.Agent
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Where("status = ?", "在线").Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

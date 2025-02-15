@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -15,6 +16,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		UserId:     req.UserId,
 		RegisterId: req.RegisterId,
 		AgentName:  req.AgentName,
+		Mode:       req.Mode,
 	})
 	if err != nil {
 		return err
@@ -45,6 +47,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error {
 	if err := s.factory.Task().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
 		"register_id": req.RegisterId,
+		"mode":        req.Mode,
 	}); err != nil {
 		return err
 	}

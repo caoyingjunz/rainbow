@@ -7,6 +7,7 @@ type (
 		RegisterId int64    `json:"register_id"`
 		Images     []string `json:"images"`
 		AgentName  string   `json:"agent_name"`
+		Mode       int64    `json:"mode"`
 	}
 
 	UpdateTaskRequest struct {
@@ -18,6 +19,7 @@ type (
 		AgentName       string   `json:"agent_name"`
 		Status          string   `json:"status"`
 		Images          []string `json:"images"`
+		Mode            int64    `json:"mode"`
 	}
 
 	UpdateTaskStatusRequest struct {
