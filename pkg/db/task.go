@@ -26,6 +26,7 @@ type TaskInterface interface {
 	ListWithNoAgent(ctx context.Context, process int, opts ...Options) ([]model.Task, error)
 	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Task, error)
 	GetOneForSchedule(ctx context.Context, opts ...Options) (*model.Task, error)
+	GetRunningTask(ctx context.Context, opts ...Options) ([]model.Task, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -158,6 +159,19 @@ func (a *task) GetOneForSchedule(ctx context.Context, opts ...Options) (*model.T
 
 	one := audits[0]
 	return &one, nil
+}
+
+func (a *task) GetRunningTask(ctx context.Context, opts ...Options) ([]model.Task, error) {
+	var audits []model.Task
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Where("process = ?", 1).Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
 }
 
 func (a *task) ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Task, error) {

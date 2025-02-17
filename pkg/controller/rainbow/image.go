@@ -32,6 +32,7 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 	return s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{
 		"status":  req.Status,
 		"message": req.Message,
+		"target":  req.Target,
 	})
 }
 

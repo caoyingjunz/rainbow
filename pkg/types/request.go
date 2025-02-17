@@ -72,5 +72,6 @@ type (
 		TaskName string `json:"task_name"`
 		Status   string `json:"status"`
 		Message  string `json:"message"`
+		Target   string `json:"target"`
 	}
 )

@@ -5,6 +5,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 	"time"
 )
@@ -83,23 +84,69 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 	if item == nil {
 		return err
 	}
-	agents, err := s.factory.Agent().ListForSchedule(ctx)
+
+	targetAgent, err := s.assignAgent(ctx)
 	if err != nil {
 		return err
 	}
-	if len(agents) == 0 {
+	if targetAgent == "" {
 		return nil
 	}
-
-	// TODO: 根据负载调度
-	targetAgent := agents[0]
 	if err = s.factory.Task().Update(ctx, item.Id, item.ResourceVersion, map[string]interface{}{
-		"agent_name": targetAgent.Name,
+		"agent_name": targetAgent,
 	}); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
+	agents, err := s.factory.Agent().ListForSchedule(ctx)
+	if err != nil {
+		return "", err
+	}
+	if len(agents) == 0 {
+		return "", nil
+	}
+
+	var agentNames []string
+	for _, agent := range agents {
+		agentNames = append(agentNames, agent.Name)
+	}
+	agentSet := sets.NewString(agentNames...)
+
+	runningTasks, err := s.factory.Task().GetRunningTask(ctx)
+	if err != nil {
+		return "", err
+	}
+	agentMap := make(map[string]int)
+	for _, t := range runningTasks {
+		if !agentSet.Has(t.AgentName) {
+			continue
+		}
+
+		old, ok := agentMap[t.AgentName]
+		if ok {
+			agentMap[t.AgentName] = old + 1
+		} else {
+			agentMap[t.AgentName] = 1
+		}
+	}
+
+	min := len(runningTasks)
+	agent := ""
+	for k, v := range agentMap {
+		if min >= v {
+			min = v
+			agent = k
+		}
+	}
+	// 一个 agent 最大并发为 10
+	if min > 10 {
+		return "", nil
+	}
+	return agent, nil
 }
 
 func (s *ServerController) monitor(ctx context.Context) {
