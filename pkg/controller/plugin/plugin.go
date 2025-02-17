@@ -266,10 +266,10 @@ func (p *PluginController) parseTargetImage(imageToPush string) (string, error) 
 	return p.Registry.Repository + "/" + p.Registry.Namespace + "/" + parts[len(parts)-1], nil
 }
 
-func (p *PluginController) doPushImage(imageToPush string) error {
+func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	targetImage, err := p.parseTargetImage(imageToPush)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	klog.Infof("starting pull image %s", imageToPush)
@@ -277,14 +277,14 @@ func (p *PluginController) doPushImage(imageToPush string) error {
 	reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
 	if err != nil {
 		klog.Errorf("failed to pull %s: %v", imageToPush, err)
-		return err
+		return "", err
 	}
 	io.Copy(os.Stdout, reader)
 
 	klog.Infof("tag %s to %s", imageToPush, targetImage)
 	if err := p.docker.ImageTag(context.TODO(), imageToPush, targetImage); err != nil {
 		klog.Errorf("failed to tag %s to %s: %v", imageToPush, targetImage, err)
-		return err
+		return "", err
 	}
 
 	klog.Infof("starting push image %s", targetImage)
@@ -292,11 +292,11 @@ func (p *PluginController) doPushImage(imageToPush string) error {
 	cmd := []string{"docker", "push", targetImage}
 	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
+		return "", fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
 	}
 
 	klog.Infof("complete push image %s", imageToPush)
-	return nil
+	return targetImage, nil
 }
 func (p *PluginController) getImagesFromFile() ([]string, error) {
 	var imgs []string
@@ -336,12 +336,13 @@ func (p *PluginController) Run() error {
 	for _, i := range p.Images {
 		go func(imageToPush string) {
 			defer wg.Done()
-			_ = p.SyncImageStatus(imageToPush, "进行中", "")
-			if err := p.doPushImage(imageToPush); err != nil {
-				_ = p.SyncImageStatus(imageToPush, "异常", err.Error())
+			_ = p.SyncImageStatus(imageToPush, "", "进行中", "")
+			target, err := p.doPushImage(imageToPush)
+			if err != nil {
+				_ = p.SyncImageStatus(imageToPush, target, "异常", err.Error())
 				errCh <- err
 			}
-			_ = p.SyncImageStatus(imageToPush, "完成", "")
+			_ = p.SyncImageStatus(imageToPush, target, "完成", "target")
 		}(i)
 	}
 	wg.Wait()
@@ -367,12 +368,12 @@ func (p *PluginController) SyncTaskStatus(status, msg string) error {
 		map[string]interface{}{"status": status, "message": msg})
 }
 
-func (p *PluginController) SyncImageStatus(name, status, msg string) error {
+func (p *PluginController) SyncImageStatus(name, target, status, msg string) error {
 	if !p.Synced {
 		return nil
 	}
 	return p.httpClient.Put(
 		fmt.Sprintf("%s/rainbow/images/status", p.Callback),
 		nil,
-		map[string]interface{}{"status": status, "message": msg, "task_id": p.TaskId, "name": name})
+		map[string]interface{}{"status": status, "message": msg, "task_id": p.TaskId, "name": name, "target": target})
 }
