@@ -26,6 +26,7 @@ type (
 		TaskId  int64  `json:"task_id"`
 		Status  string `json:"status"`
 		Message string `json:"message"`
+		Process int    `json:"process"`
 	}
 
 	CreateRegistryRequest struct {

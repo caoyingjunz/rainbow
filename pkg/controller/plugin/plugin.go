@@ -185,14 +185,12 @@ func (p *PluginController) doComplete() error {
 }
 
 func (p *PluginController) Complete() error {
-	_ = p.SyncTaskStatus("初始化", "初始化同步环境")
-
-	status, msg := "初始化成功", "初始化环境完成"
+	status, msg, process := "初始化成功", "初始化环境结束", 1
 	var err error
 	if err = p.doComplete(); err != nil {
-		status, msg = "初始化失败", err.Error()
+		status, msg, process = "初始化失败", err.Error(), 3
 	}
-	_ = p.SyncTaskStatus(status, msg)
+	_ = p.SyncTaskStatus(status, msg, process)
 	return err
 }
 
@@ -319,15 +317,14 @@ func (p *PluginController) Run() error {
 	for _, runner := range p.Runners {
 		name := runner.GetName()
 		if err := runner.Run(); err != nil {
-			_ = p.SyncTaskStatus(name, name+"失败")
+			_ = p.SyncTaskStatus(name, name+"失败", 3)
 			return err
+		} else {
+			_ = p.SyncTaskStatus(name, name+"完成", 1)
 		}
-		_ = p.SyncTaskStatus(name, name+"完成")
 	}
 
-	_ = p.SyncTaskStatus("推送镜像中", "")
-	defer p.SyncTaskStatus("镜像推送结束", "")
-
+	_ = p.SyncTaskStatus("开始推送镜像", "", 1)
 	diff := len(p.Images)
 	errCh := make(chan error, diff)
 
@@ -341,8 +338,9 @@ func (p *PluginController) Run() error {
 			if err != nil {
 				_ = p.SyncImageStatus(imageToPush, target, "异常", err.Error())
 				errCh <- err
+			} else {
+				_ = p.SyncImageStatus(imageToPush, target, "结束", "")
 			}
-			_ = p.SyncImageStatus(imageToPush, target, "完成", "target")
 		}(i)
 	}
 	wg.Wait()
@@ -350,22 +348,29 @@ func (p *PluginController) Run() error {
 	select {
 	case err := <-errCh:
 		if err != nil {
+			_ = p.SyncTaskStatus("镜像推送结束", "存在推送异常", 2)
 			return err
 		}
 	default:
 	}
 
+	_ = p.SyncTaskStatus("镜像推送结束", "推送全部结束", 2)
 	return nil
 }
 
-func (p *PluginController) SyncTaskStatus(status, msg string) error {
+// SyncTaskStatus
+// 0 未开始
+// 1 执行中
+// 2 执行成功
+// 3 执行失败
+func (p *PluginController) SyncTaskStatus(status string, msg string, process int) error {
 	if !p.Synced {
 		return nil
 	}
 	return p.httpClient.Put(
 		fmt.Sprintf("%s/rainbow/tasks/%d/status", p.Callback, p.TaskId),
 		nil,
-		map[string]interface{}{"status": status, "message": msg})
+		map[string]interface{}{"status": status, "message": msg, "process": process})
 }
 
 func (p *PluginController) SyncImageStatus(name, target, status, msg string) error {

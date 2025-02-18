@@ -2,7 +2,6 @@ package rainbow
 
 import (
 	"context"
-
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )

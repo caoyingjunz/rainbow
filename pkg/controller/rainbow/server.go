@@ -33,7 +33,6 @@ type ServerInterface interface {
 	UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, taskId int64, userId string) (interface{}, error)
-
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 
 	Run(ctx context.Context, workers int) error
@@ -107,12 +106,15 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if len(agents) == 0 {
+		klog.Warningf("不存在可用工作节点，等待下一次调度")
 		return "", nil
 	}
 
 	var agentNames []string
+	agentMap := make(map[string]int)
 	for _, agent := range agents {
 		agentNames = append(agentNames, agent.Name)
+		agentMap[agent.Name] = 0
 	}
 	agentSet := sets.NewString(agentNames...)
 
@@ -120,17 +122,15 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	agentMap := make(map[string]int)
 	for _, t := range runningTasks {
 		if !agentSet.Has(t.AgentName) {
 			continue
 		}
-
 		old, ok := agentMap[t.AgentName]
 		if ok {
 			agentMap[t.AgentName] = old + 1
 		} else {
-			agentMap[t.AgentName] = 1
+			continue
 		}
 	}
 
@@ -144,8 +144,15 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 	}
 	// 一个 agent 最大并发为 10
 	if min > 10 {
+		klog.Warningf("工作节点已满负载，等待下一次调度")
 		return "", nil
 	}
+	if agent == "" {
+		klog.Warningf("未选中工作节点，等待下一次调度")
+		return "", nil
+	}
+
+	klog.Infof("工作节点 %s 已选中", agent)
 	return agent, nil
 }
 

@@ -92,7 +92,7 @@ func (s *ServerController) ListTasks(ctx context.Context, userId string) (interf
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
-	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message})
+	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message, "process": req.Process})
 }
 
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
