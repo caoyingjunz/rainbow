@@ -128,7 +128,7 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	if err != nil {
 		s.handleErr(ctx, err, key)
 	} else {
-		_ = s.factory.Task().UpdateDirectly(ctx, taskId, map[string]interface{}{"status": "初始化", "message": "初始化环境中", "process": 1})
+		_ = s.factory.Task().UpdateDirectly(ctx, taskId, map[string]interface{}{"status": "镜像初始化", "message": "初始化环境中", "process": 1})
 		s.handleErr(ctx, s.sync(ctx, taskId, resourceVersion), key)
 	}
 	return true
