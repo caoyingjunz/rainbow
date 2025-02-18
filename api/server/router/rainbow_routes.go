@@ -1,9 +1,10 @@
 package router
 
 import (
+	"github.com/gin-gonic/gin"
+
 	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/rainbow/pkg/types"
-	"github.com/gin-gonic/gin"
 )
 
 func (cr *rainbowRouter) createTask(c *gin.Context) {
