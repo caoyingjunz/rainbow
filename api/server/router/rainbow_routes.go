@@ -71,7 +71,25 @@ func (cr *rainbowRouter) UpdateTaskStatus(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) deleteTask(c *gin.Context) {}
+func (cr *rainbowRouter) deleteTask(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().DeleteTask(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
 
 func (cr *rainbowRouter) getTask(c *gin.Context) {}
 
@@ -207,6 +225,26 @@ func (cr *rainbowRouter) getAgent(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) updateAgentStatus(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.UpdateAgentStatusRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().UpdateAgentStatus(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) listAgents(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -254,6 +292,26 @@ func (cr *rainbowRouter) updateImage(c *gin.Context) {
 
 	req.Id = idMeta.ID
 	if err = cr.c.Server().UpdateImage(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteImage(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().SoftDeleteImage(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

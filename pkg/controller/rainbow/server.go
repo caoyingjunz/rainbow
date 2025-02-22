@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+	"fmt"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -24,13 +25,16 @@ type ServerInterface interface {
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
 	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error
 	ListTasks(ctx context.Context, userId string) (interface{}, error)
+	DeleteTask(ctx context.Context, taskId int64) error
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)
+	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
 
 	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
 	UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error
+	SoftDeleteImage(ctx context.Context, imageId int64) error
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, taskId int64, userId string) (interface{}, error)
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
@@ -50,6 +54,10 @@ func NewServer(f db.ShareDaoFactory) *ServerController {
 
 func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interface{}, error) {
 	return s.factory.Agent().Get(ctx, agentId)
+}
+
+func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
+	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
 }
 
 func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) {

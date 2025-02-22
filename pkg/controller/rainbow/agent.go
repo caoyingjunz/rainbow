@@ -137,10 +137,20 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task) (*template.PluginTemplateConfig, error) {
 	taskId := task.Id
 
-	registry, err := s.factory.Registry().Get(ctx, task.RegisterId)
+	var (
+		registry *model.Registry
+		err      error
+	)
+	// 未指定自定义参考时，使用默认仓库
+	if task.RegisterId == 0 {
+		registry, err = s.factory.Registry().GetByName(ctx, "default")
+	} else {
+		registry, err = s.factory.Registry().Get(ctx, task.RegisterId)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get registry %v", err)
 	}
+
 	images, err := s.factory.Image().ListWithTask(ctx, taskId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get images %v", err)

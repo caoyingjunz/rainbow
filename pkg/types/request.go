@@ -75,4 +75,9 @@ type (
 		Message  string `json:"message"`
 		Target   string `json:"target"`
 	}
+
+	UpdateAgentStatusRequest struct {
+		AgentName string `json:"agent_name"`
+		Status    string `json:"status"`
+	}
 )

@@ -21,7 +21,7 @@ type ImageInterface interface {
 	UpdateDirectly(ctx context.Context, name string, taskId int64, updates map[string]interface{}) error
 
 	CreateInBatch(ctx context.Context, objects []model.Image) error
-	DeleteInBatch(ctx context.Context, taskId int64) error
+	SoftDeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
 	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Image, error)
 	ListWithUserAndTask(ctx context.Context, taskId int64, userId string, opts ...Options) ([]model.Image, error)
@@ -39,6 +39,7 @@ func (a *image) Create(ctx context.Context, object *model.Image) (*model.Image, 
 	now := time.Now()
 	object.GmtCreate = now
 	object.GmtModified = now
+	object.GmtDeleted = now
 
 	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
 		return nil, err
@@ -92,11 +93,15 @@ func (a *image) Delete(ctx context.Context, imageId int64) error {
 	return nil
 }
 
-func (a *image) DeleteInBatch(ctx context.Context, taskId int64) error {
-	var audit []model.Image
-	if err := a.db.WithContext(ctx).Where("task_id = ?", taskId).Delete(&audit).Error; err != nil {
-		return err
+func (a *image) SoftDeleteInBatch(ctx context.Context, taskId int64) error {
+	updates := make(map[string]interface{})
+	updates["gmt_deleted"] = time.Now()
+	updates["is_deleted"] = true
+	f := a.db.WithContext(ctx).Model(&model.Image{}).Where("task_id = ?", taskId).Updates(updates)
+	if f.Error != nil {
+		return f.Error
 	}
+
 	return nil
 }
 
@@ -114,7 +119,7 @@ func (a *image) List(ctx context.Context, opts ...Options) ([]model.Image, error
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Find(&audits).Error; err != nil {
+	if err := tx.Where("is_deleted = 0").Order("gmt_create DESC").Find(&audits).Error; err != nil {
 		return nil, err
 	}
 
@@ -127,7 +132,7 @@ func (a *image) ListWithTask(ctx context.Context, taskId int64, opts ...Options)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Where("task_id = ?", taskId).Find(&audits).Error; err != nil {
+	if err := tx.Where("task_id = ? and is_deleted = 0", taskId).Order("gmt_create DESC").Find(&audits).Error; err != nil {
 		return nil, err
 	}
 
@@ -140,7 +145,7 @@ func (a *image) ListWithUser(ctx context.Context, userId string, opts ...Options
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Where("user_id = ?", userId).Find(&audits).Error; err != nil {
+	if err := tx.Where("user_id = ? and is_deleted = 0", userId).Order("gmt_create DESC").Find(&audits).Error; err != nil {
 		return nil, err
 	}
 
@@ -152,7 +157,7 @@ func (a *image) ListWithUserAndTask(ctx context.Context, taskId int64, userId st
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Where("user_id = ? and task_id = ?", userId, taskId).Find(&audits).Error; err != nil {
+	if err := tx.Where("user_id = ? and task_id = ? and is_deleted = 0", userId, taskId).Order("gmt_create DESC").Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

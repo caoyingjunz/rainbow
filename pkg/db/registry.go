@@ -17,6 +17,8 @@ type RegistryInterface interface {
 	Get(ctx context.Context, registryId int64) (*model.Registry, error)
 	List(ctx context.Context, opts ...Options) ([]model.Registry, error)
 	ListWithUser(ctx context.Context, userId int64, opts ...Options) ([]model.Registry, error)
+
+	GetByName(ctx context.Context, registryName string) (*model.Registry, error)
 }
 
 func newRegistry(db *gorm.DB) RegistryInterface {
@@ -60,6 +62,14 @@ func (a *registry) Delete(ctx context.Context, registryId int64) error {
 func (a *registry) Get(ctx context.Context, registryId int64) (*model.Registry, error) {
 	var audit model.Registry
 	if err := a.db.WithContext(ctx).Where("id = ?", registryId).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
+func (a *registry) GetByName(ctx context.Context, registryName string) (*model.Registry, error) {
+	var audit model.Registry
+	if err := a.db.WithContext(ctx).Where("name = ? and role = ?", registryName, 1).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil

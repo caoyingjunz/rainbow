@@ -95,8 +95,12 @@ func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.Upda
 	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message, "process": req.Process})
 }
 
+func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
+	return s.DeleteTaskWithImages(ctx, taskId)
+}
+
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
-	_ = s.factory.Image().DeleteInBatch(ctx, taskId)
+	_ = s.factory.Image().SoftDeleteInBatch(ctx, taskId)
 	_ = s.factory.Task().Delete(ctx, taskId)
 	return nil
 }

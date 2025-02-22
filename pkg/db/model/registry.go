@@ -13,6 +13,7 @@ type Registry struct {
 
 	Name       string `json:"name"`
 	UserId     string `gorm:"index:idx_user" json:"user_id"` // 所属用户
+	Role       int    `json:"role"`                          // 0. 常规权限 1. 超级权限
 	Repository string `json:"repository"`
 	Namespace  string `json:"namespace"`
 	Username   string `json:"username"`

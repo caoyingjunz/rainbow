@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"time"
 )
 
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
@@ -32,6 +33,22 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 		"status":  req.Status,
 		"message": req.Message,
 		"target":  req.Target,
+	})
+}
+
+// SoftDeleteImage 软删除
+func (s *ServerController) SoftDeleteImage(ctx context.Context, imageId int64) error {
+	old, err := s.factory.Image().Get(ctx, imageId)
+	if err != nil {
+		return err
+	}
+	if old.IsDeleted {
+		return nil
+	}
+
+	return s.factory.Image().Update(ctx, imageId, old.ResourceVersion, map[string]interface{}{
+		"gmt_deleted": time.Now(),
+		"is_deleted":  true,
 	})
 }
 

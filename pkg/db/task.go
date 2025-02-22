@@ -77,7 +77,7 @@ func (a *task) UpdateDirectly(ctx context.Context, taskId int64, updates map[str
 }
 
 func (a *task) Delete(ctx context.Context, taskId int64) error {
-	return nil
+	return a.db.WithContext(ctx).Where("id = ?", taskId).Delete(&model.Image{}).Error
 }
 
 func (a *task) Get(ctx context.Context, agentId int64) (*model.Task, error) {
@@ -111,6 +111,7 @@ func (a *task) List(ctx context.Context, opts ...Options) ([]model.Task, error) 
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
+
 	if err := tx.Find(&audits).Error; err != nil {
 		return nil, err
 	}
@@ -180,7 +181,8 @@ func (a *task) ListWithUser(ctx context.Context, userId string, opts ...Options)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Where("user_id = ?", userId).Find(&audits).Error; err != nil {
+
+	if err := tx.Where("user_id = ?", userId).Order("gmt_create DESC").Find(&audits).Error; err != nil {
 		return nil, err
 	}
 
