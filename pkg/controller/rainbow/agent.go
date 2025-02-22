@@ -148,6 +148,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		registry, err = s.factory.Registry().Get(ctx, task.RegisterId)
 	}
 	if err != nil {
+		klog.Error("failed to get registry %v", err)
 		return nil, fmt.Errorf("failed to get registry %v", err)
 	}
 
