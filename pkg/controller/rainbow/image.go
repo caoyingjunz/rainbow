@@ -56,6 +56,7 @@ func (s *ServerController) ListImages(ctx context.Context, taskId int64, userId 
 	if taskId == 0 && len(userId) == 0 {
 		return s.factory.Image().List(ctx)
 	}
+
 	if taskId != 0 && len(userId) != 0 {
 		return s.factory.Image().ListWithUserAndTask(ctx, taskId, userId)
 	}

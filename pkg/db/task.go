@@ -77,7 +77,7 @@ func (a *task) UpdateDirectly(ctx context.Context, taskId int64, updates map[str
 }
 
 func (a *task) Delete(ctx context.Context, taskId int64) error {
-	return a.db.WithContext(ctx).Where("id = ?", taskId).Delete(&model.Image{}).Error
+	return a.db.WithContext(ctx).Where("id = ?", taskId).Delete(&model.Task{}).Error
 }
 
 func (a *task) Get(ctx context.Context, agentId int64) (*model.Task, error) {

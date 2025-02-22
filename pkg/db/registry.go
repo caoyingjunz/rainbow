@@ -16,7 +16,7 @@ type RegistryInterface interface {
 	Delete(ctx context.Context, registryId int64) error
 	Get(ctx context.Context, registryId int64) (*model.Registry, error)
 	List(ctx context.Context, opts ...Options) ([]model.Registry, error)
-	ListWithUser(ctx context.Context, userId int64, opts ...Options) ([]model.Registry, error)
+	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Registry, error)
 
 	GetByName(ctx context.Context, registryName string) (*model.Registry, error)
 }
@@ -88,7 +88,7 @@ func (a *registry) List(ctx context.Context, opts ...Options) ([]model.Registry,
 	return audits, nil
 }
 
-func (a *registry) ListWithUser(ctx context.Context, userId int64, opts ...Options) ([]model.Registry, error) {
+func (a *registry) ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Registry, error) {
 	var audits []model.Registry
 	tx := a.db.WithContext(ctx)
 	for _, opt := range opts {

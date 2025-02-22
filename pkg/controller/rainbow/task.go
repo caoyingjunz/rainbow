@@ -32,6 +32,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		images = append(images, model.Image{
 			TaskId:   taskId,
 			TaskName: req.Name,
+			UserId:   req.UserId,
 			Name:     i,
 		})
 	}

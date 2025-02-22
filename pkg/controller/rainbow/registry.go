@@ -34,8 +34,12 @@ func (s *ServerController) DeleteRegistry(ctx context.Context, registryId int64)
 	return s.factory.Registry().Delete(ctx, registryId)
 }
 
-func (s *ServerController) ListRegistries(ctx context.Context) (interface{}, error) {
-	return s.factory.Registry().List(ctx)
+func (s *ServerController) ListRegistries(ctx context.Context, userId string) (interface{}, error) {
+	if len(userId) == 0 {
+		return s.factory.Registry().List(ctx)
+	}
+
+	return s.factory.Registry().ListWithUser(ctx, userId)
 }
 
 func (s *ServerController) GetRegistry(ctx context.Context, registryId int64) (interface{}, error) {

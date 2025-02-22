@@ -17,6 +17,7 @@ type Image struct {
 	Name     string `json:"name"`
 	Target   string `json:"target"`
 	TaskId   int64  `gorm:"index:idx_task" json:"task_id"`
+	UserId   string `json:"user_id"`
 	TaskName string `json:"task_name"`
 	Status   string `json:"status"`
 	Message  string `json:"message"`

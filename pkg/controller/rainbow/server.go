@@ -20,7 +20,7 @@ type ServerInterface interface {
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
-	ListRegistries(ctx context.Context) (interface{}, error)
+	ListRegistries(ctx context.Context, userId string) (interface{}, error)
 
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
 	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error

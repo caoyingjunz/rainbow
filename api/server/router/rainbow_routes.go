@@ -196,8 +196,16 @@ func (cr *rainbowRouter) getRegistry(c *gin.Context) {
 func (cr *rainbowRouter) listRegistries(c *gin.Context) {
 	resp := httputils.NewResponse()
 
-	var err error
-	if resp.Result, err = cr.c.Server().ListRegistries(c); err != nil {
+	var (
+		err      error
+		userMeta types.UserMeta
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &userMeta); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().ListRegistries(c, userMeta.UserId); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -367,7 +375,7 @@ func (cr *rainbowRouter) listImages(c *gin.Context) {
 		taskMeta types.TaskMeta
 		err      error
 	)
-	if err = httputils.ShouldBindAny(c, nil, &userMeta, &taskMeta); err != nil {
+	if err = httputils.ShouldBindAny(c, nil, nil, &userMeta); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
