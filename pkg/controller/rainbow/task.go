@@ -17,6 +17,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		RegisterId: req.RegisterId,
 		AgentName:  req.AgentName,
 		Mode:       req.Mode,
+		Status:     "等待执行",
 	})
 	if err != nil {
 		return err
