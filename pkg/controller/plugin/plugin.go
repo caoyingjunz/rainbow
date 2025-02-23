@@ -324,7 +324,7 @@ func (p *PluginController) Run() error {
 		}
 	}
 
-	_ = p.SyncTaskStatus("开始推送镜像", "", 1)
+	_ = p.SyncTaskStatus("开始同步镜像", "", 1)
 	diff := len(p.Images)
 	errCh := make(chan error, diff)
 
@@ -333,13 +333,13 @@ func (p *PluginController) Run() error {
 	for _, i := range p.Images {
 		go func(imageToPush string) {
 			defer wg.Done()
-			_ = p.SyncImageStatus(imageToPush, "", "进行中", "")
+			_ = p.SyncImageStatus(imageToPush, "", "同步进行中", "")
 			target, err := p.doPushImage(imageToPush)
 			if err != nil {
-				_ = p.SyncImageStatus(imageToPush, target, "异常", err.Error())
+				_ = p.SyncImageStatus(imageToPush, target, "同步异常", err.Error())
 				errCh <- err
 			} else {
-				_ = p.SyncImageStatus(imageToPush, target, "结束", "")
+				_ = p.SyncImageStatus(imageToPush, target, "同步完成", "")
 			}
 		}(i)
 	}
@@ -348,13 +348,13 @@ func (p *PluginController) Run() error {
 	select {
 	case err := <-errCh:
 		if err != nil {
-			_ = p.SyncTaskStatus("镜像推送结束", "存在推送异常", 2)
+			_ = p.SyncTaskStatus("镜像同步结束", "存在镜像同步异常", 2)
 			return err
 		}
 	default:
 	}
 
-	_ = p.SyncTaskStatus("镜像推送结束", "推送全部结束", 2)
+	_ = p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
 	return nil
 }
 
