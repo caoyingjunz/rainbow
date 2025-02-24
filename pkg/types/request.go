@@ -2,24 +2,28 @@ package types
 
 type (
 	CreateTaskRequest struct {
-		Name       string   `json:"name"`
-		UserId     string   `json:"user_id"`
-		RegisterId int64    `json:"register_id"`
-		Images     []string `json:"images"`
-		AgentName  string   `json:"agent_name"`
-		Mode       int64    `json:"mode"`
+		Name              string   `json:"name"`
+		UserId            string   `json:"user_id"`
+		RegisterId        int64    `json:"register_id"`
+		Type              int      `json:"type"` // 0：直接指定镜像列表 1: 指定 kubernetes 版本
+		KubernetesVersion string   `json:"kubernetes_version"`
+		Images            []string `json:"images"`
+		AgentName         string   `json:"agent_name"`
+		Mode              int64    `json:"mode"`
 	}
 
 	UpdateTaskRequest struct {
-		Id              int64    `json:"id"`
-		ResourceVersion int64    `json:"resource_version"`
-		Name            string   `json:"name"`
-		UserId          string   `json:"user_id"`
-		RegisterId      int64    `json:"register_id"`
-		AgentName       string   `json:"agent_name"`
-		Status          string   `json:"status"`
-		Images          []string `json:"images"`
-		Mode            int64    `json:"mode"`
+		Id                int64    `json:"id"`
+		ResourceVersion   int64    `json:"resource_version"`
+		Name              string   `json:"name"`
+		UserId            string   `json:"user_id"`
+		RegisterId        int64    `json:"register_id"`
+		Type              int      `json:"type"` // 0：直接指定镜像列表 1: 指定 kubernetes 版本
+		KubernetesVersion string   `json:"kubernetes_version"`
+		AgentName         string   `json:"agent_name"`
+		Status            string   `json:"status"`
+		Images            []string `json:"images"`
+		Mode              int64    `json:"mode"`
 	}
 
 	UpdateTaskStatusRequest struct {
