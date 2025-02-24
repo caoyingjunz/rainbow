@@ -12,15 +12,21 @@ import (
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
 	object, err := s.factory.Task().Create(ctx, &model.Task{
-		Name:       req.Name,
-		UserId:     req.UserId,
-		RegisterId: req.RegisterId,
-		AgentName:  req.AgentName,
-		Mode:       req.Mode,
-		Status:     "等待执行",
+		Name:              req.Name,
+		UserId:            req.UserId,
+		RegisterId:        req.RegisterId,
+		AgentName:         req.AgentName,
+		Mode:              req.Mode,
+		Status:            "等待执行",
+		Type:              req.Type,
+		KubernetesVersion: req.KubernetesVersion,
 	})
 	if err != nil {
 		return err
+	}
+
+	if req.Type == 1 {
+		return nil
 	}
 
 	if len(req.Images) == 0 {
