@@ -93,6 +93,10 @@ func (i *image) Run() error {
 		if err != nil {
 			return fmt.Errorf("获取 k8s 镜像失败: %v", err)
 		}
+
+		if err = i.p.CreateImages(kubeImages); err != nil {
+			klog.Errorf("回写k8s镜像失败: %v", err)
+		}
 		images = append(images, kubeImages...)
 	}
 
@@ -126,15 +130,18 @@ func (p *PluginController) Validate() error {
 		// 检查 kubeadm 的版本是否和 k8s 版本一致
 		kubeadmVersion, err := p.getKubeadmVersion()
 		if err != nil {
+			klog.Error("failed to get kubeadm version: %v", err)
 			return fmt.Errorf("failed to get kubeadm version: %v", err)
 		}
 		if kubeadmVersion != p.KubernetesVersion {
+			klog.Errorf("kubeadm version %s not match kubernetes version %s", kubeadmVersion, p.KubernetesVersion)
 			return fmt.Errorf("kubeadm version %s not match kubernetes version %s", kubeadmVersion, p.KubernetesVersion)
 		}
 	}
 
 	// 检查 docker 的客户端是否正常
 	if _, err := p.docker.Ping(context.Background()); err != nil {
+		klog.Errorf("%v", err)
 		return err
 	}
 
