@@ -154,6 +154,7 @@ func (p *PluginController) doComplete() error {
 		return err
 	}
 	p.docker = cli
+	p.exec = exec.New()
 
 	if p.Cfg.Default.PushKubernetes {
 		if len(p.KubernetesVersion) == 0 {
@@ -168,7 +169,7 @@ func (p *PluginController) doComplete() error {
 	if p.Cfg.Default.PushKubernetes {
 		//cmd := []string{"sudo", "apt-get", "install", "-y", fmt.Sprintf("kubeadm=%s-00", p.Cfg.Kubernetes.Version[1:])}
 		cmd := []string{"sudo", "curl", "-LO", fmt.Sprintf("https://dl.k8s.io/release/%s/bin/linux/amd64/kubeadm", p.Cfg.Kubernetes.Version)}
-		klog.Infof("Starting install kubeadm", cmd)
+		klog.Infof("Starting install kubeadm %v", cmd)
 		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("failed to get kubeadm %v %v", string(out), err)
@@ -181,7 +182,6 @@ func (p *PluginController) doComplete() error {
 		}
 	}
 
-	p.exec = exec.New()
 	p.Registry = p.Cfg.Registry
 
 	p.Runners = []Runner{
