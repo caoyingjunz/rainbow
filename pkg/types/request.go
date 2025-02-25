@@ -56,9 +56,16 @@ type (
 	CreateImageRequest struct {
 		TaskId   int64  `json:"task_id"`
 		TaskName string `json:"task_name"`
+		UserId   string `json:"user_id"`
 		Name     string `json:"name"`
 		Status   string `json:"status"`
 		Message  string `json:"message"`
+	}
+
+	CreateImagesRequest struct {
+		TaskId   int64    `json:"task_id"`
+		TaskName string   `json:"task_name"`
+		Names    []string `json:"names"`
 	}
 
 	UpdateImageRequest struct {

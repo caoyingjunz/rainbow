@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"k8s.io/klog/v2"
 	"time"
 )
 
@@ -14,6 +15,9 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 		TaskName: req.TaskName,
 		Status:   req.Status,
 	})
+	if err != nil {
+		klog.Errorf("创建镜像失败 %v", err)
+	}
 
 	return err
 }
@@ -69,4 +73,28 @@ func (s *ServerController) ListImages(ctx context.Context, taskId int64, userId 
 
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {
 	return s.factory.Image().Get(ctx, imageId)
+}
+
+func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateImagesRequest) error {
+	task, err := s.factory.Task().Get(ctx, req.TaskId)
+	if err != nil {
+		klog.Errorf("未传任务名，通过任务ID获取任务详情失败 %v", err)
+		return err
+	}
+
+	for _, r := range req.Names {
+		_, err = s.factory.Image().Create(ctx, &model.Image{
+			Name:     r,
+			TaskId:   req.TaskId,
+			TaskName: task.Name,
+			UserId:   task.UserId,
+			Status:   "镜像同步中",
+		})
+		if err != nil {
+			klog.Errorf("创建镜像失败 %v", err)
+			return err
+		}
+	}
+
+	return nil
 }

@@ -56,5 +56,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		imageRoute.GET("", cr.listImages)
 
 		imageRoute.PUT("/status", cr.UpdateImageStatus)
+		imageRoute.POST("/batches", cr.createImages)
 	}
 }

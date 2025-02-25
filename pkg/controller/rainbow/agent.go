@@ -152,18 +152,9 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		return nil, fmt.Errorf("failed to get registry %v", err)
 	}
 
-	images, err := s.factory.Image().ListWithTask(ctx, taskId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get images %v", err)
-	}
-	var img []string
-	for _, image := range images {
-		img = append(img, image.Name)
-	}
-
-	return &template.PluginTemplateConfig{
+	pluginTemplateConfig := &template.PluginTemplateConfig{
 		Default: template.DefaultOption{
-			PushImages: true,
+			Time: time.Now().Unix(), // 注入时间戳，确保每次内容都不相同
 		},
 		Plugin: template.PluginOption{
 			Callback: s.callback,
@@ -176,8 +167,28 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 			Username:   registry.Username,
 			Password:   registry.Password,
 		},
-		Images: img,
-	}, nil
+	}
+
+	// 根据type判断是镜像列表推送还是k8s镜像组推送
+	switch task.Type {
+	case 0:
+		images, err := s.factory.Image().ListWithTask(ctx, taskId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get images %v", err)
+		}
+
+		var img []string
+		for _, image := range images {
+			img = append(img, image.Name)
+		}
+		pluginTemplateConfig.Default.PushImages = true
+		pluginTemplateConfig.Images = img
+	case 1:
+		pluginTemplateConfig.Default.PushKubernetes = true
+		pluginTemplateConfig.Kubernetes.Version = task.KubernetesVersion
+	}
+
+	return pluginTemplateConfig, err
 }
 
 func (s *AgentController) sync(ctx context.Context, taskId int64, resourceVersion int64) error {

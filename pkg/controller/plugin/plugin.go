@@ -382,3 +382,14 @@ func (p *PluginController) SyncImageStatus(name, target, status, msg string) err
 		nil,
 		map[string]interface{}{"status": status, "message": msg, "task_id": p.TaskId, "name": name, "target": target})
 }
+
+func (p *PluginController) CreateImages(names []string) error {
+	if !p.Synced {
+		return nil
+	}
+
+	return p.httpClient.Post(
+		fmt.Sprintf("%s/rainbow/images/batches", p.Callback),
+		nil,
+		map[string]interface{}{"task_id": p.TaskId, "names": names})
+}

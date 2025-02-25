@@ -9,8 +9,9 @@ type PluginTemplateConfig struct {
 }
 
 type DefaultOption struct {
-	PushKubernetes bool `yaml:"push_kubernetes"`
-	PushImages     bool `yaml:"push_images"`
+	PushKubernetes bool  `yaml:"push_kubernetes"`
+	PushImages     bool  `yaml:"push_images"`
+	Time           int64 `yaml:"time"`
 }
 
 type KubernetesOption struct {

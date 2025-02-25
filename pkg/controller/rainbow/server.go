@@ -37,7 +37,9 @@ type ServerInterface interface {
 	SoftDeleteImage(ctx context.Context, imageId int64) error
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, taskId int64, userId string) (interface{}, error)
+
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
+	CreateImages(ctx context.Context, req *types.CreateImagesRequest) error
 
 	Run(ctx context.Context, workers int) error
 }
