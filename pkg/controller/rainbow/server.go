@@ -3,12 +3,15 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"time"
+
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/klog/v2"
+
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/klog/v2"
-	"time"
 )
 
 type ServerGetter interface {
@@ -132,38 +135,47 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, t := range runningTasks {
-		if !agentSet.Has(t.AgentName) {
-			continue
-		}
-		old, ok := agentMap[t.AgentName]
-		if ok {
-			agentMap[t.AgentName] = old + 1
-		} else {
-			continue
-		}
-	}
 
-	min := len(runningTasks)
-	agent := ""
-	for k, v := range agentMap {
-		if min >= v {
-			min = v
-			agent = k
+	if len(runningTasks) == 0 {
+		rand.Seed(time.Now().UnixNano())
+		x := rand.Intn(len(agentNames))
+		agent := agentNames[x]
+		klog.Infof("当前节点均空闲，工作节点 %s 被随机选中", agent)
+		return agent, nil
+	} else {
+		for _, t := range runningTasks {
+			if !agentSet.Has(t.AgentName) {
+				continue
+			}
+			old, ok := agentMap[t.AgentName]
+			if ok {
+				agentMap[t.AgentName] = old + 1
+			} else {
+				continue
+			}
 		}
-	}
-	// 一个 agent 最大并发为 10
-	if min > 10 {
-		klog.Warningf("工作节点已满负载，等待下一次调度")
-		return "", nil
-	}
-	if agent == "" {
-		klog.Warningf("未选中工作节点，等待下一次调度")
-		return "", nil
-	}
 
-	klog.Infof("工作节点 %s 已选中", agent)
-	return agent, nil
+		min := len(runningTasks)
+		agent := ""
+		for k, v := range agentMap {
+			if min >= v {
+				min = v
+				agent = k
+			}
+		}
+		// 一个 agent 最大并发为 10
+		if min > 10 {
+			klog.Warningf("工作节点已满负载，等待下一次调度")
+			return "", nil
+		}
+		if agent == "" {
+			klog.Warningf("未选中工作节点，等待下一次调度")
+			return "", nil
+		}
+
+		klog.Infof("工作节点 %s 已选中", agent)
+		return agent, nil
+	}
 }
 
 func (s *ServerController) monitor(ctx context.Context) {

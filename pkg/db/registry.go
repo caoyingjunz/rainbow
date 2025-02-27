@@ -19,6 +19,7 @@ type RegistryInterface interface {
 	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Registry, error)
 
 	GetByName(ctx context.Context, registryName string) (*model.Registry, error)
+	GetAdminRegistries(ctx context.Context, opts ...Options) ([]model.Registry, error)
 }
 
 func newRegistry(db *gorm.DB) RegistryInterface {
@@ -95,6 +96,19 @@ func (a *registry) ListWithUser(ctx context.Context, userId string, opts ...Opti
 		tx = opt(tx)
 	}
 	if err := tx.Where("user_id = ?", userId).Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *registry) GetAdminRegistries(ctx context.Context, opts ...Options) ([]model.Registry, error) {
+	var audits []model.Registry
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Where("role = ?", 1).Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

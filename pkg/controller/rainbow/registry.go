@@ -15,6 +15,7 @@ func (s *ServerController) CreateRegistry(ctx context.Context, req *types.Create
 		Namespace:  req.Namespace,
 		Username:   req.Username,
 		Password:   req.Password,
+		Role:       req.Role,
 	})
 
 	return err

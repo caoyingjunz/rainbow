@@ -40,6 +40,7 @@ type (
 		Namespace  string `json:"namespace"`
 		Username   string `json:"username"`
 		Password   string `json:"password"`
+		Role       int    `json:"role"`
 	}
 
 	UpdateRegistryRequest struct {

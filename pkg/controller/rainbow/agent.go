@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"strings"
 	"time"
@@ -134,6 +135,22 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+func (s *AgentController) GetOneAdminRegistry(ctx context.Context) (*model.Registry, error) {
+	regs, err := s.factory.Registry().GetAdminRegistries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(regs) == 0 {
+		return nil, fmt.Errorf("no admin registry found")
+	}
+
+	// 随机分，暂时不考虑负载情况，后续优化
+	rand.Seed(time.Now().UnixNano())
+	x := rand.Intn(len(regs))
+	t := regs[x]
+	return &t, err
+}
+
 func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task) (*template.PluginTemplateConfig, error) {
 	taskId := task.Id
 
@@ -143,7 +160,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 	)
 	// 未指定自定义参考时，使用默认仓库
 	if task.RegisterId == 0 {
-		registry, err = s.factory.Registry().GetByName(ctx, "default")
+		registry, err = s.GetOneAdminRegistry(ctx)
 	} else {
 		registry, err = s.factory.Registry().Get(ctx, task.RegisterId)
 	}
