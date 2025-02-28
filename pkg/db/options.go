@@ -48,3 +48,30 @@ func WithIDIn(ids ...int64) Options {
 		return tx.Where("id IN ?", ids)
 	}
 }
+
+func WithUser(userId string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(userId) == 0 {
+			return tx
+		}
+		return tx.Where("user_id = ?", userId)
+	}
+}
+
+func WithTask(taskId int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if taskId == 0 {
+			return tx
+		}
+		return tx.Where("task_id = ?", taskId)
+	}
+}
+
+func WithNameLike(name string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(name) == 0 {
+			return tx
+		}
+		return tx.Where("name like %?%", name)
+	}
+}

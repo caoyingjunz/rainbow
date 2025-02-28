@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"k8s.io/klog/v2"
@@ -56,19 +57,8 @@ func (s *ServerController) SoftDeleteImage(ctx context.Context, imageId int64) e
 	})
 }
 
-func (s *ServerController) ListImages(ctx context.Context, taskId int64, userId string) (interface{}, error) {
-	if taskId == 0 && len(userId) == 0 {
-		return s.factory.Image().List(ctx)
-	}
-
-	if taskId != 0 && len(userId) != 0 {
-		return s.factory.Image().ListWithUserAndTask(ctx, taskId, userId)
-	}
-
-	if taskId != 0 {
-		return s.factory.Image().ListWithTask(ctx, taskId)
-	}
-	return s.factory.Image().ListWithUser(ctx, userId)
+func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Image().List(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
 }
 
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {

@@ -92,4 +92,27 @@ type (
 		AgentName string `json:"agent_name"`
 		Status    string `json:"status"`
 	}
+
+	// PageRequest 分页配置
+	PageRequest struct {
+		Page  int `form:"page" json:"page"`   // 页数，表示第几页
+		Limit int `form:"limit" json:"limit"` // 每页数量
+	}
+	// QueryOption 搜索配置
+	QueryOption struct {
+		LabelSelector string `form:"labelSelector" json:"labelSelector"` // 标签搜索
+		NameSelector  string `form:"nameSelector" json:"nameSelector"`   // 名称搜索
+	}
 )
+
+// ListOptions is the query options to a standard REST list call.
+type ListOptions struct {
+	Count bool  `form:"count"`
+	Limit int64 `form:"limit"`
+
+	UserMeta `json:",inline"`
+	TaskMeta `json:",inline"`
+
+	PageRequest `json:",inline"` // 分页请求属性
+	QueryOption `json:",inline"` // 搜索内容
+}

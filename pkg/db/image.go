@@ -24,7 +24,6 @@ type ImageInterface interface {
 	SoftDeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
 	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Image, error)
-	ListWithUserAndTask(ctx context.Context, taskId int64, userId string, opts ...Options) ([]model.Image, error)
 }
 
 func newImage(db *gorm.DB) ImageInterface {
@@ -146,18 +145,6 @@ func (a *image) ListWithUser(ctx context.Context, userId string, opts ...Options
 		tx = opt(tx)
 	}
 	if err := tx.Where("user_id = ? and is_deleted = 0", userId).Order("gmt_create DESC").Find(&audits).Error; err != nil {
-		return nil, err
-	}
-
-	return audits, nil
-}
-func (a *image) ListWithUserAndTask(ctx context.Context, taskId int64, userId string, opts ...Options) ([]model.Image, error) {
-	var audits []model.Image
-	tx := a.db.WithContext(ctx)
-	for _, opt := range opts {
-		tx = opt(tx)
-	}
-	if err := tx.Where("user_id = ? and task_id = ? and is_deleted = 0", userId, taskId).Order("gmt_create DESC").Find(&audits).Error; err != nil {
 		return nil, err
 	}
 
