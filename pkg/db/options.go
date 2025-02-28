@@ -72,6 +72,6 @@ func WithNameLike(name string) Options {
 		if len(name) == 0 {
 			return tx
 		}
-		return tx.Where("name like %?%", name)
+		return tx.Where("name like ?", "%"+name+"%")
 	}
 }
