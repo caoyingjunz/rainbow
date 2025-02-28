@@ -3,10 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
-	"gorm.io/gorm/clause"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 )
