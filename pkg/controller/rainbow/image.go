@@ -2,11 +2,13 @@ package rainbow
 
 import (
 	"context"
+	"time"
+
+	"k8s.io/klog/v2"
+
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
-	"k8s.io/klog/v2"
-	"time"
 )
 
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
