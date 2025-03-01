@@ -103,12 +103,16 @@ type (
 		LabelSelector string `form:"labelSelector" json:"labelSelector"` // 标签搜索
 		NameSelector  string `form:"nameSelector" json:"nameSelector"`   // 名称搜索
 	}
+
+	CustomMeta struct {
+		Status int `form:"status"`
+		Limits int `form:"limits"`
+	}
 )
 
 // ListOptions is the query options to a standard REST list call.
 type ListOptions struct {
-	Count bool  `form:"count"`
-	Limit int64 `form:"limit"`
+	CustomMeta `json:",inline"`
 
 	UserMeta `json:",inline"`
 	TaskMeta `json:",inline"`

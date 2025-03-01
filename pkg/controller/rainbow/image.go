@@ -60,7 +60,12 @@ func (s *ServerController) SoftDeleteImage(ctx context.Context, imageId int64) e
 }
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Image().List(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
+	if listOption.Limits == 0 {
+		return s.factory.Image().List(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
+	}
+
+	// TODO: 临时实现，后续再优化
+	return s.factory.Image().List(ctx, db.WithStatus("同步完成"), db.WithLimit(listOption.Limits))
 }
 
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {

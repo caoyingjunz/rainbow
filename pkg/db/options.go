@@ -75,3 +75,12 @@ func WithNameLike(name string) Options {
 		return tx.Where("name like ?", "%"+name+"%")
 	}
 }
+
+func WithStatus(status string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(status) == 0 {
+			return tx
+		}
+		return tx.Where("status = ?", status)
+	}
+}
