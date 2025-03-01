@@ -34,15 +34,11 @@ func (s *ServerController) GetCollection(ctx context.Context, listOption types.L
 		reviewNum = +review.Count
 	}
 
-	return map[string]int64{
-		"tasks":  taskNum,
-		"images": imageNum,
-		"review": reviewNum,
-	}, nil
+	return map[string]int64{"tasks": taskNum, "images": imageNum, "review": reviewNum}, nil
 }
 
+// AddDailyReview 单纯做记录，偶尔的报错可忽略
 func (s *ServerController) AddDailyReview(ctx context.Context, page string) error {
-	return s.factory.Task().AddDailyReview(ctx, &model.Daily{
-		Page: page,
-	})
+	_ = s.factory.Task().AddDailyReview(ctx, &model.Daily{Page: page})
+	return nil
 }
