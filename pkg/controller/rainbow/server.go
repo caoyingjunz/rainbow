@@ -44,6 +44,8 @@ type ServerInterface interface {
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) error
 
+	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 }
 
