@@ -27,6 +27,10 @@ type TaskInterface interface {
 	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Task, error)
 	GetOneForSchedule(ctx context.Context, opts ...Options) (*model.Task, error)
 	GetRunningTask(ctx context.Context, opts ...Options) ([]model.Task, error)
+
+	Count(ctx context.Context) (int64, error)
+
+	ListReview(ctx context.Context) ([]model.Review, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -196,4 +200,24 @@ func (a *task) AssignToAgent(ctx context.Context, taskId int64, agentName string
 	})
 
 	return f.Error
+}
+
+func (a *task) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := a.db.WithContext(ctx).Model(&model.Task{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (a *task) ListReview(ctx context.Context) ([]model.Review, error) {
+	var audits []model.Review
+	tx := a.db.WithContext(ctx)
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
 }

@@ -24,6 +24,8 @@ type ImageInterface interface {
 	SoftDeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
 	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Image, error)
+
+	Count(ctx context.Context) (int64, error)
 }
 
 func newImage(db *gorm.DB) ImageInterface {
@@ -149,4 +151,13 @@ func (a *image) ListWithUser(ctx context.Context, userId string, opts ...Options
 	}
 
 	return audits, nil
+}
+
+func (a *image) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := a.db.WithContext(ctx).Model(&model.Image{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
