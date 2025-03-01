@@ -97,15 +97,15 @@ func (cr *rainbowRouter) listTasks(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		userMeta types.UserMeta
-		err      error
+		listOption types.ListOptions
+		err        error
 	)
-	if err = httputils.ShouldBindAny(c, nil, nil, &userMeta); err != nil {
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
 
-	if resp.Result, err = cr.c.Server().ListTasks(c, userMeta.UserId); err != nil {
+	if resp.Result, err = cr.c.Server().ListTasks(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -197,15 +197,15 @@ func (cr *rainbowRouter) listRegistries(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		err      error
-		userMeta types.UserMeta
+		err        error
+		listOption types.ListOptions
 	)
-	if err = httputils.ShouldBindAny(c, nil, nil, &userMeta); err != nil {
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
 
-	if resp.Result, err = cr.c.Server().ListRegistries(c, userMeta.UserId); err != nil {
+	if resp.Result, err = cr.c.Server().ListRegistries(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

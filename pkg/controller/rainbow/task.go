@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
@@ -93,12 +94,8 @@ func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTask
 	return nil
 }
 
-func (s *ServerController) ListTasks(ctx context.Context, userId string) (interface{}, error) {
-	if len(userId) == 0 {
-		return s.factory.Task().List(ctx)
-	}
-
-	return s.factory.Task().ListWithUser(ctx, userId)
+func (s *ServerController) ListTasks(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Task().List(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {

@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+	"github.com/caoyingjunz/rainbow/pkg/db"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -35,12 +36,8 @@ func (s *ServerController) DeleteRegistry(ctx context.Context, registryId int64)
 	return s.factory.Registry().Delete(ctx, registryId)
 }
 
-func (s *ServerController) ListRegistries(ctx context.Context, userId string) (interface{}, error) {
-	if len(userId) == 0 {
-		return s.factory.Registry().List(ctx)
-	}
-
-	return s.factory.Registry().ListWithUser(ctx, userId)
+func (s *ServerController) ListRegistries(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Registry().List(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
 }
 
 func (s *ServerController) GetRegistry(ctx context.Context, registryId int64) (interface{}, error) {

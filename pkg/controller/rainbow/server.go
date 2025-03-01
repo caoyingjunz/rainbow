@@ -23,11 +23,11 @@ type ServerInterface interface {
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
-	ListRegistries(ctx context.Context, userId string) (interface{}, error)
+	ListRegistries(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
 	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error
-	ListTasks(ctx context.Context, userId string) (interface{}, error)
+	ListTasks(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	DeleteTask(ctx context.Context, taskId int64) error
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
