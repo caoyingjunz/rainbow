@@ -62,5 +62,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	collectRoute := httpEngine.Group("/rainbow/collections")
 	{
 		collectRoute.GET("", cr.getCollections)
+		collectRoute.POST("/add/review", cr.AddDailyReview)
 	}
 }

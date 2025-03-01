@@ -423,3 +423,24 @@ func (cr *rainbowRouter) getCollections(c *gin.Context) {
 
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) AddDailyReview(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		pageOption struct {
+			Page string `json:"page"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &pageOption, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().AddDailyReview(c, pageOption.Page); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}

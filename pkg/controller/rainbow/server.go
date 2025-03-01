@@ -45,6 +45,7 @@ type ServerInterface interface {
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) error
 
 	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	AddDailyReview(ctx context.Context, page string) error
 
 	Run(ctx context.Context, workers int) error
 }

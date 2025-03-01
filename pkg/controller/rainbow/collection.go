@@ -5,6 +5,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
@@ -25,11 +26,11 @@ func (s *ServerController) GetCollection(ctx context.Context, listOption types.L
 		klog.Error("获取镜像数量失败: %v", err)
 	}
 
-	reviewes, err := s.factory.Task().ListReview(ctx)
+	reviews, err := s.factory.Task().ListReview(ctx)
 	if err != nil {
 		klog.Error("获取浏览数量失败: %v", err)
 	}
-	for _, review := range reviewes {
+	for _, review := range reviews {
 		reviewNum = +review.Count
 	}
 
@@ -38,4 +39,10 @@ func (s *ServerController) GetCollection(ctx context.Context, listOption types.L
 		"images": imageNum,
 		"review": reviewNum,
 	}, nil
+}
+
+func (s *ServerController) AddDailyReview(ctx context.Context, page string) error {
+	return s.factory.Task().AddDailyReview(ctx, &model.Daily{
+		Page: page,
+	})
 }
