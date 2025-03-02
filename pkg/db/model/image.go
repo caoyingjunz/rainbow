@@ -6,6 +6,11 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
 
+const (
+	PublicVisible  = 0
+	PrivateVisible = 1
+)
+
 func init() {
 	register(&Image{})
 }
@@ -21,6 +26,9 @@ type Image struct {
 	TaskName string `json:"task_name"`
 	Status   string `json:"status"`
 	Message  string `json:"message"`
+
+	Tags    string `json:"tags"`
+	Visible int    `json:"visible"`
 
 	IsDeleted bool `json:"is_deleted"`
 }
