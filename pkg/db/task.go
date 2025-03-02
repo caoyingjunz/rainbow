@@ -32,6 +32,7 @@ type TaskInterface interface {
 
 	ListReview(ctx context.Context) ([]model.Review, error)
 	AddDailyReview(ctx context.Context, object *model.Daily) error
+	CountDailyReview(ctx context.Context) (int64, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -230,4 +231,13 @@ func (a *task) AddDailyReview(ctx context.Context, object *model.Daily) error {
 
 	err := a.db.WithContext(ctx).Create(object).Error
 	return err
+}
+
+func (a *task) CountDailyReview(ctx context.Context) (int64, error) {
+	var total int64
+	if err := a.db.WithContext(ctx).Model(&model.Daily{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
