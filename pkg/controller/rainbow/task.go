@@ -9,6 +9,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
@@ -36,7 +37,8 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	taskId := object.Id
 
 	var images []model.Image
-	for _, i := range req.Images {
+	trimImages := util.TrimAndFilter(req.Images)
+	for _, i := range trimImages {
 		images = append(images, model.Image{
 			TaskId:   taskId,
 			TaskName: req.Name,
@@ -80,7 +82,8 @@ func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTask
 		addImages = append(addImages, n)
 	}
 	var images []model.Image
-	for _, i := range addImages {
+	trimAddImages := util.TrimAndFilter(req.Images)
+	for _, i := range trimAddImages {
 		images = append(images, model.Image{
 			TaskId: req.Id,
 			Name:   i,
