@@ -16,11 +16,11 @@ type Config struct {
 }
 
 type DefaultOption struct {
-	Listen int    `yaml:"listen"`
-	Mode   string `yaml:"mode"` // debug 和 release 模式
-
-	PushKubernetes bool `yaml:"push_kubernetes"`
-	PushImages     bool `yaml:"push_images"`
+	Listen         int    `yaml:"listen"`
+	Mode           string `yaml:"mode"` // debug 和 release 模式
+	PushKubernetes bool   `yaml:"push_kubernetes"`
+	PushImages     bool   `yaml:"push_images"`
+	Copy           bool   `yaml:"copy"`
 }
 
 type ServerOption struct {
