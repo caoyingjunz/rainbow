@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"github.com/containers/image/v5/copy"
+	"github.com/containers/image/v5/manifest"
+	"github.com/containers/image/v5/signature"
+	"github.com/containers/image/v5/transports/alltransports"
+	"github.com/containers/image/v5/types"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/caoyingjunz/pixiulib/exec"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"k8s.io/klog/v2"
 
@@ -277,32 +280,62 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 		return "", err
 	}
 
-	klog.Infof("starting pull image %s", imageToPush)
-	// start pull
-	reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
+	srcRef, err := alltransports.ParseImageName("docker://" + imageToPush)
 	if err != nil {
-		klog.Errorf("failed to pull %s: %v", imageToPush, err)
+		klog.Errorf("Invalid source image name: %v", err)
 		return "", err
 	}
-	io.Copy(os.Stdout, reader)
-
-	klog.Infof("tag %s to %s", imageToPush, targetImage)
-	if err := p.docker.ImageTag(context.TODO(), imageToPush, targetImage); err != nil {
-		klog.Errorf("failed to tag %s to %s: %v", imageToPush, targetImage, err)
+	destRef, err := alltransports.ParseImageName("docker://" + targetImage)
+	if err != nil {
+		klog.Errorf("Invalid destination image name: %v", err)
 		return "", err
 	}
 
-	klog.Infof("starting push image %s", targetImage)
-
-	cmd := []string{"docker", "push", targetImage}
-	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
+	sourceCtx := &types.SystemContext{
+		DockerAuthConfig: nil,
+	}
+	destCtx := &types.SystemContext{
+		DockerAuthConfig: &types.DockerAuthConfig{
+			Username: p.Registry.Username,
+			Password: p.Registry.Password,
+		},
 	}
 
-	klog.Infof("complete push image %s", imageToPush)
+	policyContext, err := signature.NewPolicyContext(&signature.Policy{
+		Default: []signature.PolicyRequirement{signature.NewPRInsecureAcceptAnything()},
+	})
+	if err != nil {
+		klog.Errorf("Error creating policy context: %v", err)
+		return "", err
+	}
+	defer policyContext.Destroy()
+
+	startTime := time.Now()
+
+	ctx := context.Background()
+	manifestBytes, err := copy.Image(ctx, policyContext, destRef, srcRef, &copy.Options{
+		SourceCtx:          sourceCtx,
+		DestinationCtx:     destCtx,
+		ImageListSelection: copy.CopySystemImage,
+		ReportWriter:       os.Stdout,
+	})
+	if err != nil {
+		klog.Errorf("Error copying image: %v", err)
+		return "", err
+	}
+
+	elapsedTime := time.Since(startTime)
+
+	manifestDigest, err := manifest.Digest(manifestBytes)
+	if err != nil {
+		klog.Errorf("Error computing manifest digest: %v", err)
+		return "", err
+	}
+	klog.Infof("Image copied successfully! Manifest digest: %s\n", manifestDigest)
+	klog.Infof("Time taken to copy the image: %s\n", elapsedTime)
 	return targetImage, nil
 }
+
 func (p *PluginController) getImagesFromFile() ([]string, error) {
 	var imgs []string
 	for _, i := range p.Cfg.Images {
