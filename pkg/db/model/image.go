@@ -6,11 +6,6 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
 
-const (
-	PublicVisible  = 0
-	PrivateVisible = 1
-)
-
 func init() {
 	register(&Image{})
 }
@@ -26,11 +21,11 @@ type Image struct {
 	Status   string `json:"status"`
 	Message  string `json:"message"`
 
-	Tags    string `json:"tags"`
-	Visible int    `json:"visible"`
-
 	GmtDeleted time.Time `gorm:"column:gmt_deleted;type:datetime" json:"gmt_deleted"`
 	IsDeleted  bool      `json:"is_deleted"`
+
+	IsPublic bool   `json:"is_public"`
+	Tags     string `json:"tags"`
 }
 
 func (t *Image) TableName() string {
