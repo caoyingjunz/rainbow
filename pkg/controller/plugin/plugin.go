@@ -4,17 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/caoyingjunz/pixiulib/exec"
-	"github.com/containers/image/v5/copy"
-	"github.com/containers/image/v5/manifest"
-	"github.com/containers/image/v5/signature"
-	"github.com/containers/image/v5/transports/alltransports"
-	"github.com/containers/image/v5/types"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"k8s.io/klog/v2"
 
@@ -157,6 +154,8 @@ func (p *PluginController) doComplete() error {
 		return err
 	}
 	p.docker = cli
+	p.exec = exec.New()
+	p.Registry = p.Cfg.Registry
 
 	if p.Cfg.Default.PushKubernetes {
 		if len(p.KubernetesVersion) == 0 {
@@ -165,6 +164,15 @@ func (p *PluginController) doComplete() error {
 			} else {
 				p.KubernetesVersion = os.Getenv("KubernetesVersion")
 			}
+		}
+	}
+
+	if p.Cfg.Default.Copy {
+		cmd := []string{"sudo", "apt-get", "install", "-y", "skopeo"}
+		klog.Infof("Starting install skopeo", cmd)
+		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to install skopeo %v %v", string(out), err)
 		}
 	}
 
@@ -183,9 +191,6 @@ func (p *PluginController) doComplete() error {
 			return fmt.Errorf("failed to install kubeadm %v %v", string(out), err)
 		}
 	}
-
-	p.exec = exec.New()
-	p.Registry = p.Cfg.Registry
 
 	p.Runners = []Runner{
 		&login{name: "Registry登陆", p: p},
@@ -280,59 +285,34 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 		return "", err
 	}
 
-	srcRef, err := alltransports.ParseImageName("docker://" + imageToPush)
+	klog.Infof("tag %s to %s", imageToPush, targetImage)
+
+	var cmd []string
+	if p.Cfg.Default.Copy {
+		cmd = []string{"skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
+		klog.Infof("starting copy image %s", targetImage)
+	} else {
+		klog.Infof("starting pull image %s", imageToPush)
+		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
+		if err != nil {
+			klog.Errorf("failed to pull %s: %v", imageToPush, err)
+			return "", err
+		}
+		io.Copy(os.Stdout, reader)
+		cmd = []string{"docker", "push", targetImage}
+		if err := p.docker.ImageTag(context.TODO(), imageToPush, targetImage); err != nil {
+			klog.Errorf("failed to tag %s to %s: %v", imageToPush, targetImage, err)
+			return "", err
+		}
+	}
+
+	klog.Infof("starting push image %s", targetImage)
+	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
-		klog.Errorf("Invalid source image name: %v", err)
-		return "", err
-	}
-	destRef, err := alltransports.ParseImageName("docker://" + targetImage)
-	if err != nil {
-		klog.Errorf("Invalid destination image name: %v", err)
-		return "", err
+		return "", fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
 	}
 
-	sourceCtx := &types.SystemContext{
-		DockerAuthConfig: nil,
-	}
-	destCtx := &types.SystemContext{
-		DockerAuthConfig: &types.DockerAuthConfig{
-			Username: p.Registry.Username,
-			Password: p.Registry.Password,
-		},
-	}
-
-	policyContext, err := signature.NewPolicyContext(&signature.Policy{
-		Default: []signature.PolicyRequirement{signature.NewPRInsecureAcceptAnything()},
-	})
-	if err != nil {
-		klog.Errorf("Error creating policy context: %v", err)
-		return "", err
-	}
-	defer policyContext.Destroy()
-
-	startTime := time.Now()
-
-	ctx := context.Background()
-	manifestBytes, err := copy.Image(ctx, policyContext, destRef, srcRef, &copy.Options{
-		SourceCtx:          sourceCtx,
-		DestinationCtx:     destCtx,
-		ImageListSelection: copy.CopySystemImage,
-		ReportWriter:       os.Stdout,
-	})
-	if err != nil {
-		klog.Errorf("Error copying image: %v", err)
-		return "", err
-	}
-
-	elapsedTime := time.Since(startTime)
-
-	manifestDigest, err := manifest.Digest(manifestBytes)
-	if err != nil {
-		klog.Errorf("Error computing manifest digest: %v", err)
-		return "", err
-	}
-	klog.Infof("Image copied successfully! Manifest digest: %s\n", manifestDigest)
-	klog.Infof("Time taken to copy the image: %s\n", elapsedTime)
+	klog.Infof("complete push image %s", imageToPush)
 	return targetImage, nil
 }
 

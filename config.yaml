@@ -3,6 +3,7 @@ default:
   mode: debug
   push_kubernetes: false
   push_images: false
+  copy: false
 
 server:
   auth:
