@@ -17,6 +17,7 @@ plugin:
   callback: http://127.0.0.1:8090
   task_id: 20220801
   synced: true
+  driver: docker #skopeo or docker
 
 mysql:
   host: peng

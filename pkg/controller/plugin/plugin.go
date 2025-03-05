@@ -154,6 +154,8 @@ func (p *PluginController) doComplete() error {
 		return err
 	}
 	p.docker = cli
+	p.exec = exec.New()
+	p.Registry = p.Cfg.Registry
 
 	if p.Cfg.Default.PushKubernetes {
 		if len(p.KubernetesVersion) == 0 {
@@ -168,7 +170,7 @@ func (p *PluginController) doComplete() error {
 	if p.Cfg.Default.PushKubernetes {
 		//cmd := []string{"sudo", "apt-get", "install", "-y", fmt.Sprintf("kubeadm=%s-00", p.Cfg.Kubernetes.Version[1:])}
 		cmd := []string{"sudo", "curl", "-LO", fmt.Sprintf("https://dl.k8s.io/release/%s/bin/linux/amd64/kubeadm", p.Cfg.Kubernetes.Version)}
-		klog.Infof("Starting install kubeadm", cmd)
+		klog.Infof("Starting install kubeadm %s", cmd)
 		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("failed to get kubeadm %v %v", string(out), err)
@@ -180,9 +182,6 @@ func (p *PluginController) doComplete() error {
 			return fmt.Errorf("failed to install kubeadm %v %v", string(out), err)
 		}
 	}
-
-	p.exec = exec.New()
-	p.Registry = p.Cfg.Registry
 
 	p.Runners = []Runner{
 		&login{name: "Registry登陆", p: p},
@@ -274,35 +273,55 @@ func (p *PluginController) parseTargetImage(imageToPush string) (string, error) 
 func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	targetImage, err := p.parseTargetImage(imageToPush)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse target image: %v", err)
 	}
 
-	klog.Infof("starting pull image %s", imageToPush)
-	// start pull
-	reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
-	if err != nil {
-		klog.Errorf("failed to pull %s: %v", imageToPush, err)
-		return "", err
+	klog.Infof("Tagging image from %s to %s", imageToPush, targetImage)
+
+	var cmd []string
+	switch p.Cfg.Plugin.Driver {
+	case "skopeo":
+		cmd = []string{"sudo", "chmod", "+x", "bin/skopeo", "&&", "bin/skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
+		klog.Infof("Making skopeo executable and copying image: %s", targetImage)
+		out, err := p.exec.Command("sh", "-c", strings.Join(cmd, " ")).CombinedOutput()
+		if err != nil {
+			klog.Errorf("Failed to execute skopeo commands: %v, output: %s", err, string(out))
+			return "", fmt.Errorf("failed to execute skopeo commands: %v", err)
+		}
+		klog.Infof("Successfully executed skopeo commands: %s", string(out))
+		return targetImage, nil
+
+	case "docker":
+		klog.Infof("Pulling image: %s", imageToPush)
+		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
+		if err != nil {
+			klog.Errorf("Failed to pull image %s: %v", imageToPush, err)
+			return "", fmt.Errorf("failed to pull image %s: %v", imageToPush, err)
+		}
+		io.Copy(os.Stdout, reader)
+
+		klog.Infof("Tagging image from %s to %s", imageToPush, targetImage)
+		if err := p.docker.ImageTag(context.TODO(), imageToPush, targetImage); err != nil {
+			klog.Errorf("Failed to tag image %s to %s: %v", imageToPush, targetImage, err)
+			return "", fmt.Errorf("failed to tag image %s to %s: %v", imageToPush, targetImage, err)
+		}
+
+		cmd = []string{"docker", "push", targetImage}
+	default:
+		return "", fmt.Errorf("unsupported driver: %s", p.Cfg.Plugin.Driver)
 	}
-	io.Copy(os.Stdout, reader)
 
-	klog.Infof("tag %s to %s", imageToPush, targetImage)
-	if err := p.docker.ImageTag(context.TODO(), imageToPush, targetImage); err != nil {
-		klog.Errorf("failed to tag %s to %s: %v", imageToPush, targetImage, err)
-		return "", err
-	}
-
-	klog.Infof("starting push image %s", targetImage)
-
-	cmd := []string{"docker", "push", targetImage}
+	klog.Infof("Pushing image: %s", targetImage)
 	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
+		klog.Errorf("Failed to push image %s: %v, output: %s", targetImage, err, string(out))
+		return "", fmt.Errorf("failed to push image %s: %v", targetImage, err)
 	}
 
-	klog.Infof("complete push image %s", imageToPush)
+	klog.Infof("Successfully pushed image: %s", targetImage)
 	return targetImage, nil
 }
+
 func (p *PluginController) getImagesFromFile() ([]string, error) {
 	var imgs []string
 	for _, i := range p.Cfg.Images {

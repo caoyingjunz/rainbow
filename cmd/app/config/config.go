@@ -40,6 +40,7 @@ type PluginOption struct {
 	Callback string `yaml:"callback"`
 	TaskId   int64  `yaml:"task_id"`
 	Synced   bool   `yaml:"synced"`
+	Driver   string `yaml:"driver"`
 }
 
 type Registry struct {
