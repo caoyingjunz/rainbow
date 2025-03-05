@@ -168,11 +168,19 @@ func (p *PluginController) doComplete() error {
 	}
 
 	if p.Cfg.Default.Copy {
-		cmd := []string{"sudo", "apt-get", "install", "-y", "skopeo"}
-		klog.Infof("Starting install skopeo", cmd)
-		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+		// 检查 skopeo 是否已经安装
+		cmdCheck := []string{"skopeo", "--version"}
+		_, err := p.exec.Command(cmdCheck[0], cmdCheck[1:]...).CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("failed to install skopeo %v %v", string(out), err)
+			// skopeo 未安装，执行安装
+			cmdInstall := []string{"sudo", "apt-get", "install", "-y", "skopeo"}
+			klog.Infof("Starting install skopeo", cmdInstall)
+			out, err := p.exec.Command(cmdInstall[0], cmdInstall[1:]...).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("failed to install skopeo %v %v", string(out), err)
+			}
+		} else {
+			klog.Info("skopeo is already installed")
 		}
 	}
 
