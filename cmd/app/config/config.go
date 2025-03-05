@@ -20,7 +20,6 @@ type DefaultOption struct {
 	Mode           string `yaml:"mode"` // debug 和 release 模式
 	PushKubernetes bool   `yaml:"push_kubernetes"`
 	PushImages     bool   `yaml:"push_images"`
-	Copy           bool   `yaml:"copy"`
 }
 
 type ServerOption struct {
@@ -40,6 +39,7 @@ type PluginOption struct {
 	Callback string `yaml:"callback"`
 	TaskId   int64  `yaml:"task_id"`
 	Synced   bool   `yaml:"synced"`
+	Driver   string `yaml:"driver"`
 }
 
 type Registry struct {
