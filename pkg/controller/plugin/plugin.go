@@ -168,26 +168,18 @@ func (p *PluginController) doComplete() error {
 	}
 
 	if p.Cfg.Default.Copy {
-		// 检查 skopeo 是否已经安装
-		cmdCheck := []string{"skopeo", "--version"}
-		_, err := p.exec.Command(cmdCheck[0], cmdCheck[1:]...).CombinedOutput()
+		cmd := []string{"sudo", "chmod", "0755", "bin/skopeo"}
+		klog.Infof("Starting install skopeo %s", cmd)
+		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
-			// skopeo 未安装，执行安装
-			cmdInstall := []string{"sudo", "apt-get", "install", "-y", "skopeo"}
-			klog.Infof("Starting install skopeo", cmdInstall)
-			out, err := p.exec.Command(cmdInstall[0], cmdInstall[1:]...).CombinedOutput()
-			if err != nil {
-				return fmt.Errorf("failed to install skopeo %v %v", string(out), err)
-			}
-		} else {
-			klog.Info("skopeo is already installed")
+			return fmt.Errorf("failed to install skopeo %v %v", string(out), err)
 		}
 	}
 
 	if p.Cfg.Default.PushKubernetes {
 		//cmd := []string{"sudo", "apt-get", "install", "-y", fmt.Sprintf("kubeadm=%s-00", p.Cfg.Kubernetes.Version[1:])}
 		cmd := []string{"sudo", "curl", "-LO", fmt.Sprintf("https://dl.k8s.io/release/%s/bin/linux/amd64/kubeadm", p.Cfg.Kubernetes.Version)}
-		klog.Infof("Starting install kubeadm", cmd)
+		klog.Infof("Starting install kubeadm %s", cmd)
 		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("failed to get kubeadm %v %v", string(out), err)
@@ -297,7 +289,7 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 
 	var cmd []string
 	if p.Cfg.Default.Copy {
-		cmd = []string{"skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
+		cmd = []string{"bin/skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
 		klog.Infof("starting copy image %s", targetImage)
 	} else {
 		klog.Infof("starting pull image %s", imageToPush)
