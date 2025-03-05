@@ -168,7 +168,7 @@ func (p *PluginController) doComplete() error {
 	}
 
 	if p.Cfg.Default.Copy {
-		cmd := []string{"sudo", "chmod", "0755", "bin/skopeo"}
+		cmd := []string{"sudo", "chmod", "+x", "bin/skopeo"}
 		klog.Infof("Starting install skopeo %s", cmd)
 		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
