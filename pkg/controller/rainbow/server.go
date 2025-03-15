@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"math/rand"
 	"time"
 
@@ -53,11 +54,13 @@ type ServerInterface interface {
 }
 
 type ServerController struct {
-	factory   db.ShareDaoFactory
+	factory db.ShareDaoFactory
+	cfg     rainbowconfig.Config
+
 	swrClient *swr.SwrClient
 }
 
-func NewServer(f db.ShareDaoFactory) *ServerController {
+func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController {
 	client, _ := huaweicloud.NewHuaweiCloudClient(huaweicloud.HuaweiCloudConfig{
 		AK:       "ak",
 		SK:       "sk",
@@ -65,6 +68,7 @@ func NewServer(f db.ShareDaoFactory) *ServerController {
 	})
 	return &ServerController{
 		factory:   f,
+		cfg:       cfg,
 		swrClient: client,
 	}
 }
