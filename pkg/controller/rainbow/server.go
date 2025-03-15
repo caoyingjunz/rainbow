@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"math/rand"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
+	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -54,9 +54,8 @@ type ServerInterface interface {
 }
 
 type ServerController struct {
-	factory db.ShareDaoFactory
-	cfg     rainbowconfig.Config
-
+	factory   db.ShareDaoFactory
+	cfg       rainbowconfig.Config
 	swrClient *swr.SwrClient
 }
 
