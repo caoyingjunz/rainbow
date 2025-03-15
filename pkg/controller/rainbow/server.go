@@ -6,12 +6,15 @@ import (
 	"math/rand"
 	"time"
 
+	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
+	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
 )
 
 type ServerGetter interface {
@@ -51,12 +54,21 @@ type ServerInterface interface {
 }
 
 type ServerController struct {
-	factory db.ShareDaoFactory
+	factory   db.ShareDaoFactory
+	cfg       rainbowconfig.Config
+	swrClient *swr.SwrClient
 }
 
-func NewServer(f db.ShareDaoFactory) *ServerController {
+func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController {
+	client, _ := huaweicloud.NewHuaweiCloudClient(huaweicloud.HuaweiCloudConfig{
+		AK:       "ak",
+		SK:       "sk",
+		RegionId: "test",
+	})
 	return &ServerController{
-		factory: f,
+		factory:   f,
+		cfg:       cfg,
+		swrClient: client,
 	}
 }
 
