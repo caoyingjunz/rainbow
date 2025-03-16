@@ -69,26 +69,28 @@ func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController
 		cfg:     cfg,
 	}
 
-	reg, err := f.Registry().GetDefaultRegistry(context.TODO())
-	if err == nil {
-		if len(reg.Ak) == 0 || len(reg.Sk) == 0 || len(reg.RegionId) == 0 {
-			klog.Errorf("默认华为仓库未设置必要配置, ak(%s) sk(%s) regionId(%s)", reg.Ak, reg.Sk, reg.RegionId)
-		} else {
-			client, err := huaweicloud.NewHuaweiCloudClient(huaweicloud.HuaweiCloudConfig{
-				AK:       reg.Ak,
-				SK:       reg.Sk,
-				RegionId: reg.RegionId,
-			})
-			if err == nil {
-				SwrClient = client
-				RegistryId = &reg.Id
-				klog.Infof("创建华为仓库客户端成功，仓库名称: %s(%d) ", reg.Name, *RegistryId)
+	if SwrClient == nil || RegistryId == nil {
+		reg, err := f.Registry().GetDefaultRegistry(context.TODO())
+		if err == nil {
+			if len(reg.Ak) == 0 || len(reg.Sk) == 0 || len(reg.RegionId) == 0 {
+				klog.Errorf("默认华为仓库未设置必要配置, ak(%s) sk(%s) regionId(%s)", reg.Ak, reg.Sk, reg.RegionId)
 			} else {
-				klog.Errorf("创建为仓库客户端失败 %v", err)
+				client, err := huaweicloud.NewHuaweiCloudClient(huaweicloud.HuaweiCloudConfig{
+					AK:       reg.Ak,
+					SK:       reg.Sk,
+					RegionId: reg.RegionId,
+				})
+				if err == nil {
+					SwrClient = client
+					RegistryId = &reg.Id
+					klog.Infof("创建华为仓库客户端成功，仓库名称: %s(%d) ", reg.Name, *RegistryId)
+				} else {
+					klog.Errorf("创建为仓库客户端失败 %v", err)
+				}
 			}
+		} else {
+			klog.Errorf("获取默认华为仓库失败: %v", err)
 		}
-	} else {
-		klog.Errorf("获取默认华为仓库失败: %v", err)
 	}
 
 	return sc
