@@ -41,14 +41,14 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 }
 
 func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
-	if s.registryId != nil {
-		reg := s.registryId
+	if RegistryId != nil {
+		reg := RegistryId
 		if *reg == req.RegistryId {
 			if req.Status == "同步完成" {
 				parts := strings.Split(req.Target, "/")
 				pps := parts[len(parts)-1]
 				p := strings.Split(pps, ":")
-				response, err := s.swrClient.UpdateRepo(&swrmodel.UpdateRepoRequest{
+				response, err := SwrClient.UpdateRepo(&swrmodel.UpdateRepoRequest{
 					Namespace:  "pixiu-public",
 					Repository: p[0],
 					Body: &swrmodel.UpdateRepoRequestBody{

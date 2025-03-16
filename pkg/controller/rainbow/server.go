@@ -53,11 +53,14 @@ type ServerInterface interface {
 	Run(ctx context.Context, workers int) error
 }
 
+var (
+	SwrClient  *swr.SwrClient
+	RegistryId *int64
+)
+
 type ServerController struct {
-	factory    db.ShareDaoFactory
-	cfg        rainbowconfig.Config
-	swrClient  *swr.SwrClient
-	registryId *int64
+	factory db.ShareDaoFactory
+	cfg     rainbowconfig.Config
 }
 
 func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController {
@@ -77,9 +80,9 @@ func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController
 				RegionId: reg.RegionId,
 			})
 			if err == nil {
-				sc.swrClient = client
-				sc.registryId = &reg.Id
-				klog.Infof("创建华为仓库客户端成功，仓库名称: %s(%d) ", reg.Name, *sc.registryId)
+				SwrClient = client
+				RegistryId = &reg.Id
+				klog.Infof("创建华为仓库客户端成功，仓库名称: %s(%d) ", reg.Name, *RegistryId)
 			} else {
 				klog.Errorf("创建为仓库客户端失败 %v", err)
 			}
