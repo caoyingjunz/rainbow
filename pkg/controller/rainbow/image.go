@@ -13,10 +13,12 @@ import (
 
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
 	_, err := s.factory.Image().Create(ctx, &model.Image{
-		Name:     req.Name,
-		TaskId:   req.TaskId,
-		TaskName: req.TaskName,
-		Status:   req.Status,
+		Name:       req.Name,
+		TaskId:     req.TaskId,
+		RegisterId: req.RegisterId,
+		TaskName:   req.TaskName,
+		Status:     req.Status,
+		IsPublic:   req.IsPublic,
 	})
 	if err != nil {
 		klog.Errorf("创建镜像失败 %v", err)
@@ -32,6 +34,7 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 	updates["name"] = req.Name
 	updates["status"] = req.Status
 	updates["message"] = req.Message
+	updates["is_public"] = req.IsPublic
 	return s.factory.Image().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
 

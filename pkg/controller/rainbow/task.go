@@ -40,11 +40,12 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	trimImages := util.TrimAndFilter(req.Images)
 	for _, i := range trimImages {
 		images = append(images, model.Image{
-			TaskId:   taskId,
-			TaskName: req.Name,
-			UserId:   req.UserId,
-			Name:     i,
-			Status:   "同步准备中",
+			TaskId:     taskId,
+			TaskName:   req.Name,
+			UserId:     req.UserId,
+			RegisterId: req.RegisterId,
+			Name:       i,
+			Status:     "同步准备中",
 		})
 	}
 

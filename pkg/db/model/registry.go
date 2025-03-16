@@ -18,6 +18,10 @@ type Registry struct {
 	Namespace  string `json:"namespace"`
 	Username   string `json:"username"`
 	Password   string `json:"password"`
+
+	RegionId string `json:"region_id"`
+	Ak       string `json:"ak"`
+	Sk       string `json:"sk"`
 }
 
 func (t *Registry) TableName() string {

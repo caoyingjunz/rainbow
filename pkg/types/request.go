@@ -10,6 +10,7 @@ type (
 		Images            []string `json:"images"`
 		AgentName         string   `json:"agent_name"`
 		Mode              int64    `json:"mode"`
+		PublicImage       bool     `json:"public_image"`
 	}
 
 	UpdateTaskRequest struct {
@@ -24,6 +25,7 @@ type (
 		Status            string   `json:"status"`
 		Images            []string `json:"images"`
 		Mode              int64    `json:"mode"`
+		PublicImage       bool     `json:"public_image"`
 	}
 
 	UpdateTaskStatusRequest struct {
@@ -55,12 +57,14 @@ type (
 	}
 
 	CreateImageRequest struct {
-		TaskId   int64  `json:"task_id"`
-		TaskName string `json:"task_name"`
-		UserId   string `json:"user_id"`
-		Name     string `json:"name"`
-		Status   string `json:"status"`
-		Message  string `json:"message"`
+		TaskId     int64  `json:"task_id"`
+		TaskName   string `json:"task_name"`
+		UserId     string `json:"user_id"`
+		RegisterId int64  `json:"register_id"`
+		Name       string `json:"name"`
+		Status     string `json:"status"`
+		Message    string `json:"message"`
+		IsPublic   bool   `json:"is_public"`
 	}
 
 	CreateImagesRequest struct {
@@ -77,6 +81,7 @@ type (
 		Name            string `json:"name"`
 		Status          string `json:"status"`
 		Message         string `json:"message"`
+		IsPublic        bool   `json:"is_public"`
 	}
 
 	UpdateImageStatusRequest struct {
