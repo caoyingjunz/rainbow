@@ -85,12 +85,13 @@ type (
 	}
 
 	UpdateImageStatusRequest struct {
-		Name     string `json:"name"`
-		TaskId   int64  `json:"task_id"`
-		TaskName string `json:"task_name"`
-		Status   string `json:"status"`
-		Message  string `json:"message"`
-		Target   string `json:"target"`
+		Name       string `json:"name"`
+		TaskId     int64  `json:"task_id"`
+		TaskName   string `json:"task_name"`
+		RegistryId int64  `json:"registry_id"`
+		Status     string `json:"status"`
+		Message    string `json:"message"`
+		Target     string `json:"target"`
 	}
 
 	UpdateAgentStatusRequest struct {

@@ -2,8 +2,10 @@ package rainbow
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
@@ -39,10 +41,33 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 }
 
 func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
+	if s.registryId != nil {
+		reg := s.registryId
+		if *reg == req.RegistryId {
+			if req.Status == "同步完成" {
+				parts := strings.Split(req.Target, "/")
+				repository := parts[len(parts)-1]
+				response, err := s.swrClient.UpdateRepo(&swrmodel.UpdateRepoRequest{
+					Namespace:  "pixiu-public",
+					Repository: repository,
+					Body: &swrmodel.UpdateRepoRequestBody{
+						IsPublic: true,
+					},
+				})
+				if err != nil {
+					klog.Errorf("尝试设置华为仓库为 public 失败: %v", err)
+				} else {
+					klog.Infof("设置仓库为公开成功 %v", response)
+				}
+			}
+		}
+	}
+
 	return s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{
-		"status":  req.Status,
-		"message": req.Message,
-		"target":  req.Target,
+		"status":      req.Status,
+		"message":     req.Message,
+		"target":      req.Target,
+		"register_id": req.RegistryId,
 	})
 }
 

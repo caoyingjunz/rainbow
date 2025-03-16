@@ -37,10 +37,11 @@ type KubernetesOption struct {
 }
 
 type PluginOption struct {
-	Callback string `yaml:"callback"`
-	TaskId   int64  `yaml:"task_id"`
-	Synced   bool   `yaml:"synced"`
-	Driver   string `yaml:"driver"`
+	Callback   string `yaml:"callback"`
+	TaskId     int64  `yaml:"task_id"`
+	RegistryId int64  `yaml:"registry_id"`
+	Synced     bool   `yaml:"synced"`
+	Driver     string `yaml:"driver"`
 }
 
 type Registry struct {

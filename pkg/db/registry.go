@@ -109,7 +109,7 @@ func (a *registry) GetAdminRegistries(ctx context.Context, opts ...Options) ([]m
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Where("role = ?", 1).Find(&audits).Error; err != nil {
+	if err := tx.Where("role > ?", 0).Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

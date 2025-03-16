@@ -141,7 +141,7 @@ func (s *AgentController) GetOneAdminRegistry(ctx context.Context) (*model.Regis
 		return nil, err
 	}
 	if len(regs) == 0 {
-		return nil, fmt.Errorf("no admin registry found")
+		return nil, fmt.Errorf("no admin or defualt registry found")
 	}
 
 	// 随机分，暂时不考虑负载情况，后续优化
@@ -174,9 +174,10 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 			Time: time.Now().Unix(), // 注入时间戳，确保每次内容都不相同
 		},
 		Plugin: template.PluginOption{
-			Callback: s.callback,
-			TaskId:   taskId,
-			Synced:   true,
+			Callback:   s.callback,
+			TaskId:     taskId,
+			RegistryId: registry.Id,
+			Synced:     true,
 		},
 		Registry: template.Registry{
 			Repository: registry.Repository,
