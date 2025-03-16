@@ -46,7 +46,6 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 		if *reg == req.RegistryId {
 			if req.Status == "同步完成" {
 				parts := strings.Split(req.Target, "/")
-
 				pps := parts[len(parts)-1]
 				p := strings.Split(pps, ":")
 				response, err := s.swrClient.UpdateRepo(&swrmodel.UpdateRepoRequest{
