@@ -193,6 +193,10 @@ func (p *PluginController) doComplete() error {
 }
 
 func (p *PluginController) Complete() error {
+	if len(p.Cfg.Plugin.Driver) == 0 {
+		p.Cfg.Plugin.Driver = "docker"
+	}
+
 	status, msg, process := "初始化成功", "初始化环境结束", 1
 	var err error
 	if err = p.doComplete(); err != nil {
