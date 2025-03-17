@@ -18,6 +18,7 @@ plugin:
   task_id: 20220801
   synced: true
   driver: docker #skopeo or docker
+  arch: amd #amd or arm or all
 
 mysql:
   host: peng

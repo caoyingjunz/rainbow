@@ -286,46 +286,80 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 
 	var cmd []string
 	switch p.Cfg.Plugin.Driver {
-	case "skopeo":
-		cmd = []string{"sudo", "chmod", "+x", "bin/skopeo", "&&", "bin/skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
-		klog.Infof("Making skopeo executable and copying image: %s", targetImage)
-		out, err := p.exec.Command("sh", "-c", strings.Join(cmd, " ")).CombinedOutput()
-		if err != nil {
-			klog.Errorf("Failed to execute skopeo commands: %v, output: %s", err, string(out))
-			return "", fmt.Errorf("failed to execute skopeo commands: %v", err)
+	case "skopeo", "docker":
+		platforms := []struct {
+			arch     string
+			suffix   string
+			override string
+			platform string
+		}{
+			{arch: "arm64", suffix: "-arm64", override: "--override-arch arm64", platform: "linux/arm64"},
+			{arch: "amd64", suffix: "", override: "--override-arch amd64", platform: "linux/amd64"},
 		}
-		klog.Infof("Successfully executed skopeo commands: %s", string(out))
+
+		var processPlatforms []struct{ arch, suffix, override, platform string }
+		switch p.Cfg.Plugin.Arch {
+		case "arm":
+			processPlatforms = append(processPlatforms, platforms[0])
+		case "all":
+			processPlatforms = platforms
+		default:
+			if p.Cfg.Plugin.Arch != "amd" {
+				klog.Warningf("Unsupported architecture '%s', fallback to 'amd'", p.Cfg.Plugin.Arch)
+			}
+			processPlatforms = append(processPlatforms, platforms[1]) // 默认 amd64
+		}
+
+		for _, pInfo := range processPlatforms {
+			modifiedImage := targetImage + pInfo.suffix
+
+			switch p.Cfg.Plugin.Driver {
+			case "skopeo":
+				cmd = []string{
+					"sudo", "chmod", "+x", "bin/skopeo", "&&",
+					"bin/skopeo", "copy",
+					"docker://" + imageToPush,
+					"docker://" + modifiedImage,
+					pInfo.override,
+				}
+				klog.Infof("Copying %s image: %s", pInfo.arch, modifiedImage)
+				if out, err := p.exec.Command("sh", "-c", strings.Join(cmd, " ")).CombinedOutput(); err != nil {
+					klog.Errorf("%s copy failed: %v, output: %s", pInfo.arch, err, string(out))
+					return "", fmt.Errorf("%s copy failed: %v", pInfo.arch, err)
+				} else {
+					klog.Infof("%s copy success: %s", pInfo.arch, string(out))
+				}
+
+			case "docker":
+				klog.Infof("Pulling %s image: %s", pInfo.arch, imageToPush)
+				if reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{Platform: pInfo.platform}); err != nil {
+					klog.Errorf("%s pull failed: %v", pInfo.arch, err)
+					return "", fmt.Errorf("%s pull failed: %v", pInfo.arch, err)
+				} else {
+					io.Copy(os.Stdout, reader)
+				}
+
+				klog.Infof("Tagging %s: %s -> %s", pInfo.arch, imageToPush, modifiedImage)
+				if err := p.docker.ImageTag(context.TODO(), imageToPush, modifiedImage); err != nil {
+					klog.Errorf("%s tag failed: %v", pInfo.arch, err)
+					return "", fmt.Errorf("%s tag failed: %v", pInfo.arch, err)
+				}
+
+				klog.Infof("Pushing %s image: %s", pInfo.arch, modifiedImage)
+				if out, err := p.exec.Command("docker", "push", modifiedImage).CombinedOutput(); err != nil {
+					klog.Errorf("%s push failed: %v, output: %s", pInfo.arch, err, string(out))
+					return "", fmt.Errorf("%s push failed: %v", pInfo.arch, err)
+				} else {
+					klog.Infof("%s push success: %s", pInfo.arch, string(out))
+				}
+			}
+		}
+
 		return targetImage, nil
 
-	case "docker":
-		klog.Infof("Pulling image: %s", imageToPush)
-		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
-		if err != nil {
-			klog.Errorf("Failed to pull image %s: %v", imageToPush, err)
-			return "", fmt.Errorf("failed to pull image %s: %v", imageToPush, err)
-		}
-		io.Copy(os.Stdout, reader)
-
-		klog.Infof("Tagging image from %s to %s", imageToPush, targetImage)
-		if err := p.docker.ImageTag(context.TODO(), imageToPush, targetImage); err != nil {
-			klog.Errorf("Failed to tag image %s to %s: %v", imageToPush, targetImage, err)
-			return "", fmt.Errorf("failed to tag image %s to %s: %v", imageToPush, targetImage, err)
-		}
-
-		cmd = []string{"docker", "push", targetImage}
 	default:
 		return "", fmt.Errorf("unsupported driver: %s", p.Cfg.Plugin.Driver)
 	}
-
-	klog.Infof("Pushing image: %s", targetImage)
-	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
-	if err != nil {
-		klog.Errorf("Failed to push image %s: %v, output: %s", targetImage, err, string(out))
-		return "", fmt.Errorf("failed to push image %s: %v", targetImage, err)
-	}
-
-	klog.Infof("Successfully pushed image: %s", targetImage)
-	return targetImage, nil
 }
 
 func (p *PluginController) getImagesFromFile() ([]string, error) {

@@ -42,6 +42,7 @@ type PluginOption struct {
 	RegistryId int64  `yaml:"registry_id"`
 	Synced     bool   `yaml:"synced"`
 	Driver     string `yaml:"driver"`
+	Arch       string `yaml:"arch"`
 }
 
 type Registry struct {
