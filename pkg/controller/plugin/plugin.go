@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	Kubeadm   = "kubeadm"
-	IgnoreKey = "W0508"
+	Kubeadm             = "kubeadm"
+	IgnoreKey           = "W0508"
+	MaxConcurrentPushes = 10
 )
 
 type KubeadmVersion struct {
@@ -361,29 +362,43 @@ func (p *PluginController) Run() error {
 	errCh := make(chan error, diff)
 
 	var wg sync.WaitGroup
-	wg.Add(diff)
-	for _, i := range p.Images {
-		go func(imageToPush string) {
-			defer wg.Done()
-			_ = p.SyncImageStatus(imageToPush, "", "同步进行中", "")
-			target, err := p.doPushImage(imageToPush)
-			if err != nil {
-				_ = p.SyncImageStatus(imageToPush, target, "同步异常", err.Error())
-				errCh <- err
-			} else {
-				_ = p.SyncImageStatus(imageToPush, target, "同步完成", "")
-			}
-		}(i)
-	}
-	wg.Wait()
+	sem := make(chan struct{}, MaxConcurrentPushes)
+	for _, imageToPush := range p.Images {
+		wg.Add(1)
+		sem <- struct{}{}
 
-	select {
-	case err := <-errCh:
-		if err != nil {
-			_ = p.SyncTaskStatus("镜像同步结束", "存在镜像同步异常", 2)
-			return err
+		go func(image string) {
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+
+			_ = p.SyncImageStatus(image, "", "同步进行中", "")
+			target, err := p.doPushImage(image)
+			if err != nil {
+				_ = p.SyncImageStatus(image, target, "同步异常", err.Error())
+				errCh <- err
+				return
+			}
+			_ = p.SyncImageStatus(image, target, "同步完成", "")
+		}(imageToPush)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	var firstErr error
+	for err := range errCh {
+		if firstErr == nil {
+			firstErr = err
 		}
-	default:
+	}
+
+	if firstErr != nil {
+		_ = p.SyncTaskStatus("镜像同步结束", "存在镜像同步异常", 2)
+		return firstErr
 	}
 
 	_ = p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
