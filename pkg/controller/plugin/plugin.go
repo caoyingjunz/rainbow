@@ -301,7 +301,7 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	switch p.Cfg.Plugin.Driver {
 	case SkopeoDriver:
 		klog.Infof("use skopeo to copying image: %s", targetImage)
-		cmd = []string{"docker", "run", "--network", "host", "-v", "/root/.docker:/root/.docker", "pixiuio/skopeo:1.17.0", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
+		cmd = []string{"docker", "run", "--network", "host", "pixiuio/skopeo:1.17.0", "skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, "&&", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
 	case DockerDriver:
 		klog.Infof("Pulling image: %s", imageToPush)
 		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
