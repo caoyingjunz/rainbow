@@ -20,13 +20,13 @@ import (
 )
 
 const (
-  Kubeadm   = "kubeadm"
+	Kubeadm   = "kubeadm"
 	IgnoreKey = "W0508"
 
 	SkopeoDriver = "skopeo"
 	DockerDriver = "docker"
 
-	MaxConcurrentPushes = 5
+	MaxConcurrency = 5
 )
 
 type KubeadmVersion struct {
@@ -363,20 +363,19 @@ func (p *PluginController) Run() error {
 	}
 
 	_ = p.SyncTaskStatus("开始同步镜像", "", 1)
+
 	diff := len(p.Images)
+	maxCh := make(chan struct{}, MaxConcurrency)
 	errCh := make(chan error, diff)
 
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, MaxConcurrentPushes)
 	for _, imageToPush := range p.Images {
 		wg.Add(1)
-		sem <- struct{}{}
+		maxCh <- struct{}{} // 获取信号量，控制并发
 
 		go func(image string) {
-			defer func() {
-				<-sem
-				wg.Done()
-			}()
+			defer wg.Done()
+			defer func() { <-maxCh }() // 释放信号量
 
 			_ = p.SyncImageStatus(image, "", "同步进行中", "")
 			target, err := p.doPushImage(image)
@@ -388,22 +387,15 @@ func (p *PluginController) Run() error {
 			_ = p.SyncImageStatus(image, target, "同步完成", "")
 		}(imageToPush)
 	}
+	wg.Wait()
 
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
-
-	var firstErr error
-	for err := range errCh {
-		if firstErr == nil {
-			firstErr = err
+	select {
+	case err := <-errCh:
+		if err != nil {
+			_ = p.SyncTaskStatus("镜像同步结束", "存在镜像同步异常", 2)
+			return err
 		}
-	}
-
-	if firstErr != nil {
-		_ = p.SyncTaskStatus("镜像同步结束", "存在镜像同步异常", 2)
-		return firstErr
+	default:
 	}
 
 	_ = p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
