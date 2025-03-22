@@ -1,7 +1,5 @@
 package config
 
-import "github.com/caoyingjunz/rainbow/pkg/template"
-
 type Config struct {
 	Default DefaultOption `yaml:"default"`
 	Mysql   MysqlOptions  `yaml:"mysql"`
@@ -11,8 +9,8 @@ type Config struct {
 
 	Server ServerOption `yaml:"server"`
 
-	Plugin   template.PluginOption `yaml:"plugin"`
-	Registry template.Registry     `yaml:"registry"`
+	Plugin   PluginOption `yaml:"plugin"`
+	Registry Registry     `yaml:"registry"`
 
 	Agent AgentOption `yaml:"agent"`
 }
@@ -21,8 +19,32 @@ type DefaultOption struct {
 	Listen int    `yaml:"listen"`
 	Mode   string `yaml:"mode"` // debug 和 release 模式
 
-	PushKubernetes bool `yaml:"push_kubernetes"`
-	PushImages     bool `yaml:"push_images"`
+	PushKubernetes bool  `yaml:"push_kubernetes"`
+	PushImages     bool  `yaml:"push_images"`
+	Time           int64 `yaml:"time"`
+}
+
+type PluginTemplateConfig struct {
+	Default    DefaultOption    `yaml:"default"`
+	Kubernetes KubernetesOption `yaml:"kubernetes"`
+	Plugin     PluginOption     `yaml:"plugin"`
+	Registry   Registry         `yaml:"registry"`
+	Images     []string         `yaml:"images"`
+}
+
+type PluginOption struct {
+	Callback   string `yaml:"callback"`
+	TaskId     int64  `yaml:"task_id"`
+	RegistryId int64  `yaml:"registry_id"`
+	Synced     bool   `yaml:"synced"`
+	Driver     string `yaml:"driver"`
+}
+
+type Registry struct {
+	Repository string `yaml:"repository"`
+	Namespace  string `yaml:"namespace"`
+	Username   string `yaml:"username"`
+	Password   string `yaml:"password"`
 }
 
 type ServerOption struct {
