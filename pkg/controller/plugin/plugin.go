@@ -22,6 +22,9 @@ import (
 const (
 	Kubeadm   = "kubeadm"
 	IgnoreKey = "W0508"
+
+	SkopeoDriver = "skopeo"
+	DockerDriver = "docker"
 )
 
 type KubeadmVersion struct {
@@ -284,11 +287,6 @@ func (p *PluginController) parseTargetImage(imageToPush string) (string, error) 
 
 	return p.Registry.Repository + "/" + p.Registry.Namespace + "/" + parts[len(parts)-1], nil
 }
-
-const (
-	SkopeoDriver = "skopeo"
-	DockerDriver = "docker"
-)
 
 func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	targetImage, err := p.parseTargetImage(imageToPush)
