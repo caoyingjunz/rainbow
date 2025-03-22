@@ -15,9 +15,9 @@ import (
 
 	"github.com/caoyingjunz/pixiulib/strutil"
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
+	"github.com/caoyingjunz/rainbow/pkg/controller/plugin"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
-	"github.com/caoyingjunz/rainbow/pkg/template"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
@@ -151,7 +151,7 @@ func (s *AgentController) GetOneAdminRegistry(ctx context.Context) (*model.Regis
 	return &t, err
 }
 
-func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task) (*template.PluginTemplateConfig, error) {
+func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task) (*rainbowconfig.PluginTemplateConfig, error) {
 	taskId := task.Id
 
 	var (
@@ -169,17 +169,23 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		return nil, fmt.Errorf("failed to get registry %v", err)
 	}
 
-	pluginTemplateConfig := &template.PluginTemplateConfig{
-		Default: template.DefaultOption{
+	driver := plugin.DockerDriver
+	if task.Mode == 1 {
+		driver = plugin.SkopeoDriver
+	}
+
+	pluginTemplateConfig := &rainbowconfig.PluginTemplateConfig{
+		Default: rainbowconfig.DefaultOption{
 			Time: time.Now().Unix(), // 注入时间戳，确保每次内容都不相同
 		},
-		Plugin: template.PluginOption{
+		Plugin: rainbowconfig.PluginOption{
 			Callback:   s.callback,
 			TaskId:     taskId,
 			RegistryId: registry.Id,
 			Synced:     true,
+			Driver:     driver,
 		},
-		Registry: template.Registry{
+		Registry: rainbowconfig.Registry{
 			Repository: registry.Repository,
 			Namespace:  registry.Namespace,
 			Username:   registry.Username,

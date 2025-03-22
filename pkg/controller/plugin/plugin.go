@@ -20,9 +20,13 @@ import (
 )
 
 const (
-	Kubeadm             = "kubeadm"
-	IgnoreKey           = "W0508"
-	MaxConcurrentPushes = 10
+  Kubeadm   = "kubeadm"
+	IgnoreKey = "W0508"
+
+	SkopeoDriver = "skopeo"
+	DockerDriver = "docker"
+
+	MaxConcurrentPushes = 5
 )
 
 type KubeadmVersion struct {
@@ -170,13 +174,22 @@ func (p *PluginController) doComplete() error {
 		}
 	}
 
+	if p.Cfg.Plugin.Driver == SkopeoDriver {
+		cmd := []string{"docker", "pull", "pixiuio/skopeo:1.17.0"}
+		klog.Infof("Starting pull skopeo image", cmd)
+		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to pull skopeo image %v %v", string(out), err)
+		}
+	}
+
 	if p.Cfg.Default.PushKubernetes {
 		//cmd := []string{"sudo", "apt-get", "install", "-y", fmt.Sprintf("kubeadm=%s-00", p.Cfg.Kubernetes.Version[1:])}
 		cmd := []string{"sudo", "curl", "-LO", fmt.Sprintf("https://dl.k8s.io/release/%s/bin/linux/amd64/kubeadm", p.Cfg.Kubernetes.Version)}
 		klog.Infof("Starting install kubeadm %s", cmd)
 		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("failed to get kubeadm %v %v", string(out), err)
+			return fmt.Errorf("failed to get kubeadm %v %v, 疑似指定的 kubernetes 版本不符合规范", string(out), err)
 		}
 
 		cmd2 := []string{"sudo", "install", "-o", "root", "-g", "root", "-m", "0755", "kubeadm", "/usr/local/bin/kubeadm"}
@@ -282,23 +295,15 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to parse target image: %v", err)
 	}
-
 	klog.Infof("Tagging image from %s to %s", imageToPush, targetImage)
 
 	var cmd []string
 	switch p.Cfg.Plugin.Driver {
-	case "skopeo":
-		cmd = []string{"sudo", "chmod", "+x", "bin/skopeo", "&&", "bin/skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
-		klog.Infof("Making skopeo executable and copying image: %s", targetImage)
-		out, err := p.exec.Command("sh", "-c", strings.Join(cmd, " ")).CombinedOutput()
-		if err != nil {
-			klog.Errorf("Failed to execute skopeo commands: %v, output: %s", err, string(out))
-			return "", fmt.Errorf("failed to execute skopeo commands: %v", err)
-		}
-		klog.Infof("Successfully executed skopeo commands: %s", string(out))
-		return targetImage, nil
-
-	case "docker":
+	case SkopeoDriver:
+		klog.Infof("use skopeo to copying image: %s", targetImage)
+		cmd1 := []string{"skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, "&&", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
+		cmd = []string{"docker", "run", "--network", "host", "pixiuio/skopeo:1.17.0", "sh", "-c", strings.Join(cmd1, " ")}
+	case DockerDriver:
 		klog.Infof("Pulling image: %s", imageToPush)
 		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
 		if err != nil {

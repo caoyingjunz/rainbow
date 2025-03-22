@@ -21,6 +21,8 @@ type DefaultOption struct {
 
 	PushKubernetes bool `yaml:"push_kubernetes"`
 	PushImages     bool `yaml:"push_images"`
+
+	Time int64 `yaml:"time"`
 }
 
 type ServerOption struct {
@@ -62,4 +64,12 @@ type MysqlOptions struct {
 type AgentOption struct {
 	Name    string `yaml:"name"`
 	DataDir string `yaml:"data_dir"`
+}
+
+type PluginTemplateConfig struct {
+	Default    DefaultOption    `yaml:"default"`
+	Kubernetes KubernetesOption `yaml:"kubernetes"`
+	Plugin     PluginOption     `yaml:"plugin"`
+	Registry   Registry         `yaml:"registry"`
+	Images     []string         `yaml:"images"`
 }
