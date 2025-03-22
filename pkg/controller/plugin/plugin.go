@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/caoyingjunz/rainbow/pkg/template"
 	"io"
 	"os"
 	"strings"
@@ -46,7 +47,7 @@ type PluginController struct {
 	docker     *client.Client
 
 	Cfg      config.Config
-	Registry config.Registry
+	Registry template.Registry
 	Images   []string
 
 	Runners []Runner

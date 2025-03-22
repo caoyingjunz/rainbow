@@ -1,5 +1,7 @@
 package config
 
+import "github.com/caoyingjunz/rainbow/pkg/template"
+
 type Config struct {
 	Default DefaultOption `yaml:"default"`
 	Mysql   MysqlOptions  `yaml:"mysql"`
@@ -9,8 +11,8 @@ type Config struct {
 
 	Server ServerOption `yaml:"server"`
 
-	Plugin   PluginOption `yaml:"plugin"`
-	Registry Registry     `yaml:"registry"`
+	Plugin   template.PluginOption `yaml:"plugin"`
+	Registry template.Registry     `yaml:"registry"`
 
 	Agent AgentOption `yaml:"agent"`
 }
@@ -34,21 +36,6 @@ type Auth struct {
 
 type KubernetesOption struct {
 	Version string `yaml:"version"`
-}
-
-type PluginOption struct {
-	Callback   string `yaml:"callback"`
-	TaskId     int64  `yaml:"task_id"`
-	RegistryId int64  `yaml:"registry_id"`
-	Synced     bool   `yaml:"synced"`
-	Driver     string `yaml:"driver"`
-}
-
-type Registry struct {
-	Repository string `yaml:"repository"`
-	Namespace  string `yaml:"namespace"`
-	Username   string `yaml:"username"`
-	Password   string `yaml:"password"`
 }
 
 type MysqlOptions struct {

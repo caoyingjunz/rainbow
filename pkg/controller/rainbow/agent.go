@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"github.com/caoyingjunz/rainbow/pkg/controller/plugin"
 	"math/rand"
 	"path/filepath"
 	"strings"
@@ -204,6 +205,13 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 	case 1:
 		pluginTemplateConfig.Default.PushKubernetes = true
 		pluginTemplateConfig.Kubernetes.Version = task.KubernetesVersion
+	}
+
+	switch task.Mode {
+	case 0:
+		pluginTemplateConfig.Plugin.Driver = plugin.DockerDriver
+	case 1:
+		pluginTemplateConfig.Plugin.Driver = plugin.SkopeoDriver
 	}
 
 	return pluginTemplateConfig, err
