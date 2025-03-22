@@ -169,6 +169,11 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		return nil, fmt.Errorf("failed to get registry %v", err)
 	}
 
+	driver := plugin.DockerDriver
+	if task.Mode == 1 {
+		driver = plugin.SkopeoDriver
+	}
+
 	pluginTemplateConfig := &rainbowconfig.PluginTemplateConfig{
 		Default: rainbowconfig.DefaultOption{
 			Time: time.Now().Unix(), // 注入时间戳，确保每次内容都不相同
@@ -178,6 +183,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 			TaskId:     taskId,
 			RegistryId: registry.Id,
 			Synced:     true,
+			Driver:     driver,
 		},
 		Registry: rainbowconfig.Registry{
 			Repository: registry.Repository,
@@ -204,13 +210,6 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 	case 1:
 		pluginTemplateConfig.Default.PushKubernetes = true
 		pluginTemplateConfig.Kubernetes.Version = task.KubernetesVersion
-	}
-
-	switch task.Mode {
-	case 0:
-		pluginTemplateConfig.Plugin.Driver = plugin.DockerDriver
-	case 1:
-		pluginTemplateConfig.Plugin.Driver = plugin.SkopeoDriver
 	}
 
 	return pluginTemplateConfig, err
