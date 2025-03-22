@@ -25,6 +25,19 @@ type DefaultOption struct {
 	Time int64 `yaml:"time"`
 }
 
+type ServerOption struct {
+	Auth Auth `yaml:"auth"`
+}
+
+type Auth struct {
+	AccessKey string `yaml:"access_key"`
+	SecretKey string `yaml:"secret_key"`
+}
+
+type KubernetesOption struct {
+	Version string `yaml:"version"`
+}
+
 type PluginOption struct {
 	Callback   string `yaml:"callback"`
 	TaskId     int64  `yaml:"task_id"`
@@ -38,19 +51,6 @@ type Registry struct {
 	Namespace  string `yaml:"namespace"`
 	Username   string `yaml:"username"`
 	Password   string `yaml:"password"`
-}
-
-type ServerOption struct {
-	Auth Auth `yaml:"auth"`
-}
-
-type Auth struct {
-	AccessKey string `yaml:"access_key"`
-	SecretKey string `yaml:"secret_key"`
-}
-
-type KubernetesOption struct {
-	Version string `yaml:"version"`
 }
 
 type MysqlOptions struct {
