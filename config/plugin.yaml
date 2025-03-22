@@ -3,8 +3,10 @@ default:
   push_images: true
 
 plugin:
-  callback: 127.0.0.1:8090
-  task_id: 123456
+  callback: http://127.0.0.1:8090
+  task_id: 20220801
+  synced: true
+  driver: docker #skopeo or docker
 
 registry:
   repository: harbor.cloud.pixiuio.com

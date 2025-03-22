@@ -3,7 +3,7 @@ agent:
   data_dir: /tmp
 
 plugin:
-  callback: 127.0.0.1:8090
+  callback: http://127.0.0.1:8090
 
 mysql:
   host: peng
