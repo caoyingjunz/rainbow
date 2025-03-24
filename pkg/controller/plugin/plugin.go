@@ -176,7 +176,7 @@ func (p *PluginController) doComplete() error {
 
 	if p.Cfg.Plugin.Driver == SkopeoDriver {
 		cmd := []string{"docker", "pull", "pixiuio/skopeo:1.17.0"}
-		klog.Infof("Starting pull skopeo image", cmd)
+		klog.Infof("Starting pull skopeo image %s", cmd)
 		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("failed to pull skopeo image %v %v", string(out), err)
@@ -301,7 +301,7 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	switch p.Cfg.Plugin.Driver {
 	case SkopeoDriver:
 		klog.Infof("use skopeo to copying image: %s", targetImage)
-		cmd1 := []string{"skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, "&&", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
+		cmd1 := []string{"skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, ">", "/dev/null", "2>&1", "&&", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
 		cmd = []string{"docker", "run", "--network", "host", "pixiuio/skopeo:1.17.0", "sh", "-c", strings.Join(cmd1, " ")}
 	case DockerDriver:
 		klog.Infof("Pulling image: %s", imageToPush)
@@ -327,7 +327,7 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
 		klog.Errorf("Failed to push image %s: %v, output: %s", targetImage, err, string(out))
-		return "", fmt.Errorf("failed to push image %s: %v", targetImage, err)
+		return "", fmt.Errorf("failed to push image %s: %v", targetImage, string(out))
 	}
 
 	klog.Infof("Successfully pushed image: %s", targetImage)
