@@ -26,6 +26,7 @@ type ServerInterface interface {
 	DeleteLabel(ctx context.Context, labelId int64) error
 	UpdateLabel(ctx context.Context, req *types.UpdateLabelRequest) error
 	ListLabels(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	ListLabelsInfo(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
@@ -48,7 +49,6 @@ type ServerInterface interface {
 	SoftDeleteImage(ctx context.Context, imageId int64) error
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
-	ListLabelsInfo(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) error
