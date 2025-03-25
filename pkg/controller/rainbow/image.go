@@ -101,7 +101,6 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 
 	return s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{
 		"status":      req.Status,
-		"message":     req.Message,
 		"mirror":      req.Target,
 		"register_id": req.RegistryId,
 		"is_public":   true,
