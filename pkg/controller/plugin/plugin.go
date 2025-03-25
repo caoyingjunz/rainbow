@@ -327,7 +327,7 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
 		klog.Errorf("Failed to push image %s: %v, output: %s", targetImage, err, string(out))
-		return "", fmt.Errorf("failed to push image %s: %v", targetImage, string(out))
+		return "", fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
 	}
 
 	klog.Infof("Successfully pushed image: %s", targetImage)
