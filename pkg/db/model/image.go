@@ -47,6 +47,7 @@ type Tag struct {
 	Path    string `json:"path"`
 	Name    string `json:"name"`
 	Size    int64  `json:"size"`
+	Status  string `json:"status"`
 }
 
 func (t *Tag) TableName() string {
