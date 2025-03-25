@@ -13,7 +13,7 @@ func (s *ServerController) CreateLabel(ctx context.Context, req *types.CreateLab
 		Name: req.Name,
 	})
 	if err != nil {
-		klog.Errorf("创建失败 %v", err)
+		klog.Errorf("创建标签失败 %v", err)
 		return err
 	}
 
@@ -38,14 +38,6 @@ func (s *ServerController) UpdateLabel(ctx context.Context, req *types.UpdateLab
 
 func (s *ServerController) ListLabels(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	list, err := s.factory.Label().List(ctx, db.WithNameLike(listOption.NameSelector))
-	if err != nil {
-		return nil, err
-	}
-	return list, nil
-}
-
-func (s *ServerController) ListLabelsInfo(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	list, err := s.factory.Label().ListLabelsInfo(ctx, db.WithNameLike(listOption.NameSelector))
 	if err != nil {
 		return nil, err
 	}

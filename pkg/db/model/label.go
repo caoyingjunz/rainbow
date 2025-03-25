@@ -9,8 +9,7 @@ func init() {
 type Label struct {
 	rainbow.Model
 
-	Name   string   `gorm:"index:idx_name,unique" json:"name"`
-	Images []*Image `gorm:"many2many:images_labels;" json:"images,omitempty"`
+	Name string `gorm:"index:idx_name,unique" json:"name"`
 }
 
 func (l *Label) TableName() string {
