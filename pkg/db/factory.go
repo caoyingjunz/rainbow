@@ -17,6 +17,7 @@ limitations under the License.
 package db
 
 import (
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +26,7 @@ type ShareDaoFactory interface {
 	Task() TaskInterface
 	Registry() RegistryInterface
 	Image() ImageInterface
+	Label() LabelInterface
 }
 
 type shareDaoFactory struct {
@@ -35,9 +37,13 @@ func (f *shareDaoFactory) Agent() AgentInterface       { return newAgent(f.db) }
 func (f *shareDaoFactory) Task() TaskInterface         { return newTask(f.db) }
 func (f *shareDaoFactory) Registry() RegistryInterface { return newRegistry(f.db) }
 func (f *shareDaoFactory) Image() ImageInterface       { return newImage(f.db) }
+func (f *shareDaoFactory) Label() LabelInterface       { return newLabel(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {
+		if err := db.AutoMigrate(&model.Image{}, &model.Label{}); err != nil {
+			return nil, err
+		}
 		// 自动创建指定模型的数据库表结构
 		if err := newMigrator(db).AutoMigrate(); err != nil {
 			return nil, err

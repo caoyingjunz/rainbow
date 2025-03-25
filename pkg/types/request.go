@@ -1,6 +1,16 @@
 package types
 
 type (
+	CreateLabelRequest struct {
+		Name string `json:"name" binding:"required"`
+	}
+
+	UpdateLabelRequest struct {
+		Id              int64  `json:"id"`
+		Name            string `json:"name" binding:"required"`
+		ResourceVersion int64  `json:"resource_version"`
+	}
+
 	CreateTaskRequest struct {
 		Name              string   `json:"name"`
 		UserId            string   `json:"user_id"`
@@ -65,6 +75,8 @@ type (
 		Status     string `json:"status"`
 		Message    string `json:"message"`
 		IsPublic   bool   `json:"is_public"`
+
+		Labels []string `json:"labels"`
 	}
 
 	CreateImagesRequest struct {

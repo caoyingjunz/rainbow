@@ -7,6 +7,109 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
+func (cr *rainbowRouter) createLabel(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateLabelRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().CreateLabel(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteLabel(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().DeleteLabel(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateLabel(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req    types.UpdateLabelRequest
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	req.Id = idMeta.ID
+
+	if err = cr.c.Server().UpdateLabel(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listLabels(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err        error
+		listOption types.ListOptions
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().ListLabels(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listLabelsInfo(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err        error
+		listOption types.ListOptions
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().ListLabelsInfo(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createTask(c *gin.Context) {
 	resp := httputils.NewResponse()
 

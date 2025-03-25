@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,6 +15,19 @@ import (
 )
 
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
+	var labels []*model.Label
+	if len(req.Labels) > 0 {
+		if err := s.factory.Label().FindByNames(ctx, req.Labels, &labels); err != nil {
+			klog.Errorf("查询关联标签失败 %v", err)
+			return err
+		}
+
+		if len(labels) != len(req.Labels) {
+			klog.Errorf("部分标签不存在")
+			return fmt.Errorf("部分标签不存在")
+		}
+	}
+
 	_, err := s.factory.Image().Create(ctx, &model.Image{
 		Name:       req.Name,
 		TaskId:     req.TaskId,
@@ -21,6 +35,7 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 		TaskName:   req.TaskName,
 		Status:     req.Status,
 		IsPublic:   req.IsPublic,
+		Labels:     labels,
 	})
 	if err != nil {
 		klog.Errorf("创建镜像失败 %v", err)

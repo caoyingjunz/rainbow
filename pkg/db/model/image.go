@@ -27,6 +27,8 @@ type Image struct {
 
 	IsPublic bool   `json:"is_public"`
 	Tags     string `json:"tags"`
+
+	Labels []*Label `gorm:"many2many:images_labels;" json:"labels,omitempty"`
 }
 
 func (t *Image) TableName() string {

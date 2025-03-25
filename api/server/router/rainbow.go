@@ -20,6 +20,15 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
+	labelRoute := httpEngine.Group("/rainbow/labels")
+	{
+		labelRoute.POST("", cr.createLabel)
+		labelRoute.DELETE("/:Id", cr.deleteLabel)
+		labelRoute.PUT("/:Id", cr.updateLabel)
+		labelRoute.GET("", cr.listLabels)
+		labelRoute.GET("/info", cr.listLabelsInfo)
+	}
+
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
@@ -27,7 +36,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		taskRoute.DELETE("/:Id", cr.deleteTask)
 		taskRoute.GET("/:Id", cr.getTask)
 		taskRoute.GET("", cr.listTasks)
-
 		taskRoute.PUT("/:Id/status", cr.UpdateTaskStatus)
 	}
 
