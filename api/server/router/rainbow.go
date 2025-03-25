@@ -27,6 +27,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		labelRoute.PUT("/:Id", cr.updateLabel)
 		labelRoute.GET("", cr.listLabels)
 	}
+	
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
