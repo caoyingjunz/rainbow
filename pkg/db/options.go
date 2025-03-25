@@ -76,6 +76,17 @@ func WithNameLike(name string) Options {
 	}
 }
 
+func WithLabelName(labelName string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(labelName) == 0 {
+			return tx
+		}
+		return tx.Joins("JOIN images_labels ON images_labels.image_id = images.id").
+			Joins("JOIN labels ON labels.id = images_labels.label_id").
+			Where("labels.name LIKE ?", "%"+labelName+"%")
+	}
+}
+
 func WithStatus(status string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(status) == 0 {

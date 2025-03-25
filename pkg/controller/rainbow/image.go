@@ -105,7 +105,7 @@ func (s *ServerController) SoftDeleteImage(ctx context.Context, imageId int64) e
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	if listOption.Limits == 0 {
-		return s.factory.Image().List(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
+		return s.factory.Image().List(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector), db.WithLabelName(listOption.LabelSelector))
 	}
 
 	// TODO: 临时实现，后续再优化
