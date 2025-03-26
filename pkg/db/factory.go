@@ -40,6 +40,7 @@ func (f *shareDaoFactory) Label() LabelInterface       { return newLabel(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {
+		// 自动创建指定模型的数据库表结构
 		if err := newMigrator(db).AutoMigrate(); err != nil {
 			return nil, err
 		}
