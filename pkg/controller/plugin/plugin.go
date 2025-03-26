@@ -93,28 +93,27 @@ func (i *image) GetName() string {
 }
 
 func (i *image) Run() error {
-	//var images []string
-	//if i.p.Cfg.Default.PushKubernetes {
-	//	kubeImages, err := i.p.getImages()
-	//	if err != nil {
-	//		return fmt.Errorf("获取 k8s 镜像失败: %v", err)
-	//	}
-	//
-	//	if err = i.p.CreateImages(kubeImages); err != nil {
-	//		klog.Errorf("回写k8s镜像失败: %v", err)
-	//	}
-	//	images = append(images, kubeImages...)
-	//}
-	//
-	//if i.p.Cfg.Default.PushImages {
-	//	fileImages, err := i.p.getImagesFromFile()
-	//	if err != nil {
-	//		return fmt.Errorf("")
-	//	}
-	//	images = append(images, fileImages...)
-	//}
-	//
-	//i.p.Images = images
+	var images []string
+	if i.p.Cfg.Default.PushKubernetes {
+		kubeImages, err := i.p.getImages()
+		if err != nil {
+			return fmt.Errorf("获取 k8s 镜像失败: %v", err)
+		}
+
+		if err = i.p.CreateImages(kubeImages); err != nil {
+			klog.Errorf("回写k8s镜像失败: %v", err)
+		}
+		images = append(images, kubeImages...)
+	}
+
+	if i.p.Cfg.Default.PushImages {
+		fileImages, err := i.p.getImagesFromFile()
+		if err != nil {
+			return fmt.Errorf("")
+		}
+		images = append(images, fileImages...)
+	}
+
 	return nil
 }
 
@@ -148,10 +147,10 @@ func (p *PluginController) Validate() error {
 	}
 
 	// 检查 docker 的客户端是否正常
-	//if _, err := p.docker.Ping(context.Background()); err != nil {
-	//	klog.Errorf("%v", err)
-	//	return err
-	//}
+	if _, err := p.docker.Ping(context.Background()); err != nil {
+		klog.Errorf("%v", err)
+		return err
+	}
 
 	return nil
 }
@@ -201,7 +200,7 @@ func (p *PluginController) doComplete() error {
 	}
 
 	p.Runners = []Runner{
-		//&login{name: "Registry登陆", p: p},
+		&login{name: "Registry登陆", p: p},
 		&image{name: "解析镜像", p: p},
 	}
 	return p.Validate()
