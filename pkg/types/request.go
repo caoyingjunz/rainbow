@@ -4,6 +4,7 @@ type (
 	CreateTaskRequest struct {
 		Name              string   `json:"name"`
 		UserId            string   `json:"user_id"`
+		UserName          string   `json:"user_name"`
 		RegisterId        int64    `json:"register_id"`
 		Type              int      `json:"type"` // 0：直接指定镜像列表 1: 指定 kubernetes 版本
 		KubernetesVersion string   `json:"kubernetes_version"`
@@ -86,13 +87,13 @@ type (
 	}
 
 	UpdateImageStatusRequest struct {
-		Name       string `json:"name"`
-		TaskId     int64  `json:"task_id"`
-		TaskName   string `json:"task_name"`
-		RegistryId int64  `json:"registry_id"`
-		Status     string `json:"status"`
-		Message    string `json:"message"`
-		Target     string `json:"target"`
+		Name        string `json:"name"` // 对应仓里的镜像名称 比如，nginx
+		ImageId     int64  `json:"image_id"`
+		TaskId      int64  `json:"task_id"`
+		RegistryId  int64  `json:"registry_id"`
+		Status      string `json:"status"`
+		Description string `json:"description"`
+		Target      string `json:"target"`
 	}
 
 	UpdateAgentStatusRequest struct {

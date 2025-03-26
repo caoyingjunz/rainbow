@@ -194,13 +194,20 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get images %v", err)
 		}
-		var img []string
-		for _, i := range images {
-			for _, tag := range i.Tags {
-				img = append(img, fmt.Sprintf("%s:%s", i.Path, tag.Name))
-			}
-		}
 
+		var img []rainbowconfig.Image
+		for _, i := range images {
+			var tags []string
+			for _, tag := range i.Tags {
+				tags = append(tags, tag.Name)
+			}
+			img = append(img, rainbowconfig.Image{
+				Name: i.Name,
+				Id:   i.Id,
+				Path: i.Path,
+				Tags: tags,
+			})
+		}
 		pluginTemplateConfig.Default.PushImages = true
 		pluginTemplateConfig.Images = img
 	case 1:

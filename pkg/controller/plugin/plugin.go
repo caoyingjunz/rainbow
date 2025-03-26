@@ -52,7 +52,7 @@ type PluginController struct {
 
 	Cfg      config.Config
 	Registry config.Registry
-	Images   []string
+	Images   []config.Image
 
 	Runners []Runner
 }
@@ -93,28 +93,28 @@ func (i *image) GetName() string {
 }
 
 func (i *image) Run() error {
-	var images []string
-	if i.p.Cfg.Default.PushKubernetes {
-		kubeImages, err := i.p.getImages()
-		if err != nil {
-			return fmt.Errorf("获取 k8s 镜像失败: %v", err)
-		}
-
-		if err = i.p.CreateImages(kubeImages); err != nil {
-			klog.Errorf("回写k8s镜像失败: %v", err)
-		}
-		images = append(images, kubeImages...)
-	}
-
-	if i.p.Cfg.Default.PushImages {
-		fileImages, err := i.p.getImagesFromFile()
-		if err != nil {
-			return fmt.Errorf("")
-		}
-		images = append(images, fileImages...)
-	}
-
-	i.p.Images = images
+	//var images []string
+	//if i.p.Cfg.Default.PushKubernetes {
+	//	kubeImages, err := i.p.getImages()
+	//	if err != nil {
+	//		return fmt.Errorf("获取 k8s 镜像失败: %v", err)
+	//	}
+	//
+	//	if err = i.p.CreateImages(kubeImages); err != nil {
+	//		klog.Errorf("回写k8s镜像失败: %v", err)
+	//	}
+	//	images = append(images, kubeImages...)
+	//}
+	//
+	//if i.p.Cfg.Default.PushImages {
+	//	fileImages, err := i.p.getImagesFromFile()
+	//	if err != nil {
+	//		return fmt.Errorf("")
+	//	}
+	//	images = append(images, fileImages...)
+	//}
+	//
+	//i.p.Images = images
 	return nil
 }
 
@@ -125,6 +125,7 @@ func NewPluginController(cfg config.Config) *PluginController {
 		TaskId:     cfg.Plugin.TaskId,
 		RegistryId: cfg.Plugin.RegistryId,
 		Synced:     cfg.Plugin.Synced,
+		Images:     cfg.Images,
 		httpClient: util.NewHttpClient(5*time.Second, cfg.Plugin.Callback),
 	}
 }
@@ -147,10 +148,10 @@ func (p *PluginController) Validate() error {
 	}
 
 	// 检查 docker 的客户端是否正常
-	if _, err := p.docker.Ping(context.Background()); err != nil {
-		klog.Errorf("%v", err)
-		return err
-	}
+	//if _, err := p.docker.Ping(context.Background()); err != nil {
+	//	klog.Errorf("%v", err)
+	//	return err
+	//}
 
 	return nil
 }
@@ -200,7 +201,7 @@ func (p *PluginController) doComplete() error {
 	}
 
 	p.Runners = []Runner{
-		&login{name: "Registry登陆", p: p},
+		//&login{name: "Registry登陆", p: p},
 		&image{name: "解析镜像", p: p},
 	}
 	return p.Validate()
@@ -208,7 +209,7 @@ func (p *PluginController) doComplete() error {
 
 func (p *PluginController) Complete() error {
 	if len(p.Cfg.Plugin.Driver) == 0 {
-		p.Cfg.Plugin.Driver = "docker"
+		p.Cfg.Plugin.Driver = DockerDriver
 	}
 
 	status, msg, process := "初始化成功", "初始化环境结束", 1
@@ -216,7 +217,7 @@ func (p *PluginController) Complete() error {
 	if err = p.doComplete(); err != nil {
 		status, msg, process = "初始化失败", err.Error(), 3
 	}
-	_ = p.SyncTaskStatus(status, msg, process)
+	p.SyncTaskStatus(status, msg, process)
 	return err
 }
 
@@ -283,20 +284,8 @@ func (p *PluginController) getImages() ([]string, error) {
 	return kubeadmImage.Images, nil
 }
 
-func (p *PluginController) parseTargetImage(imageToPush string) (string, error) {
-	// real image to push
-	parts := strings.Split(imageToPush, "/")
-
-	return p.Registry.Repository + "/" + p.Registry.Namespace + "/" + parts[len(parts)-1], nil
-}
-
-func (p *PluginController) doPushImage(imageToPush string) (string, error) {
-	targetImage, err := p.parseTargetImage(imageToPush)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse target image: %v", err)
-	}
-	klog.Infof("Tagging image from %s to %s", imageToPush, targetImage)
-
+func (p *PluginController) sync(imageToPush string, targetImage string, img config.Image) error {
+	klog.Infof("preparing to sync image %s to %s", imageToPush, targetImage)
 	var cmd []string
 	switch p.Cfg.Plugin.Driver {
 	case SkopeoDriver:
@@ -308,46 +297,56 @@ func (p *PluginController) doPushImage(imageToPush string) (string, error) {
 		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
 		if err != nil {
 			klog.Errorf("Failed to pull image %s: %v", imageToPush, err)
-			return "", fmt.Errorf("failed to pull image %s: %v", imageToPush, err)
+			return fmt.Errorf("failed to pull image %s: %v", imageToPush, err)
 		}
 		io.Copy(os.Stdout, reader)
 
 		klog.Infof("Tagging image from %s to %s", imageToPush, targetImage)
 		if err := p.docker.ImageTag(context.TODO(), imageToPush, targetImage); err != nil {
 			klog.Errorf("Failed to tag image %s to %s: %v", imageToPush, targetImage, err)
-			return "", fmt.Errorf("failed to tag image %s to %s: %v", imageToPush, targetImage, err)
+			return fmt.Errorf("failed to tag image %s to %s: %v", imageToPush, targetImage, err)
 		}
 
 		cmd = []string{"docker", "push", targetImage}
 	default:
-		return "", fmt.Errorf("unsupported driver: %s", p.Cfg.Plugin.Driver)
+		return fmt.Errorf("unsupported driver: %s", p.Cfg.Plugin.Driver)
 	}
 
-	klog.Infof("Pushing image: %s", targetImage)
+	klog.Infof("syncing image %s to %s", imageToPush, targetImage)
 	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
 		klog.Errorf("Failed to push image %s: %v, output: %s", targetImage, err, string(out))
-		return "", fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
+		return fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
 	}
 
-	klog.Infof("Successfully pushed image: %s", targetImage)
-	return targetImage, nil
+	klog.Infof("Successfully sync image: %s", targetImage)
+	return nil
+}
+
+const (
+	SyncImageRunning  = "进行中"
+	SyncImageError    = "异常"
+	SyncImageComplete = "完成"
+)
+
+func (p *PluginController) doPushImage(img config.Image) error {
+	imageMap := img.GetMap(p.Registry.Repository, p.Registry.Namespace)
+
+	for imageToPush, targetImage := range imageMap {
+		p.SyncImageStatus(targetImage, SyncImageRunning, "", img)
+		err := p.sync(imageToPush, targetImage, img)
+		if err != nil {
+			p.SyncImageStatus(targetImage, SyncImageError, err.Error(), img)
+			continue
+		}
+		p.SyncImageStatus(targetImage, SyncImageComplete, "", img)
+	}
+
+	return nil
 }
 
 func (p *PluginController) getImagesFromFile() ([]string, error) {
 	var imgs []string
-	for _, i := range p.Cfg.Images {
-		imageStr := strings.TrimSpace(i)
-		if len(imageStr) == 0 {
-			continue
-		}
-		if strings.Contains(imageStr, " ") {
-			return nil, fmt.Errorf("error image format: %s", imageStr)
-		}
-
-		imgs = append(imgs, imageStr)
-	}
-
 	return imgs, nil
 }
 
@@ -359,14 +358,13 @@ func (p *PluginController) Run() error {
 	for _, runner := range p.Runners {
 		name := runner.GetName()
 		if err := runner.Run(); err != nil {
-			_ = p.SyncTaskStatus(name, name+"失败", 3)
+			p.SyncTaskStatus(name, name+"失败", 3)
 			return err
 		} else {
-			_ = p.SyncTaskStatus(name, name+"完成", 1)
+			p.SyncTaskStatus(name, name+"完成", 1)
 		}
 	}
-
-	_ = p.SyncTaskStatus("开始同步镜像", "", 1)
+	p.SyncTaskStatus("开始同步镜像", "", 1)
 
 	diff := len(p.Images)
 	maxCh := make(chan struct{}, MaxConcurrency)
@@ -377,18 +375,15 @@ func (p *PluginController) Run() error {
 		wg.Add(1)
 		maxCh <- struct{}{} // 获取信号量，控制并发
 
-		go func(image string) {
+		go func(image config.Image) {
 			defer wg.Done()
 			defer func() { <-maxCh }() // 释放信号量
 
-			_ = p.SyncImageStatus(image, "", "同步进行中", "")
-			target, err := p.doPushImage(image)
+			err := p.doPushImage(image)
 			if err != nil {
-				_ = p.SyncImageStatus(image, target, "同步异常", err.Error())
 				errCh <- err
 				return
 			}
-			_ = p.SyncImageStatus(image, target, "同步完成", "")
 		}(imageToPush)
 	}
 	wg.Wait()
@@ -396,13 +391,13 @@ func (p *PluginController) Run() error {
 	select {
 	case err := <-errCh:
 		if err != nil {
-			_ = p.SyncTaskStatus("镜像同步结束", "存在镜像同步异常", 2)
+			p.SyncTaskStatus("镜像同步结束", "存在镜像同步异常", 2)
 			return err
 		}
 	default:
 	}
 
-	_ = p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
+	p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
 	return nil
 }
 
@@ -411,24 +406,52 @@ func (p *PluginController) Run() error {
 // 1 执行中
 // 2 执行成功
 // 3 执行失败
-func (p *PluginController) SyncTaskStatus(status string, msg string, process int) error {
+func (p *PluginController) SyncTaskStatus(status string, msg string, process int) {
 	if !p.Synced {
-		return nil
+		klog.Infof("未启用任务回调同步功能")
+		return
 	}
-	return p.httpClient.Put(
-		fmt.Sprintf("%s/rainbow/tasks/%d/status", p.Callback, p.TaskId),
-		nil,
-		map[string]interface{}{"status": status, "message": msg, "process": process})
+
+	for i := 0; i < 3; i++ {
+		err := p.httpClient.Put(
+			fmt.Sprintf("%s/rainbow/tasks/%d/status", p.Callback, p.TaskId),
+			nil,
+			map[string]interface{}{"status": status, "message": msg, "process": process})
+		if err == nil {
+			return
+		}
+
+		klog.Errorf("同步任务(%d) 状态(%s) 信息(%s) 失败 %v，尝试重试", p.TaskId, status, msg, err)
+		time.Sleep(time.Second)
+	}
 }
 
-func (p *PluginController) SyncImageStatus(name, target, status, msg string) error {
+func (p *PluginController) SyncImageStatus(target string, status string, msg string, img config.Image) {
 	if !p.Synced {
-		return nil
+		klog.Infof("未启用镜像回调同步功能")
+		return
 	}
-	return p.httpClient.Put(
-		fmt.Sprintf("%s/rainbow/images/status", p.Callback),
-		nil,
-		map[string]interface{}{"status": status, "message": msg, "task_id": p.TaskId, "name": name, "target": target, "registry_id": p.RegistryId})
+
+	for i := 0; i < 3; i++ {
+		err := p.httpClient.Put(
+			fmt.Sprintf("%s/rainbow/images/status", p.Callback),
+			nil,
+			map[string]interface{}{
+				"name":        img.Name,
+				"image_id":    img.Id,
+				"task_id":     p.TaskId,
+				"registry_id": p.RegistryId,
+				"status":      status,
+				"description": msg,
+				"target":      target,
+			})
+		if err == nil {
+			return
+		}
+
+		klog.Errorf("同步镜像(%d) 状态(%s) 信息(%s) mirror(%s) 失败 %v，尝试重试", p.TaskId, status, msg, target, err)
+		time.Sleep(time.Second)
+	}
 }
 
 func (p *PluginController) CreateImages(names []string) error {

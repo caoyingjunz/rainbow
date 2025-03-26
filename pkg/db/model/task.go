@@ -13,6 +13,7 @@ type Task struct {
 
 	Name              string `json:"name"`
 	UserId            string `json:"user_id"`
+	UserName          string `json:"user_name"`
 	RegisterId        int64  `json:"register_id"`
 	AgentName         string `json:"agent_name"`
 	Process           int    `json:"process"`

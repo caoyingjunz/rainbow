@@ -19,6 +19,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
 		UserId:            req.UserId,
+		UserName:          req.UserName,
 		RegisterId:        req.RegisterId,
 		AgentName:         req.AgentName,
 		Mode:              req.Mode,
@@ -66,7 +67,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 
 	for path, tags := range imageMap {
 		var imageId int64
-		oldImage, err := s.factory.Image().GetByPath(ctx, path)
+		oldImage, err := s.factory.Image().GetByPath(ctx, path, db.WithUser(req.UserId))
 		if err != nil {
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
@@ -80,6 +81,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					TaskId:     taskId,
 					TaskName:   req.Name,
 					UserId:     req.UserId,
+					UserName:   req.UserName,
 					RegisterId: req.RegisterId,
 					GmtDeleted: time.Now(),
 					Name:       name,

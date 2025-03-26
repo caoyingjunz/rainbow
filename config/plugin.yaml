@@ -18,4 +18,9 @@ kubernetes:
   version: v1.23.6
 
 images:
-  - docker.io/nginx:latest
+  - name: nginx
+    id: 20220801
+    path: docker.io/nginx
+    tags:
+      - latest
+      - v1.0.1

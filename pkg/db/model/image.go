@@ -19,6 +19,7 @@ type Image struct {
 	TaskName string `json:"task_name"`
 
 	UserId     string `json:"user_id"`
+	UserName   string `json:"user_name"`
 	RegisterId int64  `json:"register_id"`
 	Status     string `json:"status"`
 
@@ -31,7 +32,9 @@ type Image struct {
 	Mirror    string `json:"mirror"`
 	Size      int64  `json:"size"`
 	Tags      []Tag  `json:"tags" gorm:"foreignKey:ImageId"`
-	IsPublic  bool   `json:"is_public"`
+
+	IsPublic      bool `json:"is_public"`
+	PublicUpdated bool `json:"public_updated"` // 是否已经同步过远端仓库状态
 
 	Description string `json:"description"`
 }

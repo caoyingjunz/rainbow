@@ -41,7 +41,7 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 	return s.factory.Image().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
 
-func (s *ServerController) TryUpdateImagePublicStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
+func (s *ServerController) TryUpdateRemotePublic(ctx context.Context, req *types.UpdateImageStatusRequest, old *model.Image) error {
 	if RegistryId == nil {
 		return nil
 	}
@@ -53,12 +53,10 @@ func (s *ServerController) TryUpdateImagePublicStatus(ctx context.Context, req *
 		return nil
 	}
 
-	parts := strings.Split(req.Target, "/")
-	pps := parts[len(parts)-1]
-	p := strings.Split(pps, ":")
-	name := p[0]
+	name := req.Name
 	namespace := "pixiu-public"
 	newPublic := true
+
 	for i := 0; i < 3; i++ {
 		response, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{
 			Namespace:  namespace,
@@ -78,15 +76,14 @@ func (s *ServerController) TryUpdateImagePublicStatus(ctx context.Context, req *
 		_, err = SwrClient.UpdateRepo(&swrmodel.UpdateRepoRequest{
 			Namespace:  namespace,
 			Repository: name,
-			Body: &swrmodel.UpdateRepoRequestBody{
-				IsPublic: newPublic,
-			},
+			Body:       &swrmodel.UpdateRepoRequestBody{IsPublic: newPublic},
 		})
 		if err != nil {
 			klog.Errorf("更新远端镜像 %s 失败 %v", name, err)
 			time.Sleep(1 * time.Second)
 			continue
 		} else {
+			_ = s.factory.Image().Update(ctx, req.ImageId, old.ResourceVersion, map[string]interface{}{"public_updated": true})
 			return nil
 		}
 	}
@@ -95,16 +92,30 @@ func (s *ServerController) TryUpdateImagePublicStatus(ctx context.Context, req *
 }
 
 func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
-	if err := s.TryUpdateImagePublicStatus(ctx, req); err != nil {
-		klog.Errorf("尝试设置华为仓库为 public 失败: %v", err)
+	old, err := s.factory.Image().Get(ctx, req.ImageId)
+	if err != nil {
+		klog.Errorf("获取镜像(%d)失败: %v", req.ImageId, err)
+		return err
 	}
 
-	return s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{
-		"status":      req.Status,
-		"mirror":      req.Target,
-		"register_id": req.RegistryId,
-		"is_public":   true,
-	})
+	if !old.PublicUpdated {
+		if err := s.TryUpdateRemotePublic(ctx, req, old); err != nil {
+			klog.Errorf("尝试设置华为仓库为 public 失败: %v", err)
+		}
+	}
+
+	target := req.Target
+
+	parts := strings.Split(target, ":")
+	mirror := parts[0]
+	tag := parts[1]
+	if len(old.Mirror) == 0 || !old.IsPublic {
+		err := s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{"mirror": mirror, "is_public": true})
+		if err != nil {
+			klog.Errorf("更新镜像失败: %v", err)
+		}
+	}
+	return s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status})
 }
 
 // SoftDeleteImage 软删除

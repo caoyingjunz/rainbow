@@ -27,10 +27,11 @@ type ImageInterface interface {
 
 	Count(ctx context.Context) (int64, error)
 
-	GetByPath(ctx context.Context, path string) (*model.Image, error)
+	GetByPath(ctx context.Context, path string, opts ...Options) (*model.Image, error)
 	ListImagesWithTag(ctx context.Context, opts ...Options) ([]model.Image, error)
 
 	CreateTag(ctx context.Context, object *model.Tag) (*model.Tag, error)
+	UpdateTag(ctx context.Context, imageId int64, tag string, updates map[string]interface{}) error
 	DeleteTag(ctx context.Context, tagId int64) error
 	GetTagByImage(ctx context.Context, imageId int64, imagePath string) (*model.Tag, error)
 	ListTags(ctx context.Context, opts ...Options) ([]model.Tag, error)
@@ -170,9 +171,14 @@ func (a *image) Count(ctx context.Context) (int64, error) {
 	return total, nil
 }
 
-func (a *image) GetByPath(ctx context.Context, path string) (*model.Image, error) {
+func (a *image) GetByPath(ctx context.Context, path string, opts ...Options) (*model.Image, error) {
 	var audit model.Image
-	if err := a.db.WithContext(ctx).Where("path = ?", path).First(&audit).Error; err != nil {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.WithContext(ctx).Where("path = ?", path).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
@@ -237,4 +243,16 @@ func (a *image) GetTagByImage(ctx context.Context, imageId int64, path string) (
 		return nil, err
 	}
 	return &audit, nil
+}
+
+func (a *image) UpdateTag(ctx context.Context, imageId int64, tag string, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	f := a.db.WithContext(ctx).Model(&model.Task{}).Where("image_id = ? and name = ?", imageId, tag).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+	return nil
 }

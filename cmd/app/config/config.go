@@ -5,7 +5,7 @@ type Config struct {
 	Mysql   MysqlOptions  `yaml:"mysql"`
 
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
-	Images     []string         `yaml:"images"`
+	Images     []Image          `yaml:"images"`
 
 	Server ServerOption `yaml:"server"`
 
@@ -71,5 +71,28 @@ type PluginTemplateConfig struct {
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
 	Plugin     PluginOption     `yaml:"plugin"`
 	Registry   Registry         `yaml:"registry"`
-	Images     []string         `yaml:"images"`
+	Images     []Image          `yaml:"images"`
+}
+
+type Image struct {
+	Name string   `yaml:"name"`
+	Id   int64    `yaml:"id"`
+	Path string   `yaml:"path"`
+	Tags []string `yaml:"tags"`
+}
+
+func (i Image) GetMap(repo, ns string) map[string]string {
+	m := make(map[string]string)
+	for _, tag := range i.Tags {
+		m[i.Path+":"+tag] = repo + "/" + ns + "/" + i.Name + ":" + tag
+	}
+	return m
+}
+
+func (i Image) GetId() int64 {
+	return i.Id
+}
+
+func (i Image) GetPath() string {
+	return i.Path
 }
