@@ -2,7 +2,6 @@ package rainbow
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -15,19 +14,6 @@ import (
 )
 
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
-	var labels []*model.Label
-	if len(req.Labels) > 0 {
-		if err := s.factory.Label().FindByNames(ctx, req.Labels, &labels); err != nil {
-			klog.Errorf("查询关联标签失败 %v", err)
-			return err
-		}
-
-		if len(labels) != len(req.Labels) {
-			klog.Errorf("部分标签不存在")
-			return fmt.Errorf("部分标签不存在")
-		}
-	}
-
 	_, err := s.factory.Image().Create(ctx, &model.Image{
 		Name:       req.Name,
 		TaskId:     req.TaskId,
@@ -35,7 +21,6 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 		TaskName:   req.TaskName,
 		Status:     req.Status,
 		IsPublic:   req.IsPublic,
-		Labels:     labels,
 	})
 	if err != nil {
 		klog.Errorf("创建镜像失败 %v", err)
@@ -105,7 +90,7 @@ func (s *ServerController) SoftDeleteImage(ctx context.Context, imageId int64) e
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	if listOption.Limits == 0 {
-		return s.factory.Image().List(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector), db.WithLabelName(listOption.LabelSelector))
+		return s.factory.Image().List(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
 	}
 
 	// TODO: 临时实现，后续再优化

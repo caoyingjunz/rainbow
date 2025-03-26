@@ -75,8 +75,6 @@ type (
 		Status     string `json:"status"`
 		Message    string `json:"message"`
 		IsPublic   bool   `json:"is_public"`
-
-		Labels []string `json:"labels"`
 	}
 
 	CreateImagesRequest struct {
