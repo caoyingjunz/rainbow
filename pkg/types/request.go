@@ -97,13 +97,13 @@ type (
 	}
 
 	UpdateImageStatusRequest struct {
-		Name        string `json:"name"` // 对应仓里的镜像名称 比如，nginx
-		ImageId     int64  `json:"image_id"`
-		TaskId      int64  `json:"task_id"`
-		RegistryId  int64  `json:"registry_id"`
-		Status      string `json:"status"`
-		Description string `json:"description"`
-		Target      string `json:"target"`
+		Name       string `json:"name"` // 对应仓里的镜像名称 比如，nginx
+		ImageId    int64  `json:"image_id"`
+		TaskId     int64  `json:"task_id"`
+		RegistryId int64  `json:"registry_id"`
+		Status     string `json:"status"`
+		Message    string `json:"message"`
+		Target     string `json:"target"`
 	}
 
 	UpdateAgentStatusRequest struct {

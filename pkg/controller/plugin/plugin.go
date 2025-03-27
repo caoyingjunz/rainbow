@@ -16,6 +16,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/config"
+	rainbowtypes "github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
@@ -322,23 +323,17 @@ func (p *PluginController) sync(imageToPush string, targetImage string, img conf
 	return nil
 }
 
-const (
-	SyncImageRunning  = "进行中"
-	SyncImageError    = "异常"
-	SyncImageComplete = "完成"
-)
-
 func (p *PluginController) doPushImage(img config.Image) error {
 	imageMap := img.GetMap(p.Registry.Repository, p.Registry.Namespace)
 
 	for imageToPush, targetImage := range imageMap {
-		p.SyncImageStatus(targetImage, SyncImageRunning, "", img)
+		p.SyncImageStatus(targetImage, rainbowtypes.SyncImageRunning, "", img)
 		err := p.sync(imageToPush, targetImage, img)
 		if err != nil {
-			p.SyncImageStatus(targetImage, SyncImageError, err.Error(), img)
+			p.SyncImageStatus(targetImage, rainbowtypes.SyncImageError, err.Error(), img)
 			continue
 		}
-		p.SyncImageStatus(targetImage, SyncImageComplete, "", img)
+		p.SyncImageStatus(targetImage, rainbowtypes.SyncImageComplete, "", img)
 	}
 
 	return nil
@@ -417,6 +412,7 @@ func (p *PluginController) SyncTaskStatus(status string, msg string, process int
 			nil,
 			map[string]interface{}{"status": status, "message": msg, "process": process})
 		if err == nil {
+			klog.Infof("同步任务(%d) 状态(%s) 信息(%s) 完成", p.TaskId, status, msg)
 			return
 		}
 
@@ -441,10 +437,11 @@ func (p *PluginController) SyncImageStatus(target string, status string, msg str
 				"task_id":     p.TaskId,
 				"registry_id": p.RegistryId,
 				"status":      status,
-				"description": msg,
+				"message":     msg,
 				"target":      target,
 			})
 		if err == nil {
+			klog.Infof("同步镜像(%d) 状态(%s) 信息(%s) mirror(%s) 成功", p.TaskId, status, msg, target, err)
 			return
 		}
 

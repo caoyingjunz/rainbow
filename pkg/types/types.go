@@ -16,3 +16,14 @@ type IdNameMeta struct {
 	ID   int64  `uri:"Id" binding:"required" form:"id"`
 	Name string `uri:"name" binding:"required" form:"name"`
 }
+
+const (
+	SyncImageInitializing = "Initializing"
+	SyncImageRunning      = "Running"
+	SyncImageError        = "Error"
+	SyncImageComplete     = "Completed"
+)
+
+const (
+	SyncTaskInitializing = "initializing"
+)

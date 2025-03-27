@@ -14,14 +14,10 @@ func init() {
 type Image struct {
 	rainbow.Model
 
-	Name     string `json:"name"`
-	TaskId   int64  `gorm:"index:idx_task" json:"task_id"`
-	TaskName string `json:"task_name"`
-
+	Name       string `json:"name"`
 	UserId     string `json:"user_id"`
 	UserName   string `json:"user_name"`
 	RegisterId int64  `json:"register_id"`
-	Status     string `json:"status"`
 
 	GmtDeleted time.Time `gorm:"column:gmt_deleted;type:datetime" json:"gmt_deleted"`
 	IsDeleted  bool      `json:"is_deleted"`
@@ -48,9 +44,11 @@ type Tag struct {
 
 	ImageId int64  `gorm:"index:idx_image" json:"image_id"`
 	Path    string `json:"path"`
+	TaskId  int64  `json:"task_id"`
 	Name    string `json:"name"`
 	Size    int64  `json:"size"`
 	Status  string `json:"status"`
+	Message string `json:"message"` // 错误信息
 }
 
 func (t *Tag) TableName() string {

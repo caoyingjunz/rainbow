@@ -18,8 +18,6 @@ type ImageInterface interface {
 	Get(ctx context.Context, imageId int64) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
-	UpdateDirectly(ctx context.Context, name string, taskId int64, updates map[string]interface{}) error
-
 	CreateInBatch(ctx context.Context, objects []model.Image) error
 	SoftDeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
@@ -27,7 +25,7 @@ type ImageInterface interface {
 
 	Count(ctx context.Context) (int64, error)
 
-	GetByPath(ctx context.Context, path string, opts ...Options) (*model.Image, error)
+	GetByPath(ctx context.Context, path string, mirror string, opts ...Options) (*model.Image, error)
 	ListImagesWithTag(ctx context.Context, opts ...Options) ([]model.Image, error)
 
 	CreateTag(ctx context.Context, object *model.Tag) (*model.Tag, error)
@@ -62,19 +60,6 @@ func (a *image) Update(ctx context.Context, imageId int64, resourceVersion int64
 	updates["resource_version"] = resourceVersion + 1
 
 	f := a.db.WithContext(ctx).Model(&model.Image{}).Where("id = ? and resource_version = ?", imageId, resourceVersion).Updates(updates)
-	if f.Error != nil {
-		return f.Error
-	}
-	if f.RowsAffected == 0 {
-		return fmt.Errorf("record not updated")
-	}
-
-	return nil
-}
-
-func (a *image) UpdateDirectly(ctx context.Context, name string, taskId int64, updates map[string]interface{}) error {
-	updates["gmt_modified"] = time.Now()
-	f := a.db.WithContext(ctx).Model(&model.Image{}).Where("name = ? and task_id = ?", name, taskId).Updates(updates)
 	if f.Error != nil {
 		return f.Error
 	}
@@ -171,14 +156,14 @@ func (a *image) Count(ctx context.Context) (int64, error) {
 	return total, nil
 }
 
-func (a *image) GetByPath(ctx context.Context, path string, opts ...Options) (*model.Image, error) {
+func (a *image) GetByPath(ctx context.Context, path string, mirror string, opts ...Options) (*model.Image, error) {
 	var audit model.Image
 	tx := a.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
 
-	if err := tx.WithContext(ctx).Where("path = ?", path).First(&audit).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("path = ? and mirror = ?", path, mirror).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
@@ -247,12 +232,10 @@ func (a *image) GetTagByImage(ctx context.Context, imageId int64, path string) (
 
 func (a *image) UpdateTag(ctx context.Context, imageId int64, tag string, updates map[string]interface{}) error {
 	updates["gmt_modified"] = time.Now()
-	f := a.db.WithContext(ctx).Model(&model.Task{}).Where("image_id = ? and name = ?", imageId, tag).Updates(updates)
+	f := a.db.WithContext(ctx).Model(&model.Tag{}).Where("image_id = ? and name = ?", imageId, tag).Updates(updates)
 	if f.Error != nil {
 		return f.Error
 	}
-	if f.RowsAffected == 0 {
-		return fmt.Errorf("record not updated")
-	}
+
 	return nil
 }
