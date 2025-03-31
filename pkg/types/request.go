@@ -1,6 +1,17 @@
 package types
 
 type (
+	CreateDockerfileRequest struct {
+		Name       string `json:"name"`
+		Dockerfile string `json:"dockerfile"`
+	}
+
+	UpdateDockerfileRequest struct {
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Dockerfile      string `json:"dockerfile"`
+	}
+
 	CreateLabelRequest struct {
 		Name string `json:"name" binding:"required"`
 	}

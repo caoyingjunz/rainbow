@@ -22,6 +22,12 @@ type ServerGetter interface {
 }
 
 type ServerInterface interface {
+	CreateDockerfile(ctx context.Context, req *types.CreateDockerfileRequest) error
+	DeleteDockerfile(ctx context.Context, dockerfileId int64) error
+	UpdateDockerfile(ctx context.Context, req *types.UpdateDockerfileRequest) error
+	ListDockerfile(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error)
+
 	CreateLabel(ctx context.Context, req *types.CreateLabelRequest) error
 	DeleteLabel(ctx context.Context, labelId int64) error
 	UpdateLabel(ctx context.Context, req *types.UpdateLabelRequest) error
