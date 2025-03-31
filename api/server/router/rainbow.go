@@ -20,6 +20,14 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
+	DockerfileRoute := httpEngine.Group("/rainbow/dockerfiles")
+	{
+		DockerfileRoute.POST("", cr.createDockerfile)
+		DockerfileRoute.DELETE("/:Id", cr.deleteDockerfile)
+		DockerfileRoute.PUT("/:Id", cr.updateDockerfile)
+		DockerfileRoute.GET("", cr.listDockerfile)
+	}
+
 	labelRoute := httpEngine.Group("/rainbow/labels")
 	{
 		labelRoute.POST("", cr.createLabel)
