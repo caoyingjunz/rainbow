@@ -90,6 +90,26 @@ func (cr *rainbowRouter) listDockerfile(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) getDockerfile(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().GetDockerfile(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createLabel(c *gin.Context) {
 	resp := httputils.NewResponse()
 

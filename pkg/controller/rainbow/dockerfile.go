@@ -43,3 +43,7 @@ func (s *ServerController) ListDockerfile(ctx context.Context, listOption types.
 	}
 	return list, nil
 }
+
+func (s *ServerController) GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error) {
+	return s.factory.Dockerfile().Get(ctx, dockerfileId)
+}

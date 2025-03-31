@@ -26,6 +26,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		DockerfileRoute.DELETE("/:Id", cr.deleteDockerfile)
 		DockerfileRoute.PUT("/:Id", cr.updateDockerfile)
 		DockerfileRoute.GET("", cr.listDockerfile)
+		DockerfileRoute.GET("/:Id", cr.getDockerfile)
 	}
 
 	labelRoute := httpEngine.Group("/rainbow/labels")

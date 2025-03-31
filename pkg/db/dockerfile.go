@@ -14,6 +14,7 @@ type DockerfileInterface interface {
 	Delete(ctx context.Context, dockerfileId int64) error
 	Update(ctx context.Context, DockerfileId int64, resourceVersion int64, updates map[string]interface{}) error
 	List(ctx context.Context, opts ...Options) ([]model.Dockerfile, error)
+	Get(ctx context.Context, dockerfileId int64) (*model.Dockerfile, error)
 }
 
 func newDockerfile(db *gorm.DB) DockerfileInterface {

@@ -26,6 +26,7 @@ type ServerInterface interface {
 	DeleteDockerfile(ctx context.Context, dockerfileId int64) error
 	UpdateDockerfile(ctx context.Context, req *types.UpdateDockerfileRequest) error
 	ListDockerfile(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error)
 
 	CreateLabel(ctx context.Context, req *types.CreateLabelRequest) error
 	DeleteLabel(ctx context.Context, labelId int64) error
