@@ -17,10 +17,7 @@ import (
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
 	_, err := s.factory.Image().Create(ctx, &model.Image{
 		Name:       req.Name,
-		TaskId:     req.TaskId,
 		RegisterId: req.RegisterId,
-		TaskName:   req.TaskName,
-		Status:     req.Status,
 		IsPublic:   req.IsPublic,
 	})
 	if err != nil {
@@ -104,18 +101,10 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 		}
 	}
 
-	target := req.Target
-
-	parts := strings.Split(target, ":")
-	mirror := parts[0]
+	parts := strings.Split(req.Target, ":")
 	tag := parts[1]
-	if len(old.Mirror) == 0 || !old.IsPublic {
-		err := s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{"mirror": mirror, "is_public": true})
-		if err != nil {
-			klog.Errorf("更新镜像失败: %v", err)
-		}
-	}
-	return s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status})
+
+	return s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status, "message": req.Message})
 }
 
 // SoftDeleteImage 软删除
@@ -156,11 +145,8 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 
 	for _, r := range req.Names {
 		_, err = s.factory.Image().Create(ctx, &model.Image{
-			Name:     r,
-			TaskId:   req.TaskId,
-			TaskName: task.Name,
-			UserId:   task.UserId,
-			Status:   "镜像同步中",
+			Name:   r,
+			UserId: task.UserId,
 		})
 		if err != nil {
 			klog.Errorf("创建镜像失败 %v", err)

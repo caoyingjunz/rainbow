@@ -49,6 +49,11 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 		return nil
 	}
 
+	reg, err := s.factory.Registry().Get(ctx, req.RegisterId)
+	if err != nil {
+		return fmt.Errorf("获取仓库(%d)失败 %v", req.RegisterId, err)
+	}
+
 	imageMap := make(map[string][]string)
 	for _, i := range util.TrimAndFilter(req.Images) {
 		path, tag, err := ParseImageItem(i)
@@ -67,26 +72,25 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 
 	for path, tags := range imageMap {
 		var imageId int64
-		oldImage, err := s.factory.Image().GetByPath(ctx, path, db.WithUser(req.UserId))
+		parts2 := strings.Split(path, "/")
+		name := parts2[len(parts2)-1]
+		if len(name) == 0 {
+			return fmt.Errorf("不合规镜像名称 %s", path)
+		}
+		mirror := reg.Repository + "/" + reg.Namespace + "/" + name
+
+		oldImage, err := s.factory.Image().GetByPath(ctx, path, mirror)
 		if err != nil {
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
-				parts2 := strings.Split(path, "/")
-				name := parts2[len(parts2)-1]
-				if len(name) == 0 {
-					return fmt.Errorf("不合规镜像名称 %s", path)
-				}
-
 				newImage, err := s.factory.Image().Create(ctx, &model.Image{
-					TaskId:     taskId,
-					TaskName:   req.Name,
 					UserId:     req.UserId,
 					UserName:   req.UserName,
 					RegisterId: req.RegisterId,
 					GmtDeleted: time.Now(),
 					Name:       name,
-					Status:     "同步准备中",
 					Path:       path,
+					Mirror:     mirror,
 				})
 				if err != nil {
 					return err
@@ -163,9 +167,7 @@ func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTask
 	trimAddImages := util.TrimAndFilter(req.Images)
 	for _, i := range trimAddImages {
 		images = append(images, model.Image{
-			TaskId: req.Id,
-			Name:   i,
-			Status: "同步准备中",
+			Name: i,
 		})
 	}
 	if err = s.factory.Image().CreateInBatch(ctx, images); err != nil {
