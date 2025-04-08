@@ -3,12 +3,15 @@ package types
 type (
 	CreateLabelRequest struct {
 		Name string `json:"name" binding:"required"`
+		Logo string `json:"logo"`
 	}
 
 	UpdateLabelRequest struct {
-		Id              int64  `json:"id"`
-		Name            string `json:"name" binding:"required"`
-		ResourceVersion int64  `json:"resource_version"`
+		Id              int64 `json:"id"`
+		ResourceVersion int64 `json:"resource_version"`
+
+		Name string `json:"name" binding:"required"`
+		Logo string `json:"logo"`
 	}
 
 	CreateTaskRequest struct {
