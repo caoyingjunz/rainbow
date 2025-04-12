@@ -120,6 +120,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					_, err = s.factory.Image().CreateTag(ctx, &model.Tag{
 						Path:    path,
 						ImageId: imageId,
+						TaskId:  taskId,
 						Name:    tag,
 					})
 					if err != nil {
