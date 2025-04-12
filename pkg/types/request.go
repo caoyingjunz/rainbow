@@ -90,8 +90,6 @@ type (
 
 	UpdateImageRequest struct {
 		Id              int64  `json:"id"`
-		TaskId          int64  `json:"task_id"`
-		TaskName        string `json:"task_name"`
 		ResourceVersion int64  `json:"resource_version"`
 		Name            string `json:"name"`
 		Status          string `json:"status"`

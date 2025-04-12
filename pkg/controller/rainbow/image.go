@@ -29,8 +29,6 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 
 func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error {
 	updates := make(map[string]interface{})
-	updates["task_id"] = req.TaskId
-	updates["task_name"] = req.TaskName
 	updates["name"] = req.Name
 	updates["status"] = req.Status
 	updates["message"] = req.Message
