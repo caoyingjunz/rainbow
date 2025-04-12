@@ -101,7 +101,7 @@ func (a *image) SoftDeleteInBatch(ctx context.Context, taskId int64) error {
 
 func (a *image) Get(ctx context.Context, imageId int64) (*model.Image, error) {
 	var audit model.Image
-	if err := a.db.WithContext(ctx).Where("id = ?", imageId).First(&audit).Error; err != nil {
+	if err := a.db.WithContext(ctx).Preload("Tags").Where("id = ?", imageId).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
