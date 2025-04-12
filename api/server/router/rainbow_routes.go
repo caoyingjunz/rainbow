@@ -420,8 +420,7 @@ func (cr *rainbowRouter) deleteImage(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
-	if err = cr.c.Server().SoftDeleteImage(c, idMeta.ID); err != nil {
+	if err = cr.c.Server().DeleteImage(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

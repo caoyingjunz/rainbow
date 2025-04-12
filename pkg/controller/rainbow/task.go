@@ -3,10 +3,8 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
-
 	"k8s.io/apimachinery/pkg/util/sets"
+	"strings"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -87,7 +85,6 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					UserId:     req.UserId,
 					UserName:   req.UserName,
 					RegisterId: req.RegisterId,
-					GmtDeleted: time.Now(),
 					Name:       name,
 					Path:       path,
 					Mirror:     mirror,
@@ -186,11 +183,10 @@ func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.Upda
 }
 
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
-	return s.DeleteTaskWithImages(ctx, taskId)
+	return s.factory.Task().Delete(ctx, taskId)
 }
 
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
-	_ = s.factory.Image().SoftDeleteInBatch(ctx, taskId)
 	_ = s.factory.Task().Delete(ctx, taskId)
 	return nil
 }

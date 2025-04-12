@@ -1,7 +1,7 @@
 package model
 
 import (
-	"time"
+	"gorm.io/gorm"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
@@ -14,20 +14,19 @@ func init() {
 type Image struct {
 	rainbow.Model
 
+	GmtDeleted gorm.DeletedAt
+
 	Name       string `json:"name"`
 	UserId     string `json:"user_id"`
 	UserName   string `json:"user_name"`
 	RegisterId int64  `json:"register_id"`
-
-	GmtDeleted time.Time `gorm:"column:gmt_deleted;type:datetime" json:"gmt_deleted"`
-	IsDeleted  bool      `json:"is_deleted"`
 
 	Logo      string `json:"logo"`
 	Path      string `json:"path"`
 	Namespace string `json:"namespace"`
 	Mirror    string `json:"mirror"`
 	Size      int64  `json:"size"`
-	Tags      []Tag  `json:"tags" gorm:"foreignKey:ImageId"`
+	Tags      []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
 
 	IsPublic      bool `json:"is_public"`
 	PublicUpdated bool `json:"public_updated"` // 是否已经同步过远端仓库状态
@@ -41,6 +40,8 @@ func (t *Image) TableName() string {
 
 type Tag struct {
 	rainbow.Model
+
+	GmtDeleted gorm.DeletedAt
 
 	ImageId int64  `gorm:"index:idx_image" json:"image_id"`
 	Path    string `json:"path"`

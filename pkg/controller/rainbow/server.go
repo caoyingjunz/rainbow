@@ -45,7 +45,7 @@ type ServerInterface interface {
 
 	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
 	UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error
-	SoftDeleteImage(ctx context.Context, imageId int64) error
+	DeleteImage(ctx context.Context, imageId int64) error
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 

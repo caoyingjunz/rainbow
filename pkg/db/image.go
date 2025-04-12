@@ -47,7 +47,6 @@ func (a *image) Create(ctx context.Context, object *model.Image) (*model.Image, 
 	now := time.Now()
 	object.GmtCreate = now
 	object.GmtModified = now
-	object.GmtDeleted = now
 
 	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
 		return nil, err
@@ -81,7 +80,7 @@ func (a *image) CreateInBatch(ctx context.Context, objects []model.Image) error 
 
 func (a *image) Delete(ctx context.Context, imageId int64) error {
 	var audit model.Image
-	if err := a.db.Clauses(clause.Returning{}).Where("id = ?", imageId).Delete(&audit).Error; err != nil {
+	if err := a.db.Clauses(clause.Returning{}).Select("Tags").Where("id = ?", imageId).Delete(&audit).Error; err != nil {
 		return err
 	}
 

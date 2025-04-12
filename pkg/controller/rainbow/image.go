@@ -107,25 +107,18 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 	return s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status, "message": req.Message})
 }
 
-// SoftDeleteImage 软删除
-func (s *ServerController) SoftDeleteImage(ctx context.Context, imageId int64) error {
-	old, err := s.factory.Image().Get(ctx, imageId)
-	if err != nil {
-		return err
-	}
-	if old.IsDeleted {
-		return nil
+// DeleteImage 删除镜像和对应的tags
+func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error {
+	if err := s.factory.Image().Delete(ctx, imageId); err != nil {
+		return fmt.Errorf("删除镜像 %s 失败", err)
 	}
 
-	return s.factory.Image().Update(ctx, imageId, old.ResourceVersion, map[string]interface{}{
-		"gmt_deleted": time.Now(),
-		"is_deleted":  true,
-	})
+	return nil
 }
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	if listOption.Limits == 0 {
-		return s.factory.Image().ListImagesWithTag(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
+		return s.factory.Image().ListImagesWithTag(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
 	}
 
 	// TODO: 临时实现，后续再优化
