@@ -17,10 +17,7 @@ import (
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
 	_, err := s.factory.Image().Create(ctx, &model.Image{
 		Name:       req.Name,
-		TaskId:     req.TaskId,
 		RegisterId: req.RegisterId,
-		TaskName:   req.TaskName,
-		Status:     req.Status,
 		IsPublic:   req.IsPublic,
 	})
 	if err != nil {
@@ -32,8 +29,6 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 
 func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error {
 	updates := make(map[string]interface{})
-	updates["task_id"] = req.TaskId
-	updates["task_name"] = req.TaskName
 	updates["name"] = req.Name
 	updates["status"] = req.Status
 	updates["message"] = req.Message
@@ -104,39 +99,24 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 		}
 	}
 
-	target := req.Target
-
-	parts := strings.Split(target, ":")
-	mirror := parts[0]
+	parts := strings.Split(req.Target, ":")
 	tag := parts[1]
-	if len(old.Mirror) == 0 || !old.IsPublic {
-		err := s.factory.Image().UpdateDirectly(ctx, req.Name, req.TaskId, map[string]interface{}{"mirror": mirror, "is_public": true})
-		if err != nil {
-			klog.Errorf("更新镜像失败: %v", err)
-		}
-	}
-	return s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status})
+
+	return s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status, "message": req.Message})
 }
 
-// SoftDeleteImage 软删除
-func (s *ServerController) SoftDeleteImage(ctx context.Context, imageId int64) error {
-	old, err := s.factory.Image().Get(ctx, imageId)
-	if err != nil {
-		return err
-	}
-	if old.IsDeleted {
-		return nil
+// DeleteImage 删除镜像和对应的tags
+func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error {
+	if err := s.factory.Image().Delete(ctx, imageId); err != nil {
+		return fmt.Errorf("删除镜像 %s 失败", err)
 	}
 
-	return s.factory.Image().Update(ctx, imageId, old.ResourceVersion, map[string]interface{}{
-		"gmt_deleted": time.Now(),
-		"is_deleted":  true,
-	})
+	return nil
 }
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	if listOption.Limits == 0 {
-		return s.factory.Image().ListImagesWithTag(ctx, db.WithTask(listOption.TaskId), db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
+		return s.factory.Image().ListImagesWithTag(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
 	}
 
 	// TODO: 临时实现，后续再优化
@@ -156,11 +136,8 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 
 	for _, r := range req.Names {
 		_, err = s.factory.Image().Create(ctx, &model.Image{
-			Name:     r,
-			TaskId:   req.TaskId,
-			TaskName: task.Name,
-			UserId:   task.UserId,
-			Status:   "镜像同步中",
+			Name:   r,
+			UserId: task.UserId,
 		})
 		if err != nil {
 			klog.Errorf("创建镜像失败 %v", err)

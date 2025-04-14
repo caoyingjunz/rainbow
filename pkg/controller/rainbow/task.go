@@ -3,8 +3,8 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"k8s.io/klog/v2"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
@@ -15,6 +15,10 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
+const (
+	TaskWaitStatus = "等待执行"
+)
+
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
@@ -23,7 +27,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		RegisterId:        req.RegisterId,
 		AgentName:         req.AgentName,
 		Mode:              req.Mode,
-		Status:            "等待执行",
+		Status:            TaskWaitStatus,
 		Type:              req.Type,
 		KubernetesVersion: req.KubernetesVersion,
 		Driver:            req.Driver,
@@ -32,6 +36,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		return err
 	}
 	if req.Type == 1 {
+		klog.Infof("创建任务成功，状态为延迟执行")
 		return nil
 	}
 
@@ -39,14 +44,25 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if err = s.CreateImageWithTag(ctx, taskId, req); err != nil {
 		_ = s.DeleteTaskWithImages(ctx, taskId)
 		return fmt.Errorf("failed to create tasks images %v", err)
-
 	}
+
 	return nil
 }
 
 func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64, req *types.CreateTaskRequest) error {
 	if len(req.Images) == 0 {
 		return nil
+	}
+
+	// 未指定镜像，则默认使用内置仓库
+	if req.RegisterId == 0 {
+		req.RegisterId = *RegistryId
+	}
+
+	klog.Infof("使用镜像仓库(%d)", req.RegisterId)
+	reg, err := s.factory.Registry().Get(ctx, req.RegisterId)
+	if err != nil {
+		return fmt.Errorf("获取仓库(%d)失败 %v", req.RegisterId, err)
 	}
 
 	imageMap := make(map[string][]string)
@@ -67,26 +83,25 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 
 	for path, tags := range imageMap {
 		var imageId int64
-		oldImage, err := s.factory.Image().GetByPath(ctx, path, db.WithUser(req.UserId))
+		parts2 := strings.Split(path, "/")
+		name := parts2[len(parts2)-1]
+		if len(name) == 0 {
+			return fmt.Errorf("不合规镜像名称 %s", path)
+		}
+		mirror := reg.Repository + "/" + reg.Namespace + "/" + name
+
+		oldImage, err := s.factory.Image().GetByPath(ctx, path, mirror)
 		if err != nil {
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
-				parts2 := strings.Split(path, "/")
-				name := parts2[len(parts2)-1]
-				if len(name) == 0 {
-					return fmt.Errorf("不合规镜像名称 %s", path)
-				}
-
 				newImage, err := s.factory.Image().Create(ctx, &model.Image{
-					TaskId:     taskId,
-					TaskName:   req.Name,
 					UserId:     req.UserId,
 					UserName:   req.UserName,
 					RegisterId: req.RegisterId,
-					GmtDeleted: time.Now(),
+					Namespace:  "pixiu-public",
 					Name:       name,
-					Status:     "同步准备中",
 					Path:       path,
+					Mirror:     mirror,
 				})
 				if err != nil {
 					return err
@@ -106,6 +121,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					_, err = s.factory.Image().CreateTag(ctx, &model.Tag{
 						Path:    path,
 						ImageId: imageId,
+						TaskId:  taskId,
 						Name:    tag,
 					})
 					if err != nil {
@@ -163,9 +179,7 @@ func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTask
 	trimAddImages := util.TrimAndFilter(req.Images)
 	for _, i := range trimAddImages {
 		images = append(images, model.Image{
-			TaskId: req.Id,
-			Name:   i,
-			Status: "同步准备中",
+			Name: i,
 		})
 	}
 	if err = s.factory.Image().CreateInBatch(ctx, images); err != nil {
@@ -184,11 +198,10 @@ func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.Upda
 }
 
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
-	return s.DeleteTaskWithImages(ctx, taskId)
+	return s.factory.Task().Delete(ctx, taskId)
 }
 
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
-	_ = s.factory.Image().SoftDeleteInBatch(ctx, taskId)
 	_ = s.factory.Task().Delete(ctx, taskId)
 	return nil
 }

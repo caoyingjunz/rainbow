@@ -14,12 +14,15 @@ type (
 
 	CreateLabelRequest struct {
 		Name string `json:"name" binding:"required"`
+		Logo string `json:"logo"`
 	}
 
 	UpdateLabelRequest struct {
-		Id              int64  `json:"id"`
-		Name            string `json:"name" binding:"required"`
-		ResourceVersion int64  `json:"resource_version"`
+		Id              int64 `json:"id"`
+		ResourceVersion int64 `json:"resource_version"`
+
+		Name string `json:"name" binding:"required"`
+		Logo string `json:"logo"`
 	}
 
 	CreateTaskRequest struct {
@@ -98,8 +101,6 @@ type (
 
 	UpdateImageRequest struct {
 		Id              int64  `json:"id"`
-		TaskId          int64  `json:"task_id"`
-		TaskName        string `json:"task_name"`
 		ResourceVersion int64  `json:"resource_version"`
 		Name            string `json:"name"`
 		Status          string `json:"status"`
