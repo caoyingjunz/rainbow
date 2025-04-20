@@ -22,6 +22,7 @@ type Image struct {
 	RegisterId int64  `json:"register_id"`
 
 	Logo      string `json:"logo"`
+	Label     string `json:"label" gorm:"index:idx"` // 标记镜像类型，比如 ai，k8s
 	Path      string `json:"path"`
 	Namespace string `json:"namespace"`
 	Mirror    string `json:"mirror"`

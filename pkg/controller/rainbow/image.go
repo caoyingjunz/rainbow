@@ -123,6 +123,11 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 	return s.factory.Image().ListImagesWithTag(ctx, db.WithStatus("同步完成"), db.WithLimit(listOption.Limits))
 }
 
+func (s *ServerController) SearchImages(ctx context.Context, q string, labels []string) (interface{}, error) {
+	fmt.Println("p", q)
+	return s.factory.Image().List(ctx, db.WithNameLike(q), db.WithLabelIn(labels...))
+}
+
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {
 	return s.factory.Image().Get(ctx, imageId)
 }

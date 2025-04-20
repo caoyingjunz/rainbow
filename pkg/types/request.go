@@ -3,6 +3,10 @@ package types
 type (
 	CreateLabelRequest struct {
 		Name string `json:"name" binding:"required"`
+	}
+
+	CreateLogoRequest struct {
+		Name string `json:"name" binding:"required"`
 		Logo string `json:"logo"`
 	}
 
@@ -11,7 +15,6 @@ type (
 		ResourceVersion int64 `json:"resource_version"`
 
 		Name string `json:"name" binding:"required"`
-		Logo string `json:"logo"`
 	}
 
 	CreateTaskRequest struct {

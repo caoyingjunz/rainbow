@@ -11,7 +11,6 @@ import (
 func (s *ServerController) CreateLabel(ctx context.Context, req *types.CreateLabelRequest) error {
 	_, err := s.factory.Label().Create(ctx, &model.Label{
 		Name: req.Name,
-		Logo: req.Logo,
 	})
 	if err != nil {
 		klog.Errorf("创建标签失败 %v", err)
@@ -34,7 +33,6 @@ func (s *ServerController) DeleteLabel(ctx context.Context, labelId int64) error
 func (s *ServerController) UpdateLabel(ctx context.Context, req *types.UpdateLabelRequest) error {
 	updates := make(map[string]interface{})
 	updates["name"] = req.Name
-	updates["logo"] = req.Logo
 	return s.factory.Label().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
 
@@ -44,4 +42,19 @@ func (s *ServerController) ListLabels(ctx context.Context, listOption types.List
 		return nil, err
 	}
 	return list, nil
+}
+
+func (s *ServerController) CreateLogo(ctx context.Context, req *types.CreateLogoRequest) error {
+	_, err := s.factory.Label().CreateLogo(ctx, &model.Logo{
+		Name: req.Name,
+	})
+	return err
+}
+
+func (s *ServerController) DeleteLogo(ctx context.Context, logoId int64) error {
+	return s.factory.Label().DeleteLogo(ctx, logoId)
+}
+
+func (s *ServerController) ListLogos(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Label().ListLogos(ctx, db.WithNameLike(listOption.NameSelector))
 }

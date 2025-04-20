@@ -205,3 +205,11 @@ func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int6
 	_ = s.factory.Task().Delete(ctx, taskId)
 	return nil
 }
+
+func (s *ServerController) GetTask(ctx context.Context, taskId int64) (interface{}, error) {
+	return s.factory.Task().Get(ctx, taskId)
+}
+
+func (s *ServerController) ListTaskImages(ctx context.Context, taskId int64) (interface{}, error) {
+	return s.factory.Image().ListTags(ctx, db.WithTask(taskId))
+}

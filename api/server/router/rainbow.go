@@ -20,14 +20,6 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
-	labelRoute := httpEngine.Group("/rainbow/labels")
-	{
-		labelRoute.POST("", cr.createLabel)
-		labelRoute.DELETE("/:Id", cr.deleteLabel)
-		labelRoute.PUT("/:Id", cr.updateLabel)
-		labelRoute.GET("", cr.listLabels)
-	}
-
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
@@ -37,6 +29,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		taskRoute.GET("", cr.listTasks)
 
 		taskRoute.PUT("/:Id/status", cr.UpdateTaskStatus)
+		taskRoute.GET(":Id/images", cr.listTaskImages)
 	}
 
 	registryRoute := httpEngine.Group("/rainbow/registries")
@@ -71,5 +64,26 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	{
 		collectRoute.GET("", cr.getCollections)
 		collectRoute.POST("/add/review", cr.AddDailyReview)
+	}
+
+	labelRoute := httpEngine.Group("/rainbow/labels")
+	{
+		labelRoute.POST("", cr.createLabel)
+		labelRoute.DELETE("/:Id", cr.deleteLabel)
+		labelRoute.PUT("/:Id", cr.updateLabel)
+		labelRoute.GET("", cr.listLabels)
+	}
+
+	// 镜像搜索
+	searchRoute := httpEngine.Group("/rainbow/search/images")
+	{
+		searchRoute.GET("", cr.searchImages)
+	}
+
+	logoRoute := httpEngine.Group("/rainbow/logos")
+	{
+		logoRoute.POST("", cr.createLogo)
+		logoRoute.DELETE("/:Id", cr.deleteLogo)
+		logoRoute.GET("", cr.listLogos)
 	}
 }

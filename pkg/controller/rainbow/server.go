@@ -22,11 +22,6 @@ type ServerGetter interface {
 }
 
 type ServerInterface interface {
-	CreateLabel(ctx context.Context, req *types.CreateLabelRequest) error
-	DeleteLabel(ctx context.Context, labelId int64) error
-	UpdateLabel(ctx context.Context, req *types.UpdateLabelRequest) error
-	ListLabels(ctx context.Context, listOption types.ListOptions) (interface{}, error)
-
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
@@ -37,7 +32,10 @@ type ServerInterface interface {
 	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error
 	ListTasks(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	DeleteTask(ctx context.Context, taskId int64) error
+	GetTask(ctx context.Context, taskId int64) (interface{}, error)
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
+
+	ListTaskImages(ctx context.Context, taskId int64) (interface{}, error)
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)
@@ -49,11 +47,23 @@ type ServerInterface interface {
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	// SearchImages 搜索镜像
+	SearchImages(ctx context.Context, q string, labels []string) (interface{}, error)
+
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) error
 
 	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	AddDailyReview(ctx context.Context, page string) error
+
+	CreateLabel(ctx context.Context, req *types.CreateLabelRequest) error
+	DeleteLabel(ctx context.Context, labelId int64) error
+	UpdateLabel(ctx context.Context, req *types.UpdateLabelRequest) error
+	ListLabels(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	CreateLogo(ctx context.Context, req *types.CreateLogoRequest) error
+	DeleteLogo(ctx context.Context, logoId int64) error
+	ListLogos(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 }

@@ -113,7 +113,7 @@ func (a *image) List(ctx context.Context, opts ...Options) ([]model.Image, error
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Where("is_deleted = 0").Order("gmt_create DESC").Find(&audits).Error; err != nil {
+	if err := tx.Find(&audits).Error; err != nil {
 		return nil, err
 	}
 

@@ -49,6 +49,15 @@ func WithIDIn(ids ...int64) Options {
 	}
 }
 
+func WithLabelIn(labels ...string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(labels) == 0 {
+			return tx
+		}
+		return tx.Where("label IN ?", labels)
+	}
+}
+
 func WithUser(userId string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(userId) == 0 {

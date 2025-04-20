@@ -13,6 +13,10 @@ type LabelInterface interface {
 	Delete(ctx context.Context, id int64) error
 	Update(ctx context.Context, labelId int64, resourceVersion int64, updates map[string]interface{}) error
 	List(ctx context.Context, opts ...Options) ([]model.Label, error)
+
+	CreateLogo(ctx context.Context, object *model.Logo) (*model.Logo, error)
+	DeleteLogo(ctx context.Context, logoId int64) error
+	ListLogos(ctx context.Context, opts ...Options) ([]model.Logo, error)
 }
 
 func newLabel(db *gorm.DB) LabelInterface {
@@ -55,6 +59,35 @@ func (l *label) Delete(ctx context.Context, labelId int64) error {
 
 func (l *label) List(ctx context.Context, opts ...Options) ([]model.Label, error) {
 	var audits []model.Label
+	tx := l.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (l *label) CreateLogo(ctx context.Context, object *model.Logo) (*model.Logo, error) {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := l.db.WithContext(ctx).Create(object).Error; err != nil {
+		return nil, err
+	}
+	return object, nil
+}
+
+func (l *label) DeleteLogo(ctx context.Context, logoId int64) error {
+	return l.db.WithContext(ctx).Where("id = ?", logoId).Delete(&model.Logo{}).Error
+}
+
+func (l *label) ListLogos(ctx context.Context, opts ...Options) ([]model.Logo, error) {
+	var audits []model.Logo
 	tx := l.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)

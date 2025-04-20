@@ -38,7 +38,6 @@ func (cr *rainbowRouter) deleteLabel(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if err = cr.c.Server().DeleteLabel(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -59,9 +58,7 @@ func (cr *rainbowRouter) updateLabel(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	req.Id = idMeta.ID
-
 	if err = cr.c.Server().UpdateLabel(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -81,7 +78,6 @@ func (cr *rainbowRouter) listLabels(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if resp.Result, err = cr.c.Server().ListLabels(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -174,7 +170,25 @@ func (cr *rainbowRouter) deleteTask(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) getTask(c *gin.Context) {}
+func (cr *rainbowRouter) getTask(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().GetTask(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
 
 func (cr *rainbowRouter) listTasks(c *gin.Context) {
 	resp := httputils.NewResponse()
@@ -189,6 +203,25 @@ func (cr *rainbowRouter) listTasks(c *gin.Context) {
 	}
 
 	if resp.Result, err = cr.c.Server().ListTasks(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listTaskImages(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListTaskImages(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -487,6 +520,18 @@ func (cr *rainbowRouter) listImages(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) searchImages(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var err error
+	if resp.Result, err = cr.c.Server().SearchImages(c, c.Query("q"), c.QueryArray("label")); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) getCollections(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -520,6 +565,63 @@ func (cr *rainbowRouter) AddDailyReview(c *gin.Context) {
 		return
 	}
 	if err = cr.c.Server().AddDailyReview(c, pageOption.Page); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) createLogo(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateLogoRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateLogo(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteLogo(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().DeleteLogo(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listLogos(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		listOption types.ListOptions
+		err        error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListLogos(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
