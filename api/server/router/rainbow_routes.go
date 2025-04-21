@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"strings"
 
 	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -523,8 +524,15 @@ func (cr *rainbowRouter) listImages(c *gin.Context) {
 func (cr *rainbowRouter) searchImages(c *gin.Context) {
 	resp := httputils.NewResponse()
 
-	var err error
-	if resp.Result, err = cr.c.Server().SearchImages(c, c.Query("q"), c.QueryArray("label")); err != nil {
+	var (
+		err error
+	)
+	parts := make([]string, 0)
+	labels := c.Query("label")
+	if len(labels) != 0 {
+		parts = strings.Split(labels, ",")
+	}
+	if resp.Result, err = cr.c.Server().SearchImages(c, c.Query("q"), parts); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
