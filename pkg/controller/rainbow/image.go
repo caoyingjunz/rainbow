@@ -116,7 +116,11 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	if listOption.Limits == 0 {
-		return s.factory.Image().ListImagesWithTag(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector))
+		parts := make([]string, 0)
+		if len(listOption.LabelSelector) != 0 {
+			parts = strings.Split(listOption.LabelSelector, ",")
+		}
+		return s.factory.Image().ListImagesWithTag(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector), db.WithLabelIn(parts...))
 	}
 
 	// TODO: 临时实现，后续再优化
@@ -124,7 +128,6 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 }
 
 func (s *ServerController) SearchImages(ctx context.Context, q string, labels []string) (interface{}, error) {
-	fmt.Println("p", q)
 	return s.factory.Image().List(ctx, db.WithNameLike(q), db.WithLabelIn(labels...))
 }
 
