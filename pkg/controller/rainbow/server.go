@@ -126,6 +126,7 @@ func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.monitor(ctx)
 	go s.schedule(ctx)
+	go s.sync(ctx)
 
 	return nil
 }
@@ -257,5 +258,15 @@ func (s *ServerController) monitor(ctx context.Context) {
 				}
 			}
 		}
+	}
+}
+
+func (s *ServerController) sync(ctx context.Context) {
+	klog.Infof("starting image syncer")
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		fmt.Println("sync")
 	}
 }
