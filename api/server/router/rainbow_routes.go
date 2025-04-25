@@ -637,3 +637,37 @@ func (cr *rainbowRouter) listLogos(c *gin.Context) {
 
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) overview(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var err error
+	if resp.Result, err = cr.c.Server().Overview(c); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) store(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var err error
+	if resp.Result, err = cr.c.Server().Store(c); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) downflow(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var err error
+	if resp.Result, err = cr.c.Server().Downflow(c); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}

@@ -86,4 +86,12 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		logoRoute.DELETE("/:Id", cr.deleteLogo)
 		logoRoute.GET("", cr.listLogos)
 	}
+
+	// 镜像汇总
+	overviewRoute := httpEngine.Group("/rainbow/overview")
+	{
+		overviewRoute.GET("", cr.overview)
+		overviewRoute.GET("/downflow/daily", cr.downflow)
+		overviewRoute.GET("/store/daily", cr.store)
+	}
 }
