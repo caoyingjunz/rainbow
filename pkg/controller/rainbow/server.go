@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
 	"math/rand"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
 )
 
 type ServerGetter interface {

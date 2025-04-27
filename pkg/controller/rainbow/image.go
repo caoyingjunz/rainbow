@@ -131,8 +131,61 @@ func (s *ServerController) SearchImages(ctx context.Context, q string, labels []
 	return s.factory.Image().List(ctx, db.WithNameLike(q), db.WithLabelIn(labels...))
 }
 
+func (s *ServerController) isDefaultRepo(regId int64) bool {
+	return regId == *RegistryId
+}
+
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {
-	return s.factory.Image().Get(ctx, imageId)
+	object, err := s.factory.Image().Get(ctx, imageId)
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.isDefaultRepo(object.RegisterId) {
+		return object, nil
+	}
+
+	req := &swrmodel.ShowRepositoryRequest{}
+	req.Namespace = object.Namespace
+	req.Repository = object.Name
+	resp2, err := SwrClient.ShowRepository(req)
+	if err != nil {
+		return object, nil
+	}
+	object.Pull = *resp2.NumDownload
+
+	request := &swrmodel.ListRepositoryTagsRequest{}
+	request.Namespace = object.Namespace
+	request.Repository = object.Name
+	resp, err := SwrClient.ListRepositoryTags(request)
+	if err != nil {
+		return object, nil
+	}
+
+	tags := *resp.Body
+	tagMap := make(map[string]swrmodel.ShowReposTagResp)
+	for _, tag := range tags {
+		object.Size = object.Size + tag.Size
+		tagMap[tag.Tag] = tag
+	}
+
+	objTags := object.Tags
+	for i, oldTag := range objTags {
+		name := oldTag.Name
+		exists, ok := tagMap[name]
+		if !ok {
+			continue
+		}
+		if oldTag.Status != types.SyncImageComplete {
+			continue
+		}
+
+		oldTag.Size = exists.Size
+		oldTag.Message = exists.Manifest
+		objTags[i] = oldTag
+	}
+	object.Tags = objTags
+	return object, nil
 }
 
 func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateImagesRequest) error {

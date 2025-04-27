@@ -27,6 +27,7 @@ type Image struct {
 	Namespace string `json:"namespace"`
 	Mirror    string `json:"mirror"`
 	Size      int64  `json:"size"`
+	Pull      int64  `json:"pull"`
 	Tags      []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
 
 	IsPublic      bool `json:"is_public"`
