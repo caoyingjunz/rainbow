@@ -20,11 +20,16 @@ const (
 )
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
+	regId := req.RegisterId
+	if regId == 0 {
+		regId = *RegistryId
+	}
+
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
 		UserId:            req.UserId,
 		UserName:          req.UserName,
-		RegisterId:        req.RegisterId,
+		RegisterId:        regId,
 		AgentName:         req.AgentName,
 		Mode:              req.Mode,
 		Status:            TaskWaitStatus,
