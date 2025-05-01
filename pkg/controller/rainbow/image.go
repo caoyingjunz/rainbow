@@ -87,7 +87,7 @@ func (s *ServerController) TryUpdateRemotePublic(ctx context.Context, req *types
 }
 
 func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
-	old, err := s.factory.Image().Get(ctx, req.ImageId)
+	old, err := s.factory.Image().Get(ctx, req.ImageId, false)
 	if err != nil {
 		klog.Errorf("获取镜像(%d)失败: %v", req.ImageId, err)
 		return err
@@ -108,7 +108,25 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 // DeleteImage 删除镜像和对应的tags
 func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error {
 	if err := s.factory.Image().Delete(ctx, imageId); err != nil {
-		return fmt.Errorf("删除镜像 %s 失败", err)
+		return fmt.Errorf("删除镜像 %d 失败 %v", imageId, err)
+	}
+
+	delImage, err := s.factory.Image().Get(ctx, imageId, true)
+	if err != nil {
+		klog.Errorf("获取已删除镜像 %d 失败: %v", imageId, s, err)
+		return nil
+	}
+
+	if !s.isDefaultRepo(delImage.RegisterId) {
+		return nil
+	}
+
+	_, err = SwrClient.DeleteRepo(&swrmodel.DeleteRepoRequest{
+		Namespace:  HuaweiNamespace,
+		Repository: delImage.Name,
+	})
+	if err != nil {
+		klog.Warningf("删除远端镜像失败 %v", err)
 	}
 
 	return nil
@@ -127,16 +145,12 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 	return s.factory.Image().ListImagesWithTag(ctx, db.WithStatus("同步完成"), db.WithLimit(listOption.Limits))
 }
 
-func (s *ServerController) SearchImages(ctx context.Context, q string, labels []string) (interface{}, error) {
-	return s.factory.Image().List(ctx, db.WithNameLike(q), db.WithLabelIn(labels...))
-}
-
 func (s *ServerController) isDefaultRepo(regId int64) bool {
 	return regId == *RegistryId
 }
 
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {
-	object, err := s.factory.Image().Get(ctx, imageId)
+	object, err := s.factory.Image().Get(ctx, imageId, false)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +218,42 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 			klog.Errorf("创建镜像失败 %v", err)
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, name string) error {
+	err := s.factory.Image().DeleteTag(ctx, imageId, name)
+	if err != nil {
+		klog.Errorf("删除镜像(%d) tag %s 失败:%v", imageId, name, err)
+		return fmt.Errorf("删除镜像(%d) tag %s 失败:%v", imageId, name, err)
+	}
+
+	delTag, err := s.factory.Image().GetTag(ctx, imageId, name, true)
+	if err != nil {
+		klog.Errorf("获取已删除镜像(%d)的tag(%s) 失败: %v", imageId, name, err)
+		return nil
+	}
+	image, err := s.factory.Image().Get(ctx, imageId, false)
+	if err != nil {
+		klog.Errorf("获取镜像(%d)的失败: %v", imageId, err)
+		return nil
+	}
+
+	if !s.isDefaultRepo(image.RegisterId) {
+		return nil
+	}
+
+	request := &swrmodel.DeleteRepoTagRequest{
+		Namespace:  HuaweiNamespace,
+		Repository: image.Name,
+		Tag:        delTag.Name,
+	}
+
+	_, err = SwrClient.DeleteRepoTag(request)
+	if err != nil {
+		klog.Errorf("删除远程镜像 %s tag(%s) 失败 %v", image.Name, delTag.Name, err)
 	}
 
 	return nil

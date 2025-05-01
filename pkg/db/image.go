@@ -15,7 +15,7 @@ type ImageInterface interface {
 	Create(ctx context.Context, object *model.Image) (*model.Image, error)
 	Update(ctx context.Context, imageId int64, resourceVersion int64, updates map[string]interface{}) error
 	Delete(ctx context.Context, imageId int64) error
-	Get(ctx context.Context, imageId int64) (*model.Image, error)
+	Get(ctx context.Context, imageId int64, del bool) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
 	CreateInBatch(ctx context.Context, objects []model.Image) error
@@ -30,8 +30,8 @@ type ImageInterface interface {
 
 	CreateTag(ctx context.Context, object *model.Tag) (*model.Tag, error)
 	UpdateTag(ctx context.Context, imageId int64, tag string, updates map[string]interface{}) error
-	DeleteTag(ctx context.Context, tagId int64) error
-	GetTagByImage(ctx context.Context, imageId int64, imagePath string) (*model.Tag, error)
+	DeleteTag(ctx context.Context, imageId int64, name string) error
+	GetTag(ctx context.Context, imageId int64, name string, del bool) (*model.Tag, error)
 	ListTags(ctx context.Context, opts ...Options) ([]model.Tag, error)
 }
 
@@ -98,10 +98,14 @@ func (a *image) SoftDeleteInBatch(ctx context.Context, taskId int64) error {
 
 	return nil
 }
+func (a *image) Get(ctx context.Context, imageId int64, del bool) (*model.Image, error) {
+	tx := a.db.WithContext(ctx)
+	if del {
+		tx = tx.Unscoped()
+	}
 
-func (a *image) Get(ctx context.Context, imageId int64) (*model.Image, error) {
 	var audit model.Image
-	if err := a.db.WithContext(ctx).Preload("Tags").Where("id = ?", imageId).First(&audit).Error; err != nil {
+	if err := tx.Preload("Tags").Where("id = ?", imageId).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
@@ -200,9 +204,9 @@ func (a *image) CreateTagsInBatch(ctx context.Context, objects []model.Tag) erro
 	return nil
 }
 
-func (a *image) DeleteTag(ctx context.Context, tagId int64) error {
+func (a *image) DeleteTag(ctx context.Context, imageId int64, name string) error {
 	var audit model.Tag
-	if err := a.db.Clauses(clause.Returning{}).Where("id = ?", tagId).Delete(&audit).Error; err != nil {
+	if err := a.db.Clauses(clause.Returning{}).Where("image_id = ? and name = ?", imageId, name).Delete(&audit).Error; err != nil {
 		return err
 	}
 	return nil
@@ -221,9 +225,13 @@ func (a *image) ListTags(ctx context.Context, opts ...Options) ([]model.Tag, err
 	return audits, nil
 }
 
-func (a *image) GetTagByImage(ctx context.Context, imageId int64, path string) (*model.Tag, error) {
+func (a *image) GetTag(ctx context.Context, imageId int64, name string, del bool) (*model.Tag, error) {
+	tx := a.db.WithContext(ctx)
+	if del {
+		tx = tx.Unscoped()
+	}
 	var audit model.Tag
-	if err := a.db.WithContext(ctx).Where("image_id = ? and name = ?", imageId, path).First(&audit).Error; err != nil {
+	if err := tx.Where("image_id = ? and name = ?", imageId, name).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil

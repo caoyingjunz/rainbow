@@ -1,8 +1,6 @@
 package router
 
 import (
-	"strings"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/caoyingjunz/pixiulib/httputils"
@@ -463,6 +461,25 @@ func (cr *rainbowRouter) deleteImage(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) deleteImageTag(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdNameMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().DeleteImageTag(c, idMeta.ID, idMeta.Name); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) UpdateImageStatus(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -515,25 +532,6 @@ func (cr *rainbowRouter) listImages(c *gin.Context) {
 		return
 	}
 	if resp.Result, err = cr.c.Server().ListImages(c, listOption); err != nil {
-		httputils.SetFailed(c, resp, err)
-		return
-	}
-
-	httputils.SetSuccess(c, resp)
-}
-
-func (cr *rainbowRouter) searchImages(c *gin.Context) {
-	resp := httputils.NewResponse()
-
-	var (
-		err error
-	)
-	parts := make([]string, 0)
-	labels := c.Query("label")
-	if len(labels) != 0 {
-		parts = strings.Split(labels, ",")
-	}
-	if resp.Result, err = cr.c.Server().SearchImages(c, c.Query("q"), parts); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

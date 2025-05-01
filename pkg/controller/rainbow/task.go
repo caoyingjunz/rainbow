@@ -16,20 +16,20 @@ import (
 )
 
 const (
-	TaskWaitStatus = "等待执行"
+	TaskWaitStatus  = "等待执行"
+	HuaweiNamespace = "pixiu-public"
 )
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
-	regId := req.RegisterId
-	if regId == 0 {
-		regId = *RegistryId
+	if req.RegisterId == 0 {
+		req.RegisterId = *RegistryId
 	}
 
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
 		UserId:            req.UserId,
 		UserName:          req.UserName,
-		RegisterId:        regId,
+		RegisterId:        req.RegisterId,
 		AgentName:         req.AgentName,
 		Mode:              req.Mode,
 		Status:            TaskWaitStatus,
@@ -57,11 +57,6 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64, req *types.CreateTaskRequest) error {
 	if len(req.Images) == 0 {
 		return nil
-	}
-
-	// 未指定镜像，则默认使用内置仓库
-	if req.RegisterId == 0 {
-		req.RegisterId = *RegistryId
 	}
 
 	klog.Infof("使用镜像仓库(%d)", req.RegisterId)
@@ -103,7 +98,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					UserId:     req.UserId,
 					UserName:   req.UserName,
 					RegisterId: req.RegisterId,
-					Namespace:  "pixiu-public",
+					Namespace:  HuaweiNamespace,
 					Name:       name,
 					Path:       path,
 					Mirror:     mirror,
@@ -120,7 +115,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 		}
 
 		for _, tag := range tags {
-			_, err = s.factory.Image().GetTagByImage(ctx, imageId, tag)
+			_, err = s.factory.Image().GetTag(ctx, imageId, tag, false)
 			if err != nil {
 				if errors.IsNotFound(err) {
 					_, err = s.factory.Image().CreateTag(ctx, &model.Tag{

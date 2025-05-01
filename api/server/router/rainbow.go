@@ -58,6 +58,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		imageRoute.PUT("/status", cr.UpdateImageStatus)
 		imageRoute.POST("/batches", cr.createImages)
+		imageRoute.DELETE("/:Id/tags/:name", cr.deleteImageTag)
 	}
 
 	collectRoute := httpEngine.Group("/rainbow/collections")
@@ -72,12 +73,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		labelRoute.DELETE("/:Id", cr.deleteLabel)
 		labelRoute.PUT("/:Id", cr.updateLabel)
 		labelRoute.GET("", cr.listLabels)
-	}
-
-	// 镜像搜索
-	searchRoute := httpEngine.Group("/rainbow/search/images")
-	{
-		searchRoute.GET("", cr.searchImages)
 	}
 
 	logoRoute := httpEngine.Group("/rainbow/logos")

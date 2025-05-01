@@ -47,11 +47,9 @@ type ServerInterface interface {
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
-	// SearchImages 搜索镜像
-	SearchImages(ctx context.Context, q string, labels []string) (interface{}, error)
-
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) error
+	DeleteImageTag(ctx context.Context, imageId int64, name string) error
 
 	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	AddDailyReview(ctx context.Context, page string) error
