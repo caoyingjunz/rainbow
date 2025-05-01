@@ -3,10 +3,10 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"k8s.io/klog/v2"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -55,10 +55,6 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 }
 
 func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64, req *types.CreateTaskRequest) error {
-	if len(req.Images) == 0 {
-		return nil
-	}
-
 	klog.Infof("使用镜像仓库(%d)", req.RegisterId)
 	reg, err := s.factory.Registry().Get(ctx, req.RegisterId)
 	if err != nil {
@@ -123,6 +119,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 						ImageId: imageId,
 						TaskId:  taskId,
 						Name:    tag,
+						Status:  types.SyncImageInitializing,
 					})
 					if err != nil {
 						return err

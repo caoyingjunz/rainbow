@@ -37,53 +37,42 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 }
 
 func (s *ServerController) TryUpdateRemotePublic(ctx context.Context, req *types.UpdateImageStatusRequest, old *model.Image) error {
-	if RegistryId == nil {
+	if !s.isDefaultRepo(req.RegistryId) {
 		return nil
 	}
-	reg := RegistryId
-	if *reg != req.RegistryId {
-		return nil
-	}
-	if req.Status != "同步完成" {
+
+	if req.Status != types.SyncImageComplete {
+		klog.Infof("镜像(%s)状态未推送完成，暂时不需要设置为公开", req.Name)
 		return nil
 	}
 
 	name := req.Name
-	namespace := "pixiu-public"
-	newPublic := true
-
 	for i := 0; i < 3; i++ {
-		response, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{
-			Namespace:  namespace,
-			Repository: name,
-		})
+		klog.Infof("尝试更新镜像 %s 已经为 public", name)
+		resp, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{Namespace: HuaweiNamespace, Repository: name})
 		if err != nil {
-			klog.Errorf("获取远端镜像 %s 失败 %v", name, err)
+			klog.Errorf("获取远端镜像 %s 失败 %v 1s后进行下一次重试", name, err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
-
-		oldPublic := *response.IsPublic
-		if oldPublic == newPublic {
+		if *resp.IsPublic {
+			klog.Infof("镜像%s 已经为 public，无需更新", req.Name)
 			return nil
 		}
 
-		_, err = SwrClient.UpdateRepo(&swrmodel.UpdateRepoRequest{
-			Namespace:  namespace,
-			Repository: name,
-			Body:       &swrmodel.UpdateRepoRequestBody{IsPublic: newPublic},
-		})
+		_, err = SwrClient.UpdateRepo(&swrmodel.UpdateRepoRequest{Namespace: HuaweiNamespace, Repository: name, Body: &swrmodel.UpdateRepoRequestBody{IsPublic: true}})
 		if err != nil {
 			klog.Errorf("更新远端镜像 %s 失败 %v", name, err)
 			time.Sleep(1 * time.Second)
 			continue
 		} else {
 			_ = s.factory.Image().Update(ctx, req.ImageId, old.ResourceVersion, map[string]interface{}{"public_updated": true})
+			klog.Infof("镜像 %s 已设置为 public", req.Name)
 			return nil
 		}
 	}
 
-	return fmt.Errorf("更新 更新远端镜像 %s 失败", name)
+	return fmt.Errorf("更新远端镜像 %s 失败", name)
 }
 
 func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error {
