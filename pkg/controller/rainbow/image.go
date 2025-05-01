@@ -86,6 +86,8 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 		if err := s.TryUpdateRemotePublic(ctx, req, old); err != nil {
 			klog.Errorf("尝试设置华为仓库为 public 失败: %v", err)
 		}
+	} else {
+		klog.Infof("镜像(%s)已更新过，跳过远程更新", old.Name)
 	}
 
 	parts := strings.Split(req.Target, ":")
