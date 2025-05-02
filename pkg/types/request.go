@@ -95,9 +95,10 @@ type (
 		Id              int64  `json:"id"`
 		ResourceVersion int64  `json:"resource_version"`
 		Name            string `json:"name"`
-		Status          string `json:"status"`
-		Message         string `json:"message"`
+		Namespace       string `json:"namespace"`
+		Label           string `json:"label"`
 		IsPublic        bool   `json:"is_public"`
+		Description     string `json:"description"`
 	}
 
 	UpdateImageStatusRequest struct {

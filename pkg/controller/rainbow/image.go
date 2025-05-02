@@ -29,9 +29,8 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 
 func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error {
 	updates := make(map[string]interface{})
-	updates["name"] = req.Name
-	updates["status"] = req.Status
-	updates["message"] = req.Message
+	updates["label"] = req.Label
+	updates["description"] = req.Description
 	updates["is_public"] = req.IsPublic
 	return s.factory.Image().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
