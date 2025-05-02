@@ -16,6 +16,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/config"
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	rainbowtypes "github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
@@ -81,6 +82,7 @@ func (l *login) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to login in image %v %v", string(out), err)
 	}
+	klog.Infof("镜像仓库登录完成")
 	return nil
 }
 
@@ -98,13 +100,37 @@ func (i *image) Run() error {
 	if i.p.Cfg.Default.PushKubernetes {
 		kubeImages, err := i.p.getImages()
 		if err != nil {
+			klog.Errorf("获取 k8s 镜像失败: %v", err)
 			return fmt.Errorf("获取 k8s 镜像失败: %v", err)
 		}
-
-		if err = i.p.CreateImages(kubeImages); err != nil {
-			klog.Errorf("回写k8s镜像失败: %v", err)
+		is, err := i.p.CreateImages(kubeImages)
+		if err != nil {
+			klog.Errorf("回调API创建 kubernetes 镜像失败: %v", err)
+			return err
 		}
-		images = append(images, kubeImages...)
+		imageMap := make(map[string]int64)
+		for _, ii := range is {
+			imageMap[ii.Path] = ii.Id
+		}
+
+		var tplImages []config.Image
+		for _, kubeImage := range kubeImages {
+			parts := strings.Split(kubeImage, ":")
+
+			path := parts[0]
+			tag := parts[1]
+
+			ps := strings.Split(path, "/")
+			name := ps[len(ps)-1]
+
+			tplImages = append(tplImages, config.Image{
+				Path: path,
+				Name: name,
+				Tags: []string{tag},
+				Id:   imageMap[path],
+			})
+		}
+		i.p.Images = tplImages
 	}
 
 	if i.p.Cfg.Default.PushImages {
@@ -153,6 +179,7 @@ func (p *PluginController) Validate() error {
 		return err
 	}
 
+	klog.Infof("plugin validate completed")
 	return nil
 }
 
@@ -196,8 +223,11 @@ func (p *PluginController) doComplete() error {
 		cmd2 := []string{"sudo", "install", "-o", "root", "-g", "root", "-m", "0755", "kubeadm", "/usr/local/bin/kubeadm"}
 		out, err = p.exec.Command(cmd2[0], cmd2[1:]...).CombinedOutput()
 		if err != nil {
+			klog.Errorf("安装 kubeadm 失败 %v %v", string(out), err)
 			return fmt.Errorf("failed to install kubeadm %v %v", string(out), err)
 		}
+
+		klog.Infof("kubeadm 已安装完成")
 	}
 
 	p.Runners = []Runner{
@@ -360,10 +390,11 @@ func (p *PluginController) Run() error {
 	}
 	p.SyncTaskStatus("开始同步镜像", "", 1)
 
+	klog.Infof("待推送镜像列表为 %v", p.Images)
+
 	diff := len(p.Images)
 	maxCh := make(chan struct{}, MaxConcurrency)
 	errCh := make(chan error, diff)
-
 	var wg sync.WaitGroup
 	for _, imageToPush := range p.Images {
 		wg.Add(1)
@@ -450,13 +481,16 @@ func (p *PluginController) SyncImageStatus(target string, status string, msg str
 	}
 }
 
-func (p *PluginController) CreateImages(names []string) error {
+func (p *PluginController) CreateImages(names []string) ([]model.Image, error) {
 	if !p.Synced {
-		return nil
+		return nil, nil
 	}
 
-	return p.httpClient.Post(
+	var resp rainbowtypes.Response
+	err := p.httpClient.Post(
 		fmt.Sprintf("%s/rainbow/images/batches", p.Callback),
-		nil,
+		&resp,
 		map[string]interface{}{"task_id": p.TaskId, "names": names})
+
+	return resp.Result, err
 }

@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/caoyingjunz/pixiulib/httputils"
@@ -97,7 +99,6 @@ func (cr *rainbowRouter) createTask(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if err = cr.c.Server().CreateTask(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -402,22 +403,27 @@ func (cr *rainbowRouter) createImage(c *gin.Context) {
 }
 
 func (cr *rainbowRouter) createImages(c *gin.Context) {
-	resp := httputils.NewResponse()
+	resp := types.Response{}
 
 	var (
 		req types.CreateImagesRequest
 		err error
 	)
 	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
-		httputils.SetFailed(c, resp, err)
+		resp.Code = http.StatusBadRequest
+		resp.Message = err.Error()
+		c.JSON(http.StatusOK, resp)
 		return
 	}
-	if err = cr.c.Server().CreateImages(c, &req); err != nil {
-		httputils.SetFailed(c, resp, err)
+	if resp.Result, err = cr.c.Server().CreateImages(c, &req); err != nil {
+		resp.Code = http.StatusBadRequest
+		resp.Message = err.Error()
+		c.JSON(http.StatusOK, resp)
 		return
 	}
 
-	httputils.SetSuccess(c, resp)
+	resp.Code = 200
+	c.JSON(http.StatusOK, resp)
 }
 
 func (cr *rainbowRouter) updateImage(c *gin.Context) {

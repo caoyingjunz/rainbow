@@ -192,25 +192,41 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 	return object, nil
 }
 
-func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateImagesRequest) error {
+func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error) {
 	task, err := s.factory.Task().Get(ctx, req.TaskId)
 	if err != nil {
 		klog.Errorf("未传任务名，通过任务ID获取任务详情失败 %v", err)
-		return err
+		return nil, err
 	}
 
-	for _, r := range req.Names {
-		_, err = s.factory.Image().Create(ctx, &model.Image{
-			Name:   r,
-			UserId: task.UserId,
-		})
-		if err != nil {
-			klog.Errorf("创建镜像失败 %v", err)
-			return err
-		}
+	taskReq := &types.CreateTaskRequest{
+		RegisterId: task.RegisterId,
+		Images:     req.Names,
+		UserName:   task.UserName,
+		UserId:     task.UserId,
+	}
+	if err := s.CreateImageWithTag(ctx, req.TaskId, taskReq); err != nil {
+		klog.Errorf("创建k8s镜像记录失败 :%v", err)
+		return nil, fmt.Errorf("创建k8s镜像记录失败 :%v", err)
 	}
 
-	return nil
+	tags, err := s.factory.Image().ListTags(ctx, db.WithTask(req.TaskId))
+	if err != nil {
+		klog.Errorf("创建k8s镜像tags失败 :%v", err)
+		return nil, fmt.Errorf("创建k8s镜像tags失败 :%v", err)
+	}
+	var imageIds []int64
+	for _, tag := range tags {
+		imageIds = append(imageIds, tag.ImageId)
+	}
+	images, err := s.factory.Image().List(ctx, db.WithIDIn(imageIds...))
+	if err != nil {
+		klog.Errorf("获取已创建的k8s镜像列表失败 :%v", err)
+		return nil, fmt.Errorf("获取已创建的k8s镜像列表失败 :%v", err)
+	}
+
+	klog.Infof("创建 k8s 镜像 %v 成功", images)
+	return images, nil
 }
 
 func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, name string) error {

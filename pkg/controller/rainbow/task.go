@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
@@ -20,11 +21,34 @@ const (
 	HuaweiNamespace = "pixiu-public"
 )
 
+func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
+	if req.Type == 1 {
+		if strings.HasPrefix(req.KubernetesVersion, "v1.") {
+			return fmt.Errorf("invaild kubernetes version (%s)", req.KubernetesVersion)
+		}
+	} else {
+		var errs []error
+		// TODO: 其他不合规检查
+		for _, image := range req.Images {
+			if strings.Contains(image, "\"") {
+				errs = append(errs, fmt.Errorf("invaild image(%s)", image))
+			}
+		}
+		return utilerrors.NewAggregate(errs)
+	}
+
+	return nil
+}
+
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
+	if err := s.preCreateTask(ctx, req); err != nil {
+		klog.Errorf("创建任务前置检查未通过 %v", err)
+		return err
+	}
+
 	if req.RegisterId == 0 {
 		req.RegisterId = *RegistryId
 	}
-
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
 		UserId:            req.UserId,
