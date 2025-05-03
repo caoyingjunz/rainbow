@@ -45,13 +45,15 @@ type Tag struct {
 
 	GmtDeleted gorm.DeletedAt
 
-	ImageId int64  `gorm:"index:idx_image" json:"image_id"`
-	Path    string `json:"path"`
-	TaskId  int64  `json:"task_id"`
-	Name    string `json:"name"`
-	Size    int64  `json:"size"`
-	Status  string `json:"status"`
-	Message string `json:"message"` // 错误信息
+	ImageId  int64  `gorm:"index:idx_image" json:"image_id"`
+	Path     string `json:"path"`
+	TaskId   int64  `json:"task_id"`
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	Status   string `json:"status"`
+	Message  string `json:"message"` // 错误信息
+	Manifest string `json:"manifest"`
+	Digest   string `json:"digest"`
 }
 
 func (t *Tag) TableName() string {

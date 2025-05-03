@@ -135,6 +135,10 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 	return s.factory.Image().ListImagesWithTag(ctx, db.WithStatus("同步完成"), db.WithLimit(listOption.Limits))
 }
 
+func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Image().List(ctx, db.WithPublic())
+}
+
 func (s *ServerController) isDefaultRepo(regId int64) bool {
 	return regId == *RegistryId
 }
@@ -185,7 +189,8 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 		}
 
 		oldTag.Size = exists.Size
-		oldTag.Message = exists.Manifest
+		oldTag.Manifest = exists.Manifest
+		oldTag.Digest = exists.Digest
 		objTags[i] = oldTag
 	}
 	object.Tags = objTags

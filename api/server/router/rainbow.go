@@ -61,6 +61,11 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		imageRoute.DELETE("/:Id/tags/:name", cr.deleteImageTag)
 	}
 
+	searchRoute := httpEngine.Group("/rainbow/search")
+	{
+		searchRoute.GET("/public/images", cr.listPublicImages)
+	}
+
 	collectRoute := httpEngine.Group("/rainbow/collections")
 	{
 		collectRoute.GET("", cr.getCollections)

@@ -31,6 +31,11 @@ func WithCreatedBefore(t time.Time) Options {
 		return tx.Where("gmt_create < ?", t)
 	}
 }
+func WithPublic() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("is_public = 1")
+	}
+}
 
 func WithLimit(limit int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
