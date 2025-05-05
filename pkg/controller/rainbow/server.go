@@ -7,6 +7,7 @@ import (
 	"time"
 
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
+	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
@@ -130,6 +131,7 @@ func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.monitor(ctx)
 	go s.schedule(ctx)
+	go s.sync(ctx)
 
 	return nil
 }
@@ -169,6 +171,65 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *ServerController) sync(ctx context.Context) {
+	if SwrClient == nil {
+		klog.Infof("未设置默认远程仓库，无需镜像同步")
+		return
+	}
+
+	klog.Infof("starting remote image sync controller")
+	ticker := time.NewTicker(300 * time.Second)
+	defer ticker.Stop()
+
+	defaultNamespace := HuaweiNamespace
+	for range ticker.C {
+		//overview, err := SwrClient.ShowDomainOverview(&swrmodel.ShowDomainOverviewRequest{})
+		//if err != nil {
+		//	klog.Errorf("获取远程仓库概览失败", err)
+		//	continue
+		//}
+		//klog.Infof("获取远程仓库概览成功 %v", overview)
+
+		// TODO: 后续分页查询
+		resp, err := SwrClient.ListReposDetails(&swrmodel.ListReposDetailsRequest{Namespace: &defaultNamespace})
+		if err != nil {
+			klog.Errorf("获取远程镜像列表失败", err)
+			continue
+		}
+		if resp.Body == nil || len(*resp.Body) == 0 {
+			klog.Infof("获取远程镜像为空")
+			return
+		}
+
+		var imageNames []string
+		imageMap := make(map[string]int64)
+		for _, reRepo := range *resp.Body {
+			imageNames = append(imageNames, reRepo.Name)
+			imageMap[reRepo.Name] = reRepo.NumDownload
+		}
+
+		targetImages, err := s.factory.Image().List(ctx, db.WithNameIn(imageNames...))
+		if err != nil {
+			klog.Errorf("查询本地镜像列表失败", err)
+			continue
+		}
+		for _, targetImage := range targetImages {
+			pull := imageMap[targetImage.Name]
+			if targetImage.Pull == pull {
+				klog.Infof("镜像(%s)下载量未发生变量，无需更新", targetImage.Name)
+				continue
+			}
+
+			klog.Infof("镜像(%s)下载量已发生变量，延迟更新", targetImage.Name)
+			err = s.factory.Image().Update(ctx, targetImage.Id, targetImage.ResourceVersion, map[string]interface{}{"pull": pull})
+			if err != nil {
+				klog.Errorf("更新镜像(%s)的下载量失败 %v", targetImage.Name, err)
+			}
+		}
+
+	}
 }
 
 func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
