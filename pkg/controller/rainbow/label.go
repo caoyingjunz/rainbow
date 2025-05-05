@@ -47,6 +47,7 @@ func (s *ServerController) ListLabels(ctx context.Context, listOption types.List
 func (s *ServerController) CreateLogo(ctx context.Context, req *types.CreateLogoRequest) error {
 	_, err := s.factory.Label().CreateLogo(ctx, &model.Logo{
 		Name: req.Name,
+		Logo: req.Logo,
 	})
 	return err
 }
