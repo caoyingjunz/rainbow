@@ -30,6 +30,7 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error {
 	updates := make(map[string]interface{})
 	updates["label"] = req.Label
+	updates["logo"] = req.Logo
 	updates["description"] = req.Description
 	updates["is_public"] = req.IsPublic
 	return s.factory.Image().Update(ctx, req.Id, req.ResourceVersion, updates)
@@ -137,6 +138,7 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 
 func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	return s.factory.Image().List(ctx, db.WithPublic(), db.WithNameLike(listOption.NameSelector), db.WithLimit(listOption.Limit))
+
 }
 
 func (s *ServerController) isDefaultRepo(regId int64) bool {

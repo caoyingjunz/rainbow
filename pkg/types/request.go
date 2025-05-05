@@ -98,6 +98,7 @@ type (
 		Namespace       string `json:"namespace"`
 		Label           string `json:"label"`
 		IsPublic        bool   `json:"is_public"`
+		Logo            string `json:"logo"`
 		Description     string `json:"description"`
 	}
 
