@@ -19,6 +19,12 @@ type IdNameMeta struct {
 	Name string `uri:"name" binding:"required" form:"name"`
 }
 
+type DownflowMeta struct {
+	ImageId   int64  `form:"image_id"`
+	StartTime string `form:"startTime"`
+	EndTime   string `form:"endTime"`
+}
+
 type Response struct {
 	Code    int           `json:"code"`              // 返回的状态码
 	Result  []model.Image `json:"result,omitempty"`  // 正常返回时的数据，可以为任意数据结构

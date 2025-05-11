@@ -69,6 +69,7 @@ type ServerInterface interface {
 	Overview(ctx context.Context) (interface{}, error)
 	Downflow(ctx context.Context) (interface{}, error)
 	Store(ctx context.Context) (interface{}, error)
+	ImageDownflow(ctx context.Context, downflowMeta types.DownflowMeta) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 }

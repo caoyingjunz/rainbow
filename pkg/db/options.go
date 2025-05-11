@@ -31,6 +31,13 @@ func WithCreatedBefore(t time.Time) Options {
 		return tx.Where("gmt_create < ?", t)
 	}
 }
+
+func WithCreatedAfter(t time.Time) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("gmt_create > ?", t)
+	}
+}
+
 func WithPublic() Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("is_public = 1")
@@ -71,6 +78,15 @@ func WithLabelIn(labels ...string) Options {
 			return tx
 		}
 		return tx.Where("label IN ?", labels)
+	}
+}
+
+func WithId(id int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if id == 0 {
+			return tx
+		}
+		return tx.Where("id = ?", id)
 	}
 }
 

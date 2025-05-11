@@ -676,6 +676,25 @@ func (cr *rainbowRouter) downflow(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) getImageDownflow(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		downflowMeta types.DownflowMeta
+		err          error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &downflowMeta); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ImageDownflow(c, downflowMeta); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) listPublicImages(c *gin.Context) {
 	resp := httputils.NewResponse()
 

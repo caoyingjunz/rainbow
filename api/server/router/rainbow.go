@@ -93,5 +93,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		overviewRoute.GET("", cr.overview)
 		overviewRoute.GET("/downflow/daily", cr.downflow)
 		overviewRoute.GET("/store/daily", cr.store)
+		overviewRoute.GET("/image/daily", cr.getImageDownflow)
 	}
 }
