@@ -18,6 +18,8 @@ type ImageInterface interface {
 	Get(ctx context.Context, imageId int64, del bool) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
+	CreateFlow(ctx context.Context, object *model.Downflow) error
+
 	CreateInBatch(ctx context.Context, objects []model.Image) error
 	SoftDeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
@@ -245,4 +247,12 @@ func (a *image) UpdateTag(ctx context.Context, imageId int64, tag string, update
 	}
 
 	return nil
+}
+
+func (a *image) CreateFlow(ctx context.Context, object *model.Downflow) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	return a.db.WithContext(ctx).Create(object).Error
 }

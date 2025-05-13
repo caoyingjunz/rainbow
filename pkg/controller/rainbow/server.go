@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
+	"github.com/robfig/cron/v3"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
@@ -130,11 +134,40 @@ func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) 
 }
 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
+	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
+	c := cron.New(cron.WithLocation(location))
+	_, err := c.AddFunc("* * * * *", func() {
+		klog.Infof("执行每日 0 点任务...")
+		s.syncPulls(ctx)
+	})
+	if err != nil {
+		klog.Fatal("定时任务配置错误:", err)
+	}
+	c.Start()
+	klog.Infof("定时任务已启动")
+
+	// 优雅关闭（可选）
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	c.Stop()
+	klog.Infof("定时任务已停止")
+
 	go s.monitor(ctx)
 	go s.schedule(ctx)
 	go s.sync(ctx)
 
 	return nil
+}
+
+func (s *ServerController) syncPulls(ctx context.Context) {
+	images, err := s.factory.Image().List(ctx)
+	if err != nil {
+		klog.Errorf("获取镜像列表失败 %v", err)
+		return
+	}
+
+	fmt.Println("images", images)
 }
 
 func (s *ServerController) schedule(ctx context.Context) {

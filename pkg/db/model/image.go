@@ -59,3 +59,15 @@ type Tag struct {
 func (t *Tag) TableName() string {
 	return "tags"
 }
+
+type Downflow struct {
+	rainbow.Model
+
+	ImageId  int64  `gorm:"index:idx_image" json:"image_id"`
+	CreateAt string `json:"create_at"`
+	PullNum  int    `json:"pull_num"`
+}
+
+func (t *Downflow) TableName() string {
+	return "downflows"
+}
