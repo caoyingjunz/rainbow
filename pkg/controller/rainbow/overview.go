@@ -2,12 +2,11 @@ package rainbow
 
 import (
 	"context"
-	"fmt"
-	"github.com/caoyingjunz/rainbow/pkg/db"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	rainbowmodel "github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
@@ -81,16 +80,11 @@ func (s *ServerController) Store(ctx context.Context) (interface{}, error) {
 	})
 }
 
-// result := {
-
-//}
 func (s *ServerController) ImageDownflow(ctx context.Context, downflowMeta types.DownflowMeta) (interface{}, error) {
-	images, err := s.factory.Image().List(ctx, db.WithId(downflowMeta.ImageId))
+	_, err := s.factory.Image().List(ctx, db.WithId(downflowMeta.ImageId))
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("images", images)
 
 	return nil, nil
 }
