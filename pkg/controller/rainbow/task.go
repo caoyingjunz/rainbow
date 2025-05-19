@@ -111,7 +111,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 		if len(name) == 0 {
 			return fmt.Errorf("不合规镜像名称 %s", path)
 		}
-		mirror := reg.Repository + "/" + reg.Namespace + "/" + name
+		mirror := reg.Repository + "/" + reg.Namespace + "/" + req.UserName + "/" + name
 
 		oldImage, err := s.factory.Image().GetByPath(ctx, path, mirror)
 		if err != nil {
