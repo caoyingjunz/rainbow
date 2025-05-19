@@ -49,6 +49,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if req.RegisterId == 0 {
 		req.RegisterId = *RegistryId
 	}
+	// 用户名转成成小写
+	req.UserName = strings.ToLower(req.UserName)
+
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
 		UserId:            req.UserId,
@@ -167,6 +170,11 @@ func ParseImageItem(image string) (string, string, error) {
 	tag := "latest"
 	if len(parts) == 2 {
 		tag = parts[1]
+	}
+
+	// 如果镜像是以 docker.io 开关，则去除 docker.io
+	if strings.HasPrefix(path, "docker.io/") {
+		path = strings.Replace(path, "docker.io/", "", 1)
 	}
 
 	return path, tag, nil
