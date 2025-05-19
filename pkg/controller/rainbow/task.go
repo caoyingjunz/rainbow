@@ -122,6 +122,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					Name:       name,
 					Path:       path,
 					Mirror:     mirror,
+					IsPublic:   req.PublicImage,
 				})
 				if err != nil {
 					return err

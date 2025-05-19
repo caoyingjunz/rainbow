@@ -134,6 +134,15 @@ func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) 
 }
 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
+	go s.monitor(ctx)
+	go s.schedule(ctx)
+	go s.sync(ctx)
+	go s.startSyncDailyPulls(ctx)
+
+	return nil
+}
+
+func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
 	c := cron.New(cron.WithLocation(location))
 	_, err := c.AddFunc("* * * * *", func() {
@@ -152,22 +161,14 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	<-sig
 	c.Stop()
 	klog.Infof("定时任务已停止")
-
-	go s.monitor(ctx)
-	go s.schedule(ctx)
-	go s.sync(ctx)
-
-	return nil
 }
 
 func (s *ServerController) syncPulls(ctx context.Context) {
-	images, err := s.factory.Image().List(ctx)
+	_, err := s.factory.Image().List(ctx)
 	if err != nil {
 		klog.Errorf("获取镜像列表失败 %v", err)
 		return
 	}
-
-	fmt.Println("images", images)
 }
 
 func (s *ServerController) schedule(ctx context.Context) {
