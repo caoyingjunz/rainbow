@@ -70,6 +70,10 @@ type ServerInterface interface {
 	DeleteLogo(ctx context.Context, logoId int64) error
 	ListLogos(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	CreateNamespace(ctx context.Context, req *types.CreateNamespaceRequest) error
+	UpdateNamespace(ctx context.Context, req *types.UpdateNamespaceRequest) error
+	ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	Overview(ctx context.Context) (interface{}, error)
 	Downflow(ctx context.Context) (interface{}, error)
 	Store(ctx context.Context) (interface{}, error)

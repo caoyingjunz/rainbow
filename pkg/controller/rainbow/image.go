@@ -48,6 +48,10 @@ func (s *ServerController) TryUpdateRemotePublic(ctx context.Context, req *types
 
 	name := req.Name
 	for i := 0; i < 3; i++ {
+		if strings.Contains(name, "/") {
+			name = strings.ReplaceAll(name, "/", "$")
+		}
+
 		klog.Infof("尝试更新镜像 %s 已经为 public", name)
 		resp, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{Namespace: HuaweiNamespace, Repository: name})
 		if err != nil {
@@ -155,20 +159,27 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 		return object, nil
 	}
 
-	req := &swrmodel.ShowRepositoryRequest{}
-	req.Namespace = object.Namespace
-	req.Repository = object.Name
-	resp2, err := SwrClient.ShowRepository(req)
+	targetName := object.Name
+	if strings.Contains(targetName, "/") {
+		targetName = strings.ReplaceAll(targetName, "/", "$")
+	}
+
+	resp2, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{
+		Namespace:  HuaweiNamespace,
+		Repository: targetName,
+	})
 	if err != nil {
+		klog.Errorf("获取远端镜像详情失败 %v", err)
 		return object, nil
 	}
 	object.Pull = *resp2.NumDownload
 
-	request := &swrmodel.ListRepositoryTagsRequest{}
-	request.Namespace = object.Namespace
-	request.Repository = object.Name
-	resp, err := SwrClient.ListRepositoryTags(request)
+	resp, err := SwrClient.ListRepositoryTags(&swrmodel.ListRepositoryTagsRequest{
+		Namespace:  HuaweiNamespace,
+		Repository: targetName,
+	})
 	if err != nil {
+		klog.Errorf("获取远端镜像版本失败 %v", err)
 		return object, nil
 	}
 
@@ -270,4 +281,23 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, na
 	}
 
 	return nil
+}
+
+func (s *ServerController) CreateNamespace(ctx context.Context, req *types.CreateNamespaceRequest) error {
+	_, err := s.factory.Image().CreateNamespace(ctx, &model.Namespace{
+		Name:        req.Name,
+		Description: req.Description,
+	})
+	if err != nil {
+		klog.Errorf("创建镜像的命名空间失败 %v", err)
+	}
+	return nil
+}
+
+func (s *ServerController) UpdateNamespace(ctx context.Context, req *types.UpdateNamespaceRequest) error {
+	return nil
+}
+
+func (s *ServerController) ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Image().ListNamespaces(ctx)
 }

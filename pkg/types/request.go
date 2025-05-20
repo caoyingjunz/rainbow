@@ -29,6 +29,7 @@ type (
 		Mode              int64    `json:"mode"`
 		PublicImage       bool     `json:"public_image"`
 		Driver            string   `json:"driver"`
+		Namespace         string   `yaml:"namespace"`
 	}
 
 	UpdateTaskRequest struct {
@@ -110,6 +111,18 @@ type (
 		Status     string `json:"status"`
 		Message    string `json:"message"`
 		Target     string `json:"target"`
+	}
+
+	CreateNamespaceRequest struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+
+	UpdateNamespaceRequest struct {
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Name            string `json:"name"`
+		Description     string `json:"description"`
 	}
 
 	UpdateAgentStatusRequest struct {

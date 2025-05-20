@@ -7,8 +7,7 @@ import (
 )
 
 func init() {
-	register(&Image{})
-	register(&Tag{})
+	register(&Image{}, &Tag{}, &Namespace{})
 }
 
 type Image struct {
@@ -70,4 +69,15 @@ type Downflow struct {
 
 func (t *Downflow) TableName() string {
 	return "downflows"
+}
+
+type Namespace struct {
+	rainbow.Model
+
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (t *Namespace) TableName() string {
+	return "namespaces"
 }

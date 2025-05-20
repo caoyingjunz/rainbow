@@ -713,3 +713,53 @@ func (cr *rainbowRouter) listPublicImages(c *gin.Context) {
 
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) createNamespace(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateNamespaceRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateNamespace(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateNamespace(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteNamespace(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listNamespaces(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		listOption types.ListOptions
+		err        error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListNamespaces(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}

@@ -49,8 +49,6 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if req.RegisterId == 0 {
 		req.RegisterId = *RegistryId
 	}
-	// 用户名转成成小写
-	req.UserName = strings.ToLower(req.UserName)
 
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
@@ -104,6 +102,14 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 		}
 	}
 
+	namespace := req.Namespace
+	if len(namespace) == 0 {
+		namespace = strings.ToLower(req.UserName)
+	}
+	if namespace == "superUser" {
+		namespace = ""
+	}
+
 	for path, tags := range imageMap {
 		var imageId int64
 		parts2 := strings.Split(path, "/")
@@ -111,6 +117,10 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 		if len(name) == 0 {
 			return fmt.Errorf("不合规镜像名称 %s", path)
 		}
+		if len(namespace) != 0 {
+			name = namespace + "/" + name
+		}
+
 		mirror := reg.Repository + "/" + reg.Namespace + "/" + name
 
 		oldImage, err := s.factory.Image().GetByPath(ctx, path, mirror)
@@ -121,7 +131,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					UserId:     req.UserId,
 					UserName:   req.UserName,
 					RegisterId: req.RegisterId,
-					Namespace:  HuaweiNamespace,
+					Namespace:  namespace,
 					Name:       name,
 					Path:       path,
 					Mirror:     mirror,

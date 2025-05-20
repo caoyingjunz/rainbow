@@ -87,6 +87,14 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		logoRoute.GET("", cr.listLogos)
 	}
 
+	nsRoute := httpEngine.Group("/rainbow/namespaces")
+	{
+		nsRoute.POST("", cr.createNamespace)
+		nsRoute.PUT("/:Id", cr.updateNamespace)
+		nsRoute.DELETE("/:Id", cr.deleteNamespace)
+		nsRoute.GET("", cr.listNamespaces)
+	}
+
 	// 镜像汇总
 	overviewRoute := httpEngine.Group("/rainbow/overview")
 	{

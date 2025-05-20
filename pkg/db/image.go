@@ -35,6 +35,11 @@ type ImageInterface interface {
 	DeleteTag(ctx context.Context, imageId int64, name string) error
 	GetTag(ctx context.Context, imageId int64, name string, del bool) (*model.Tag, error)
 	ListTags(ctx context.Context, opts ...Options) ([]model.Tag, error)
+
+	CreateNamespace(ctx context.Context, object *model.Namespace) (*model.Namespace, error)
+	UpdateNamespace(ctx context.Context, namespaceId int64, resourceVersion int64, updates map[string]interface{}) error
+	DeleteNamespace(ctx context.Context, namespaceId int64) error
+	ListNamespaces(ctx context.Context, opts ...Options) ([]model.Namespace, error)
 }
 
 func newImage(db *gorm.DB) ImageInterface {
@@ -255,4 +260,48 @@ func (a *image) CreateFlow(ctx context.Context, object *model.Downflow) error {
 	object.GmtModified = now
 
 	return a.db.WithContext(ctx).Create(object).Error
+}
+
+func (a *image) CreateNamespace(ctx context.Context, object *model.Namespace) (*model.Namespace, error) {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
+		return nil, err
+	}
+	return object, nil
+}
+
+func (a *image) UpdateNamespace(ctx context.Context, namespaceId int64, resourceVersion int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := a.db.WithContext(ctx).Model(&model.Namespace{}).Where("id = ? and resource_version = ?", namespaceId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
+}
+
+func (a *image) DeleteNamespace(ctx context.Context, namespaceId int64) error {
+	var audit model.Namespace
+	return a.db.Clauses(clause.Returning{}).Where("id = ? ", namespaceId).Delete(&audit).Error
+}
+
+func (a *image) ListNamespaces(ctx context.Context, opts ...Options) ([]model.Namespace, error) {
+	var audits []model.Namespace
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+	return audits, nil
 }
