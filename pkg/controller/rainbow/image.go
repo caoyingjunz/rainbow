@@ -294,8 +294,18 @@ func (s *ServerController) CreateNamespace(ctx context.Context, req *types.Creat
 	return nil
 }
 
-func (s *ServerController) UpdateNamespace(ctx context.Context, req *types.UpdateNamespaceRequest) error {
+func (s *ServerController) DeleteNamespace(ctx context.Context, objectId int64) error {
+	if err := s.factory.Image().DeleteNamespace(ctx, objectId); err != nil {
+		return fmt.Errorf("删除命名空间 %d 失败 %v", objectId, err)
+	}
+
 	return nil
+}
+
+func (s *ServerController) UpdateNamespace(ctx context.Context, req *types.UpdateNamespaceRequest) error {
+	updates := make(map[string]interface{})
+	updates["description"] = req.Description
+	return s.factory.Image().UpdateNamespace(ctx, req.Id, req.ResourceVersion, updates)
 }
 
 func (s *ServerController) ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
