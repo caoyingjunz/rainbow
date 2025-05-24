@@ -72,6 +72,7 @@ type ServerInterface interface {
 
 	CreateNamespace(ctx context.Context, req *types.CreateNamespaceRequest) error
 	UpdateNamespace(ctx context.Context, req *types.UpdateNamespaceRequest) error
+	DeleteNamespace(ctx context.Context, objectId int64) error
 	ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	Overview(ctx context.Context) (interface{}, error)

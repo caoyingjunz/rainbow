@@ -735,12 +735,39 @@ func (cr *rainbowRouter) createNamespace(c *gin.Context) {
 
 func (cr *rainbowRouter) updateNamespace(c *gin.Context) {
 	resp := httputils.NewResponse()
+	var (
+		idMeta types.IdMeta
+		req    types.UpdateNamespaceRequest
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.Id = idMeta.ID
+	if err = cr.c.Server().UpdateNamespace(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
 
 	httputils.SetSuccess(c, resp)
 }
 
 func (cr *rainbowRouter) deleteNamespace(c *gin.Context) {
 	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().DeleteNamespace(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
 
 	httputils.SetSuccess(c, resp)
 }
