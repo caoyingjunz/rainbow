@@ -84,6 +84,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	{
 		logoRoute.POST("", cr.createLogo)
 		logoRoute.DELETE("/:Id", cr.deleteLogo)
+		logoRoute.PUT("/:Id", cr.updateLogo)
 		logoRoute.GET("", cr.listLogos)
 	}
 

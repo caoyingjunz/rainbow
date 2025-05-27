@@ -67,6 +67,7 @@ type ServerInterface interface {
 	ListLabels(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	CreateLogo(ctx context.Context, req *types.CreateLogoRequest) error
+	UpdateLogo(ctx context.Context, req *types.UpdateLogoRequest) error
 	DeleteLogo(ctx context.Context, logoId int64) error
 	ListLogos(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 

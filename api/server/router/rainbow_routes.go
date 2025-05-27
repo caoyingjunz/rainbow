@@ -623,6 +623,25 @@ func (cr *rainbowRouter) deleteLogo(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) updateLogo(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		idMeta types.IdMeta
+		req    types.UpdateLogoRequest
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.Id = idMeta.ID
+	if err = cr.c.Server().UpdateLogo(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) listLogos(c *gin.Context) {
 	resp := httputils.NewResponse()
 

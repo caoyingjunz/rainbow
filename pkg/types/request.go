@@ -10,6 +10,13 @@ type (
 		Logo string `json:"logo"`
 	}
 
+	UpdateLogoRequest struct {
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Name            string `json:"name" binding:"required"`
+		Logo            string `json:"logo"`
+	}
+
 	UpdateLabelRequest struct {
 		Id              int64 `json:"id"`
 		ResourceVersion int64 `json:"resource_version"`

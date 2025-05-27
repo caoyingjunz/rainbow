@@ -52,6 +52,12 @@ func (s *ServerController) CreateLogo(ctx context.Context, req *types.CreateLogo
 	return err
 }
 
+func (s *ServerController) UpdateLogo(ctx context.Context, req *types.UpdateLogoRequest) error {
+	updates := make(map[string]interface{})
+	updates["logo"] = req.Logo
+	return s.factory.Label().UpdateLogo(ctx, req.Id, req.ResourceVersion, updates)
+}
+
 func (s *ServerController) DeleteLogo(ctx context.Context, logoId int64) error {
 	return s.factory.Label().DeleteLogo(ctx, logoId)
 }

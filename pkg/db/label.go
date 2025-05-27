@@ -15,6 +15,7 @@ type LabelInterface interface {
 	List(ctx context.Context, opts ...Options) ([]model.Label, error)
 
 	CreateLogo(ctx context.Context, object *model.Logo) (*model.Logo, error)
+	UpdateLogo(ctx context.Context, labelId int64, resourceVersion int64, updates map[string]interface{}) error
 	DeleteLogo(ctx context.Context, logoId int64) error
 	ListLogos(ctx context.Context, opts ...Options) ([]model.Logo, error)
 }
@@ -80,6 +81,21 @@ func (l *label) CreateLogo(ctx context.Context, object *model.Logo) (*model.Logo
 		return nil, err
 	}
 	return object, nil
+}
+
+func (l *label) UpdateLogo(ctx context.Context, labelId int64, resourceVersion int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := l.db.WithContext(ctx).Model(&model.Logo{}).Where("id = ? and resource_version = ?", labelId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
 }
 
 func (l *label) DeleteLogo(ctx context.Context, logoId int64) error {
