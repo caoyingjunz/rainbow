@@ -36,7 +36,8 @@ type (
 		Mode              int64    `json:"mode"`
 		PublicImage       bool     `json:"public_image"`
 		Driver            string   `json:"driver"`
-		Namespace         string   `yaml:"namespace"`
+		Logo              string   `json:"logo"`
+		Namespace         string   `json:"namespace"`
 	}
 
 	UpdateTaskRequest struct {
