@@ -73,6 +73,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		KubernetesVersion: req.KubernetesVersion,
 		Driver:            req.Driver,
 		Namespace:         req.Namespace,
+		IsPublic:          req.PublicImage,
 	})
 	if err != nil {
 		return err

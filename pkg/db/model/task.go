@@ -24,6 +24,7 @@ type Task struct {
 	KubernetesVersion string `json:"kubernetes_version"`
 	Driver            string `json:"driver"` // docker or skopeo
 	Namespace         string `json:"namespace"`
+	IsPublic          bool   `json:"is_public"`
 }
 
 func (t *Task) TableName() string {

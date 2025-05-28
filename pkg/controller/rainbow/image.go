@@ -222,11 +222,12 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 	}
 
 	taskReq := &types.CreateTaskRequest{
-		RegisterId: task.RegisterId,
-		Images:     req.Names,
-		UserName:   task.UserName,
-		UserId:     task.UserId,
-		Namespace:  task.Namespace,
+		RegisterId:  task.RegisterId,
+		Images:      req.Names,
+		UserName:    task.UserName,
+		UserId:      task.UserId,
+		Namespace:   task.Namespace,
+		PublicImage: task.IsPublic,
 	}
 	if err := s.CreateImageWithTag(ctx, req.TaskId, taskReq); err != nil {
 		klog.Errorf("创建k8s镜像记录失败 :%v", err)
