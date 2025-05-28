@@ -108,6 +108,8 @@ func (i *image) Run() error {
 			klog.Errorf("回调API创建 kubernetes 镜像失败: %v", err)
 			return err
 		}
+		klog.Infof("已完成 kubernetes 镜像的回调创建，镜像列表为 %v", is)
+
 		imageMap := make(map[string]int64)
 		for _, ii := range is {
 			imageMap[ii.Path] = ii.Id

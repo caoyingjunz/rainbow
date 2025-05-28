@@ -116,9 +116,13 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 		return nil
 	}
 
+	name := delImage.Name
+	if strings.Contains(name, "/") {
+		name = strings.ReplaceAll(name, "/", "$")
+	}
 	_, err = SwrClient.DeleteRepo(&swrmodel.DeleteRepoRequest{
 		Namespace:  HuaweiNamespace,
-		Repository: delImage.Name,
+		Repository: name,
 	})
 	if err != nil {
 		klog.Warningf("删除远端镜像失败 %v", err)
@@ -222,6 +226,7 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 		Images:     req.Names,
 		UserName:   task.UserName,
 		UserId:     task.UserId,
+		Namespace:  task.Namespace,
 	}
 	if err := s.CreateImageWithTag(ctx, req.TaskId, taskReq); err != nil {
 		klog.Errorf("创建k8s镜像记录失败 :%v", err)
@@ -269,9 +274,14 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, na
 		return nil
 	}
 
+	imageName := image.Name
+	if strings.Contains(imageName, "/") {
+		imageName = strings.ReplaceAll(imageName, "/", "$")
+	}
+
 	request := &swrmodel.DeleteRepoTagRequest{
 		Namespace:  HuaweiNamespace,
-		Repository: image.Name,
+		Repository: imageName,
 		Tag:        delTag.Name,
 	}
 

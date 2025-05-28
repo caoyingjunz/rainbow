@@ -23,7 +23,7 @@ const (
 
 func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
 	if req.Type == 1 {
-		if strings.HasPrefix(req.KubernetesVersion, "v1.") {
+		if !strings.HasPrefix(req.KubernetesVersion, "v1.") {
 			return fmt.Errorf("invaild kubernetes version (%s)", req.KubernetesVersion)
 		}
 	} else {
@@ -40,6 +40,10 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 	return nil
 }
 
+const (
+	defaultNamespace = "emptyNamespace"
+)
+
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
 	if err := s.preCreateTask(ctx, req); err != nil {
 		klog.Errorf("创建任务前置检查未通过 %v", err)
@@ -48,6 +52,13 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 
 	if req.RegisterId == 0 {
 		req.RegisterId = *RegistryId
+	}
+
+	if len(req.Namespace) == 0 {
+		req.Namespace = strings.ToLower(req.UserName)
+	}
+	if req.Namespace == defaultNamespace {
+		req.Namespace = ""
 	}
 
 	object, err := s.factory.Task().Create(ctx, &model.Task{
@@ -61,12 +72,13 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		Type:              req.Type,
 		KubernetesVersion: req.KubernetesVersion,
 		Driver:            req.Driver,
+		Namespace:         req.Namespace,
 	})
 	if err != nil {
 		return err
 	}
 	if req.Type == 1 {
-		klog.Infof("创建任务成功，状态为延迟执行")
+		klog.Infof("创建任务(%s)成功，状态为延迟执行", req.Name)
 		return nil
 	}
 
@@ -103,13 +115,6 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 	}
 
 	namespace := req.Namespace
-	if len(namespace) == 0 {
-		namespace = strings.ToLower(req.UserName)
-	}
-	if namespace == "superUser" {
-		namespace = ""
-	}
-
 	for path, tags := range imageMap {
 		var imageId int64
 		parts2 := strings.Split(path, "/")

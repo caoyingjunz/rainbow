@@ -137,10 +137,12 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 func (s *AgentController) GetOneAdminRegistry(ctx context.Context) (*model.Registry, error) {
 	regs, err := s.factory.Registry().GetAdminRegistries(ctx)
 	if err != nil {
+		klog.Errorf("获取默认镜像仓库失败: %v", err)
 		return nil, err
 	}
 	if len(regs) == 0 {
-		return nil, fmt.Errorf("no admin or defualt registry found")
+		klog.Errorf("no admin or default registry found")
+		return nil, fmt.Errorf("no admin or default registry found")
 	}
 
 	// 随机分，暂时不考虑负载情况，后续优化
@@ -178,6 +180,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 			RegistryId: registry.Id,
 			Synced:     true,
 			Driver:     task.Driver,
+			Namespace:  task.Namespace,
 		},
 		Registry: rainbowconfig.Registry{
 			Repository: registry.Repository,
