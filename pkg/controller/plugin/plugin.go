@@ -110,11 +110,10 @@ func (i *image) Run() error {
 		}
 		klog.Infof("已完成 kubernetes 镜像的回调创建，镜像列表为 %v", is)
 
-		imageMap := make(map[string]int64)
+		imageMap := make(map[string]model.Image)
 		for _, ii := range is {
-			imageMap[ii.Path] = ii.Id
+			imageMap[ii.Path] = ii
 		}
-
 		var tplImages []config.Image
 		for _, kubeImage := range kubeImages {
 			parts := strings.Split(kubeImage, ":")
@@ -122,14 +121,11 @@ func (i *image) Run() error {
 			path := parts[0]
 			tag := parts[1]
 
-			ps := strings.Split(path, "/")
-			name := ps[len(ps)-1]
-
 			tplImages = append(tplImages, config.Image{
 				Path: path,
-				Name: name,
+				Name: imageMap[path].Name,
 				Tags: []string{tag},
-				Id:   imageMap[path],
+				Id:   imageMap[path].Id,
 			})
 		}
 		i.p.Images = tplImages

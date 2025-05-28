@@ -155,20 +155,16 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 		}
 
 		for _, tag := range tags {
-			_, err = s.factory.Image().GetTag(ctx, imageId, tag, false)
+			_, err = s.factory.Image().CreateTag(ctx, &model.Tag{
+				Path:    path,
+				ImageId: imageId,
+				TaskId:  taskId,
+				Name:    tag,
+				Status:  types.SyncImageInitializing,
+			})
 			if err != nil {
-				if errors.IsNotFound(err) {
-					_, err = s.factory.Image().CreateTag(ctx, &model.Tag{
-						Path:    path,
-						ImageId: imageId,
-						TaskId:  taskId,
-						Name:    tag,
-						Status:  types.SyncImageInitializing,
-					})
-					if err != nil {
-						return err
-					}
-				}
+				klog.Errorf("创建镜像(%s)的版本(%s)失败 %v", path, tag, err)
+				return err
 			}
 		}
 	}
