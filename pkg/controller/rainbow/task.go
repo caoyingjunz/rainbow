@@ -125,8 +125,10 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 		if len(name) == 0 {
 			return fmt.Errorf("不合规镜像名称 %s", path)
 		}
-		if len(namespace) != 0 {
-			name = namespace + "/" + name
+		if req.RegisterId == *RegistryId {
+			if len(namespace) != 0 {
+				name = namespace + "/" + name
+			}
 		}
 
 		mirror := reg.Repository + "/" + reg.Namespace + "/" + name
