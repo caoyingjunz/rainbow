@@ -30,6 +30,7 @@ type Image struct {
 	Tags      []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
 
 	IsPublic      bool `json:"is_public"`
+	IsOfficial    bool `json:"is_official"`
 	PublicUpdated bool `json:"public_updated"` // 是否已经同步过远端仓库状态
 
 	Description string `json:"description"`

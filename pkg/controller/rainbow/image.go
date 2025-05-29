@@ -228,6 +228,8 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 		UserId:      task.UserId,
 		Namespace:   task.Namespace,
 		PublicImage: task.IsPublic,
+		IsOfficial:  task.IsOfficial,
+		Logo:        task.Logo,
 	}
 	if err := s.CreateImageWithTag(ctx, req.TaskId, taskReq); err != nil {
 		klog.Errorf("创建k8s镜像记录失败 :%v", err)

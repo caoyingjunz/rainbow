@@ -25,6 +25,8 @@ type Task struct {
 	Driver            string `json:"driver"` // docker or skopeo
 	Namespace         string `json:"namespace"`
 	IsPublic          bool   `json:"is_public"`
+	IsOfficial        bool   `json:"is_official"`
+	Logo              string `json:"logo"`
 }
 
 func (t *Task) TableName() string {

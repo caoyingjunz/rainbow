@@ -38,6 +38,7 @@ type (
 		Driver            string   `json:"driver"`
 		Logo              string   `json:"logo"`
 		Namespace         string   `json:"namespace"`
+		IsOfficial        bool     `json:"is_official"`
 	}
 
 	UpdateTaskRequest struct {

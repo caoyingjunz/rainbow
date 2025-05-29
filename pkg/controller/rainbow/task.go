@@ -74,6 +74,8 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		Driver:            req.Driver,
 		Namespace:         req.Namespace,
 		IsPublic:          req.PublicImage,
+		Logo:              req.Logo,
+		IsOfficial:        req.IsOfficial,
 	})
 	if err != nil {
 		return err
@@ -143,6 +145,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					Path:       path,
 					Mirror:     mirror,
 					IsPublic:   req.PublicImage,
+					IsOfficial: req.IsOfficial,
 				})
 				if err != nil {
 					return err
