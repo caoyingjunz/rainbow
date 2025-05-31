@@ -154,6 +154,11 @@ type (
 		Status int `form:"status"`
 		Limits int `form:"limits"`
 	}
+
+	RemoteSearchRequest struct {
+		Hub   string `json:"hub"  form:"hub"`
+		Query string `json:"query" form:"query"`
+	}
 )
 
 // ListOptions is the query options to a standard REST list call.
