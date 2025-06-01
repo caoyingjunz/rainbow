@@ -2,12 +2,18 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
+
 	"io"
-	"k8s.io/klog/v2"
+	"log"
+	"net"
 	"sync"
 
+	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"k8s.io/klog/v2"
+
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
+	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
 
 type Server struct {
@@ -58,4 +64,21 @@ func (s *Server) CallClient(clientId string, data []byte) ([]byte, error) {
 	}
 
 	return nil, err
+}
+
+func Install(o *options.ServerOptions) {
+	listener, err := net.Listen("tcp", ":8091")
+	if err != nil {
+		log.Fatalf("failed to listen %v", err)
+	}
+	cs := &Server{}
+	s := grpc.NewServer()
+	pb.RegisterTunnelServer(s, cs)
+
+	go func() {
+		log.Printf("grpc listening at %v", listener.Addr())
+		if err = s.Serve(listener); err != nil {
+			log.Fatalf("failed to serve %v", err)
+		}
+	}()
 }
