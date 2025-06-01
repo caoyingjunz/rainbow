@@ -62,8 +62,9 @@ type MysqlOptions struct {
 }
 
 type AgentOption struct {
-	Name    string `yaml:"name"`
-	DataDir string `yaml:"data_dir"`
+	Name      string `yaml:"name"`
+	DataDir   string `yaml:"data_dir"`
+	RpcServer string `yaml:"rpc_server"`
 }
 
 type PluginTemplateConfig struct {
