@@ -38,8 +38,7 @@ func main() {
 	// 安装 http 路由
 	router.InstallRouters(opts)
 
-	runers := []func(context.Context, int) error{opts.Controller.Server().Run}
-	for _, runner := range runers {
+	for _, runner := range []func(context.Context, int) error{opts.Controller.Server().Run} {
 		if err = runner(context.TODO(), 5); err != nil {
 			klog.Fatal("failed to rainbow agent: ", err)
 		}

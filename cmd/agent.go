@@ -28,8 +28,7 @@ func main() {
 		klog.Fatal(err)
 	}
 
-	runers := []func(context.Context, int) error{opts.Controller.Agent().Run}
-	for _, runner := range runers {
+	for _, runner := range []func(context.Context, int) error{opts.Controller.Agent().Run} {
 		if err = runner(context.TODO(), 5); err != nil {
 			klog.Fatal("failed to rainbow agent: ", err)
 		}
@@ -46,9 +45,9 @@ func main() {
 	if err != nil {
 		klog.Fatalf("%v", err)
 	}
-	klog.Infof("agent connected to server by rpc")
+	klog.Infof("agent has been connected to rpc server")
 
-	clientId := opts.ComponentConfig.Agent.Name
+	agentConfig := opts.ComponentConfig.Agent
 	// 启动协程，接受服务段回调 client 的请求
 	go func() {
 		for {
@@ -58,7 +57,7 @@ func main() {
 				return
 			}
 			// TODO
-			klog.Infof("node(%s) received from server: %s", clientId, msg.Result)
+			klog.Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
 		}
 	}()
 

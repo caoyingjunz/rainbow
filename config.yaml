@@ -10,7 +10,7 @@ server:
     secret_key: secret_key
 
 agent:
-  rpc_server: http://127.0.0.1:8091
+  rpc_server: 127.0.0.1:8091
   name: test-agent
   data_dir: /tmp
 
