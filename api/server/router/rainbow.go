@@ -104,4 +104,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		overviewRoute.GET("/store/daily", cr.store)
 		overviewRoute.GET("/image/daily", cr.getImageDownflow)
 	}
+
+	repoRoute := httpEngine.Group("/rainbow/search")
+	{
+		repoRoute.GET("/repositories", searchRepositories)
+	}
 }

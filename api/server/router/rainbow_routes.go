@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -806,6 +807,26 @@ func (cr *rainbowRouter) listNamespaces(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func searchRepositories(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.RemoteSearchRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if len(req.Hub) == 0 {
+		req.Hub = "dockerhub"
+	}
+
+	fmt.Println("searchRepositories", req)
 
 	httputils.SetSuccess(c, resp)
 }
