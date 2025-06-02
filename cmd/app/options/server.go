@@ -2,11 +2,11 @@ package options
 
 import (
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"os"
 
 	"github.com/caoyingjunz/pixiulib/config"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"k8s.io/klog/v2"
