@@ -2,9 +2,11 @@ package rainbow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 
+	"github.com/google/uuid"
 	"k8s.io/klog/v2"
 
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
@@ -37,34 +39,28 @@ func (s *ServerController) Connect(stream pb.Tunnel_ConnectServer) error {
 			klog.Infof("client(%s) rpc 注册成功", req.ClientId)
 		}
 		s.lock.Unlock()
-
-		klog.Infof("Received %s from %s", string(req.Payload), req.ClientId)
+		klog.V(2).Infof("Received %s from %s", string(req.Payload), req.ClientId)
 	}
 }
 
-func (s *ServerController) Callback(clientId string, data []byte) ([]byte, error) {
-	stream, ok := RpcClients[clientId]
-	if !ok {
+func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
+	client := GetRpcClient(req.ClientId, RpcClients)
+	if client == nil {
 		klog.Errorf("client not connected or register")
 		return nil, fmt.Errorf("client not connected or register")
 	}
 
-	// 发送调用请求
-	err := stream.Send(&pb.Response{Result: []byte(clientId + " server callback")})
+	req.Uid = uuid.NewString()
+	data, err := json.Marshal(req)
 	if err != nil {
-		klog.Errorf("回调客户端(%s)失败: %v", clientId, err)
 		return nil, err
 	}
-
-	return nil, err
-}
-
-func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
-	fmt.Println("req2", RpcClients[req.ClientId])
-	clientId := req.ClientId
-	if len(clientId) == 0 {
+	if err = client.Send(&pb.Response{Result: data}); err != nil {
+		klog.Errorf("调用 Client(%v)失败 %v", req.ClientId, err)
+		return nil, fmt.Errorf("调用 Client(%v) 失败 %v", req.ClientId, err)
 	}
 
+	// TODO: 回调客户端不提供返回值，通过redis缓存临时规避
 	return nil, nil
 }
 
