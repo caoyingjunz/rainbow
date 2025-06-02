@@ -61,6 +61,10 @@ func (s *ServerController) Callback(clientId string, data []byte) ([]byte, error
 
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
 	fmt.Println("req2", RpcClients[req.ClientId])
+	clientId := req.ClientId
+	if len(clientId) == 0 {
+	}
+
 	return nil, nil
 }
 
