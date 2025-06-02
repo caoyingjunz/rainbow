@@ -107,6 +107,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 	repoRoute := httpEngine.Group("/rainbow/search")
 	{
-		repoRoute.GET("/repositories", searchRepositories)
+		repoRoute.GET("/repositories", cr.searchRepositories)
+		repoRoute.GET("/repositories/:Name/tags", cr.searchRepositoryTags)
 	}
 }

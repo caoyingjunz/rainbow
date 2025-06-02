@@ -14,7 +14,6 @@ import (
 
 	"github.com/caoyingjunz/rainbow/api/server/router"
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
-	"github.com/caoyingjunz/rainbow/pkg/rpc"
 )
 
 var (
@@ -33,8 +32,6 @@ func main() {
 		klog.Fatal(err)
 	}
 
-	// 安装 rpc 服务
-	rpc.Install(opts)
 	// 安装 http 路由
 	router.InstallRouters(opts)
 

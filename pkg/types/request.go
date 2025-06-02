@@ -159,6 +159,11 @@ type (
 		Hub   string `json:"hub"  form:"hub"`
 		Query string `json:"query" form:"query"`
 	}
+
+	RemoteTagSearchRequest struct {
+		Hub   string `json:"hub"  form:"hub"`
+		Query string `json:"query" form:"query"`
+	}
 )
 
 // ListOptions is the query options to a standard REST list call.

@@ -3,7 +3,10 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
+	"google.golang.org/grpc"
 	"math/rand"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -81,6 +84,9 @@ type ServerInterface interface {
 	Store(ctx context.Context) (interface{}, error)
 	ImageDownflow(ctx context.Context, downflowMeta types.DownflowMeta) (interface{}, error)
 
+	SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error)
+	SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 }
 
@@ -90,8 +96,9 @@ var (
 )
 
 type ServerController struct {
-	factory db.ShareDaoFactory
-	cfg     rainbowconfig.Config
+	factory   db.ShareDaoFactory
+	cfg       rainbowconfig.Config
+	rpcServer *RpcServer
 }
 
 func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController {
@@ -144,6 +151,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.schedule(ctx)
 	go s.sync(ctx)
 	go s.startSyncDailyPulls(ctx)
+	go s.startRpcServer(ctx)
 
 	return nil
 }
@@ -167,6 +175,24 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 	<-sig
 	c.Stop()
 	klog.Infof("定时任务已停止")
+}
+
+func (s *ServerController) startRpcServer(ctx context.Context) {
+	if s.rpcServer == nil {
+		s.rpcServer = &RpcServer{}
+	}
+
+	listener, err := net.Listen("tcp", ":8091")
+	if err != nil {
+		klog.Fatalf("failed to listen %v", err)
+	}
+	gs := grpc.NewServer()
+	pb.RegisterTunnelServer(gs, s.rpcServer)
+
+	klog.Infof("starting rpc server (listening at %v)", listener.Addr())
+	if err = gs.Serve(listener); err != nil {
+		klog.Fatalf("failed to start rpc serve %v", err)
+	}
 }
 
 func (s *ServerController) syncPulls(ctx context.Context) {
