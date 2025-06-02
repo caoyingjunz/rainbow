@@ -50,8 +50,11 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 		return nil, fmt.Errorf("client not connected or register")
 	}
 
-	req.Uid = uuid.NewString()
-	data, err := json.Marshal(req)
+	data, err := json.Marshal(types.RemoteMetaRequest{
+		Type:                    1,
+		Uid:                     uuid.NewString(),
+		RepositorySearchRequest: req,
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -57,8 +57,12 @@ func main() {
 				klog.Errorf("Receive error: %v", err)
 				return
 			}
-			// TODO
 			klog.Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
+
+			// 启动搜索
+			if err = opts.Controller.Agent().Search(context.TODO(), msg.Result); err != nil {
+				klog.Errorf("failed to search remote repository or tags %v", err)
+			}
 		}
 	}()
 

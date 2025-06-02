@@ -156,17 +156,22 @@ type (
 	}
 
 	RemoteSearchRequest struct {
-		Uid      string `json:"uid"`
 		Hub      string `json:"hub" form:"hub"`
 		ClientId string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
 		Query    string `json:"query" form:"query"`
 	}
 
 	RemoteTagSearchRequest struct {
-		Uid      string `json:"uid"`
 		Hub      string `json:"hub"  form:"hub"`
 		ClientId string `json:"client_id" form:"client_id"`
 		Query    string `json:"query" form:"query"`
+	}
+
+	RemoteMetaRequest struct {
+		Type                    int
+		Uid                     string `json:"uid"`
+		RepositorySearchRequest RemoteSearchRequest
+		TagSearchRequest        RemoteTagSearchRequest
 	}
 )
 

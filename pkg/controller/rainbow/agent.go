@@ -2,7 +2,9 @@ package rainbow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/caoyingjunz/rainbow/pkg/types"
 	"math/rand"
 	"path/filepath"
 	"strings"
@@ -26,6 +28,7 @@ type AgentGetter interface {
 }
 type Interface interface {
 	Run(ctx context.Context, workers int) error
+	Search(ctx context.Context, date []byte) error
 }
 
 type AgentController struct {
@@ -50,6 +53,44 @@ func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config) *AgentController {
 	}
 }
 
+func (s *AgentController) Search(ctx context.Context, date []byte) error {
+	var reqMeta types.RemoteMetaRequest
+	if err := json.Unmarshal(date, &reqMeta); err != nil {
+		klog.Errorf("failed to unmarshal remote meta request", err)
+		return err
+	}
+
+	var (
+		result interface{}
+		err    error
+	)
+	switch reqMeta.Type {
+	case 1:
+		result, err = s.SearchRepositories(ctx, reqMeta.RepositorySearchRequest)
+	case 2:
+		result, err = s.SearchTags(ctx, reqMeta.TagSearchRequest)
+	default:
+		return fmt.Errorf("unsupported req type %d", reqMeta.Type)
+	}
+	if err != nil {
+		klog.Errorf("远程搜索失败 %v", err)
+		return err
+	}
+
+	uid := reqMeta.Uid
+	fmt.Println("uid", uid)
+	fmt.Println("result", result)
+	return nil
+}
+
+func (s *AgentController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
+	return nil, nil
+}
+
+func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
+	return nil, nil
+}
+
 func (s *AgentController) Run(ctx context.Context, workers int) error {
 	// 注册 rainbow 代理
 	if err := s.RegisterAgentIfNotExist(ctx); err != nil {
@@ -57,9 +98,7 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 	}
 
 	go s.report(ctx)
-
 	go s.getNextWorkItems(ctx)
-
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
 	}
