@@ -2,7 +2,9 @@ package config
 
 type Config struct {
 	Default DefaultOption `yaml:"default"`
-	Mysql   MysqlOptions  `yaml:"mysql"`
+
+	Mysql MysqlOptions `yaml:"mysql"`
+	Redis RedisOption  `yaml:"redis"`
 
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
 	Images     []Image          `yaml:"images"`
@@ -59,6 +61,12 @@ type MysqlOptions struct {
 	Password string `yaml:"password"`
 	Port     int    `yaml:"port"`
 	Name     string `yaml:"name"`
+}
+
+type RedisOption struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password"`
+	Db       int    `yaml:"db"`
 }
 
 type AgentOption struct {

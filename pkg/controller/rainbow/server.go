@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"net"
 	"os"
@@ -97,18 +98,20 @@ var (
 )
 
 type ServerController struct {
-	factory db.ShareDaoFactory
-	cfg     rainbowconfig.Config
+	factory     db.ShareDaoFactory
+	cfg         rainbowconfig.Config
+	redisClient *redis.Client
 
 	// rpcServer
 	pb.UnimplementedTunnelServer
 	lock sync.RWMutex
 }
 
-func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController {
+func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *ServerController {
 	sc := &ServerController{
-		factory: f,
-		cfg:     cfg,
+		factory:     f,
+		cfg:         cfg,
+		redisClient: redisClient,
 	}
 
 	if SwrClient == nil || RegistryId == nil {

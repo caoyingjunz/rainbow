@@ -27,6 +27,11 @@ mysql:
   port: 3306
   name: rainbow
 
+redis:
+  addr: redis:6379
+  password: ""
+  db: 0
+
 registry:
   repository: harbor.cloud.pixiuio.com
   namespace: pixiucloud

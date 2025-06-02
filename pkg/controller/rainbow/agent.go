@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"path/filepath"
 	"strings"
@@ -32,8 +33,9 @@ type Interface interface {
 }
 
 type AgentController struct {
-	factory db.ShareDaoFactory
-	cfg     rainbowconfig.Config
+	factory     db.ShareDaoFactory
+	cfg         rainbowconfig.Config
+	redisClient *redis.Client
 
 	queue workqueue.RateLimitingInterface
 
@@ -42,14 +44,15 @@ type AgentController struct {
 	baseDir  string
 }
 
-func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config) *AgentController {
+func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *AgentController {
 	return &AgentController{
-		factory:  f,
-		cfg:      cfg,
-		name:     cfg.Agent.Name,
-		baseDir:  cfg.Agent.DataDir,
-		callback: cfg.Plugin.Callback,
-		queue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
+		factory:     f,
+		cfg:         cfg,
+		redisClient: redisClient,
+		name:        cfg.Agent.Name,
+		baseDir:     cfg.Agent.DataDir,
+		callback:    cfg.Plugin.Callback,
+		queue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
 	}
 }
 

@@ -2,6 +2,7 @@ package options
 
 import (
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"os"
 
 	"github.com/caoyingjunz/pixiulib/config"
@@ -21,6 +22,8 @@ type ServerOptions struct {
 
 	db      *gorm.DB
 	Factory rainbowdb.ShareDaoFactory
+
+	RedisClient *redis.Client
 
 	HttpEngine *gin.Engine
 	Controller controller.RainbowInterface
@@ -58,7 +61,7 @@ func (o *ServerOptions) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig, o.Factory)
+	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient)
 	return nil
 }
 
@@ -87,4 +90,15 @@ func (o *ServerOptions) register() error {
 
 	o.Factory, err = rainbowdb.NewDaoFactory(db, true)
 	return err
+}
+
+func (o *ServerOptions) registerRedis() error {
+	redisConfig := o.ComponentConfig.Redis
+	o.RedisClient = redis.NewClient(&redis.Options{
+		Addr:     redisConfig.Addr,
+		Password: redisConfig.Password,
+		DB:       redisConfig.Db,
+	})
+
+	return nil
 }
