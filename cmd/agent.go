@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -60,6 +62,17 @@ func main() {
 			klog.Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
 		}
 	}()
+	// 启动客户端定时测试DEMO
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
-	select {}
+	for range ticker.C {
+		ts := time.Now().String()
+		if err = stream.Send(&pb.Request{
+			ClientId: agentConfig.Name,
+			Payload:  []byte(ts),
+		}); err != nil {
+			log.Println("调用服务端失败", err)
+		}
+	}
 }

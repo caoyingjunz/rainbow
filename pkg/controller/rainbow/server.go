@@ -3,21 +3,22 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
-	"google.golang.org/grpc"
 	"math/rand"
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"github.com/robfig/cron/v3"
+	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
+	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -96,9 +97,12 @@ var (
 )
 
 type ServerController struct {
-	factory   db.ShareDaoFactory
-	cfg       rainbowconfig.Config
-	rpcServer *RpcServer
+	factory db.ShareDaoFactory
+	cfg     rainbowconfig.Config
+
+	// rpcServer
+	pb.UnimplementedTunnelServer
+	lock sync.RWMutex
 }
 
 func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController {
@@ -178,16 +182,12 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 }
 
 func (s *ServerController) startRpcServer(ctx context.Context) {
-	if s.rpcServer == nil {
-		s.rpcServer = &RpcServer{}
-	}
-
 	listener, err := net.Listen("tcp", ":8091")
 	if err != nil {
 		klog.Fatalf("failed to listen %v", err)
 	}
 	gs := grpc.NewServer()
-	pb.RegisterTunnelServer(gs, s.rpcServer)
+	pb.RegisterTunnelServer(gs, s)
 
 	klog.Infof("starting rpc server (listening at %v)", listener.Addr())
 	if err = gs.Serve(listener); err != nil {
