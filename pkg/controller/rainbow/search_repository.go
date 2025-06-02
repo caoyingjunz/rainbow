@@ -31,7 +31,6 @@ func (s *ServerController) Connect(stream pb.Tunnel_ConnectServer) error {
 		if RpcClients == nil {
 			RpcClients = make(map[string]pb.Tunnel_ConnectServer)
 		}
-
 		old, ok := RpcClients[req.ClientId]
 		if !ok || old != stream {
 			RpcClients[req.ClientId] = stream
@@ -39,16 +38,15 @@ func (s *ServerController) Connect(stream pb.Tunnel_ConnectServer) error {
 		}
 		s.lock.Unlock()
 
-		// TODO 目前是DEMO
-		//klog.Infof("Received from %s %s", req.ClientId, string(req.Payload))
+		klog.Infof("Received %s from %s", string(req.Payload), req.ClientId)
 	}
 }
 
 func (s *ServerController) Callback(clientId string, data []byte) ([]byte, error) {
 	stream, ok := RpcClients[clientId]
 	if !ok {
-		klog.Errorf("client not connected")
-		return nil, fmt.Errorf("client not connected")
+		klog.Errorf("client not connected or register")
+		return nil, fmt.Errorf("client not connected or register")
 	}
 
 	// 发送调用请求
@@ -62,7 +60,7 @@ func (s *ServerController) Callback(clientId string, data []byte) ([]byte, error
 }
 
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
-	fmt.Println("req2", RpcClients)
+	fmt.Println("req2", RpcClients[req.ClientId])
 	return nil, nil
 }
 

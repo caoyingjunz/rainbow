@@ -156,13 +156,15 @@ type (
 	}
 
 	RemoteSearchRequest struct {
-		Hub   string `json:"hub"  form:"hub"`
-		Query string `json:"query" form:"query"`
+		Hub      string `json:"hub" form:"hub"`
+		ClientId string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
+		Query    string `json:"query" form:"query"`
 	}
 
 	RemoteTagSearchRequest struct {
-		Hub   string `json:"hub"  form:"hub"`
-		Query string `json:"query" form:"query"`
+		Hub      string `json:"hub"  form:"hub"`
+		ClientId string `json:"client_id" form:"client_id"`
+		Query    string `json:"query" form:"query"`
 	}
 )
 

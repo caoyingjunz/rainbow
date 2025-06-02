@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"time"
 
 	"google.golang.org/grpc"
@@ -62,17 +61,22 @@ func main() {
 			klog.Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
 		}
 	}()
-	// 启动客户端定时测试DEMO
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
 
+	// 向 rpc 服务端进行注册
+	if err = stream.Send(&pb.Request{ClientId: agentConfig.Name, Payload: []byte("pong")}); err != nil {
+		klog.Fatal("client(%s) 向 rpc 服务注册失败", err)
+	}
+
+	// 启动客户端探活API
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	for range ticker.C {
-		ts := time.Now().String()
+		t := time.Now().Format("2006-01-02 15:04:05")
 		if err = stream.Send(&pb.Request{
 			ClientId: agentConfig.Name,
-			Payload:  []byte(ts),
+			Payload:  []byte("pong at " + t),
 		}); err != nil {
-			log.Println("调用服务端失败", err)
+			klog.Errorf("client(%s) 探活 RPC 服务端失败 at %v %v", agentConfig.Name, t, err)
 		}
 	}
 }
