@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/caoyingjunz/rainbow/pkg/types"
 	"math/rand"
 	"path/filepath"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
+	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
@@ -84,6 +84,12 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 }
 
 func (s *AgentController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
+	switch req.Hub {
+	case "dockerhub":
+		url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories/?query=%s", req.Query)
+		return DoHttpRequest(url)
+	}
+
 	return nil, nil
 }
 

@@ -1,7 +1,10 @@
 package rainbow
 
 import (
+	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"time"
 
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
@@ -25,4 +28,23 @@ func GetRpcClient(clientId string, m map[string]pb.Tunnel_ConnectServer) pb.Tunn
 
 	rand.Seed(time.Now().UnixNano())
 	return m[keys[rand.Intn(len(keys))]]
+}
+
+func DoHttpRequest(url string) (interface{}, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+	request, err := http.NewRequest("", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error resp %s", resp.Status)
+	}
+
+	return ioutil.ReadAll(resp.Body)
 }
