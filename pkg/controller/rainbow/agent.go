@@ -80,9 +80,16 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 		return err
 	}
 
-	uid := reqMeta.Uid
-	fmt.Println("uid", uid)
-	fmt.Println("result", result)
+	// 保存 60s
+	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Set(ctx, reqMeta.Uid, result, 30*time.Second)
+		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", reqMeta.Uid), "set")
+		return nil
+	}); err != nil {
+		klog.Errorf("临时存储失败 %v", err)
+	}
+
+	klog.Infof("搜索(%s)结果已暂存 key(%s)", reqMeta.RepositorySearchRequest.Query, reqMeta.Uid)
 	return nil
 }
 

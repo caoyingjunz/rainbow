@@ -60,6 +60,10 @@ func (o *ServerOptions) Complete() error {
 	if err := o.register(); err != nil {
 		return err
 	}
+	// 注册 redis 客户端
+	if err := o.registerRedis(); err != nil {
+		return err
+	}
 
 	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient)
 	return nil

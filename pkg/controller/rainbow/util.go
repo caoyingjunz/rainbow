@@ -30,7 +30,7 @@ func GetRpcClient(clientId string, m map[string]pb.Tunnel_ConnectServer) pb.Tunn
 	return m[keys[rand.Intn(len(keys))]]
 }
 
-func DoHttpRequest(url string) (interface{}, error) {
+func DoHttpRequest(url string) ([]byte, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	request, err := http.NewRequest("", url, nil)
 	if err != nil {
