@@ -74,6 +74,7 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 }
 
 func (s *ServerController) GetResult(ctx context.Context, key string) (string, error) {
+	// 先尝试直接获取
 	val, err := s.redisClient.Get(ctx, key).Result()
 	if err == nil {
 		return val, nil // key 存在直接返回
@@ -82,11 +83,19 @@ func (s *ServerController) GetResult(ctx context.Context, key string) (string, e
 		return "", fmt.Errorf("redis error: %w", err) // 非"不存在"错误
 	}
 
+	// key 不存在，准备订阅通知
 	channel := fmt.Sprintf("__keyspace@0__:%s", key) // Redis 通知频道格式
 	pubSub := s.redisClient.Subscribe(ctx, channel)
 	defer pubSub.Close()
+
 	if _, err = pubSub.Receive(ctx); err != nil {
 		return "", fmt.Errorf("subscribe failed: %w", err)
+	}
+
+	// 再次检查（避免订阅期间 key 被设置）
+	val, err = s.redisClient.Get(ctx, key).Result()
+	if err == nil {
+		return val, nil
 	}
 
 	// 30 秒超时
