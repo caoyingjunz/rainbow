@@ -77,12 +77,11 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 	}
 	if err != nil {
 		klog.Errorf("远程搜索失败 %v", err)
-		return err
 	}
 
 	// 保存 60s
 	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.Set(ctx, reqMeta.Uid, result, 30*time.Second)
+		pipe.Set(ctx, reqMeta.Uid, types.SearchResult{Result: result, Err: err}, 30*time.Second)
 		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", reqMeta.Uid), "set")
 		return nil
 	}); err != nil {
@@ -104,6 +103,12 @@ func (s *AgentController) SearchRepositories(ctx context.Context, req types.Remo
 }
 
 func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
+	switch req.Hub {
+	case "dockerhub":
+		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags/?page_size=%s&page=%s", req.Namespace, req.Repository, req.PageSize, req.Page)
+		return DoHttpRequest(url)
+	}
+
 	return nil, nil
 }
 

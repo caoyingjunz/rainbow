@@ -70,7 +70,27 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 }
 
 func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
-	return nil, nil
+	client := GetRpcClient(req.ClientId, RpcClients)
+	if client == nil {
+		klog.Errorf("client not connected or register")
+		return nil, fmt.Errorf("client not connected or register")
+	}
+
+	key := uuid.NewString()
+	data, err := json.Marshal(types.RemoteMetaRequest{
+		Type:             2,
+		Uid:              key,
+		TagSearchRequest: req,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err = client.Send(&pb.Response{Result: data}); err != nil {
+		klog.Errorf("调用 Client(%v)失败 %v", req.ClientId, err)
+		return nil, fmt.Errorf("调用 Client(%v) 失败 %v", req.ClientId, err)
+	}
+
+	return s.GetResult(ctx, key)
 }
 
 func (s *ServerController) GetResult(ctx context.Context, key string) (string, error) {
