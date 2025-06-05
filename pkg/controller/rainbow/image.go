@@ -33,6 +33,7 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 	updates["logo"] = req.Logo
 	updates["description"] = req.Description
 	updates["is_public"] = req.IsPublic
+	updates["lock"] = req.Lock
 	return s.factory.Image().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
 
