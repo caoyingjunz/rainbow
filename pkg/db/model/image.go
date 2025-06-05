@@ -33,6 +33,8 @@ type Image struct {
 	IsOfficial    bool `json:"is_official"`
 	PublicUpdated bool `json:"public_updated"` // 是否已经同步过远端仓库状态
 
+	Lock bool `json:"lock" gorm:"default:false"` // 锁字段，默认false表示未锁定
+
 	Description string `json:"description"`
 }
 

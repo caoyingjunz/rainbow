@@ -102,6 +102,17 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 
 // DeleteImage 删除镜像和对应的tags
 func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error {
+	// 获取镜像信息，检查是否被锁定
+	image, err := s.factory.Image().Get(ctx, imageId, false)
+	if err != nil {
+		klog.Errorf("获取镜像(%d)失败: %v", imageId, err)
+	}
+
+	// 检查 Lock 字段，如果为 true 则不允许删除
+	if image.Lock {
+		return fmt.Errorf("镜像 %d 已被锁定，不允许删除", imageId)
+	}
+
 	if err := s.factory.Image().Delete(ctx, imageId); err != nil {
 		return fmt.Errorf("删除镜像 %d 失败 %v", imageId, err)
 	}
