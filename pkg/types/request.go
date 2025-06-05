@@ -93,7 +93,7 @@ type (
 		Status     string `json:"status"`
 		Message    string `json:"message"`
 		IsPublic   bool   `json:"is_public"`
-		IsLocked       bool   `json:"is_locked"`
+		IsLocked   bool   `json:"is_locked"`
 	}
 
 	CreateImagesRequest struct {
@@ -111,7 +111,7 @@ type (
 		IsPublic        bool   `json:"is_public"`
 		Logo            string `json:"logo"`
 		Description     string `json:"description"`
-		IsLocked            bool   `json:"is_locked"`
+		IsLocked        bool   `json:"is_locked"`
 	}
 
 	UpdateImageStatusRequest struct {
