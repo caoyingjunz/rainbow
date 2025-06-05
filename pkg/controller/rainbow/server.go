@@ -154,11 +154,11 @@ func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) 
 }
 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
-	go s.monitor(ctx)
 	go s.schedule(ctx)
 	go s.sync(ctx)
 	go s.startSyncDailyPulls(ctx)
 	go s.startRpcServer(ctx)
+	go s.startAgentHeartbeat(ctx)
 
 	return nil
 }
@@ -367,8 +367,8 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 	}
 }
 
-func (s *ServerController) monitor(ctx context.Context) {
-	klog.Infof("starting agent monitor")
+func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
+	klog.Infof("starting agent heartbeat")
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()

@@ -46,7 +46,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("%v", err)
 	}
-	klog.Infof("agent connected to rpcServer")
+	klog.Infof("agent connected to rpcServer(%s)", opts.ComponentConfig.Agent.RpcServer)
 
 	agentConfig := opts.ComponentConfig.Agent
 	// 启动协程，接受服务段回调 client 的请求

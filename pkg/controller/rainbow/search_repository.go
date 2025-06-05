@@ -45,13 +45,62 @@ func (s *ServerController) Connect(stream pb.Tunnel_ConnectServer) error {
 	}
 }
 
-func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
-	client := GetRpcClient(req.ClientId, RpcClients)
-	if client == nil {
-		klog.Errorf("client not connected or register")
-		return nil, fmt.Errorf("client not connected or register")
-	}
+type HubSearchResponse struct {
+	Count    int                `json:"count"`
+	Next     string             `json:"next"`
+	Previous string             `json:"previous"`
+	Results  []RepositoryResult `json:"results"`
+}
 
+type RepositoryResult struct {
+	RepoName         string `json:"repo_name"`
+	ShortDescription string `json:"short_description"`
+	StarCount        int    `json:"star_count"`
+	PullCount        int64  `json:"pull_count"` // 使用 int64 因为拉取计数可能非常大
+	RepoOwner        string `json:"repo_owner"`
+	IsAutomated      bool   `json:"is_automated"`
+	IsOfficial       bool   `json:"is_official"`
+}
+
+type HubTagResponse struct {
+	Count    int         `json:"count"`
+	Next     string      `json:"next"`
+	Previous interface{} `json:"previous"` // 可能是 null 或字符串
+	Results  []TagResult `json:"results"`
+}
+
+type TagResult struct {
+	Images              []ImageInfo `json:"images"`
+	LastUpdated         time.Time   `json:"last_updated"`
+	LastUpdater         int64       `json:"last_updater"`
+	LastUpdaterUsername string      `json:"last_updater_username"`
+	Name                string      `json:"name"`
+	Repository          int64       `json:"repository"`
+	FullSize            int64       `json:"full_size"`
+	V2                  bool        `json:"v2"`
+	TagStatus           string      `json:"tag_status"`
+	TagLastPulled       time.Time   `json:"tag_last_pulled"`
+	TagLastPushed       time.Time   `json:"tag_last_pushed"`
+	MediaType           string      `json:"media_type"`
+	ContentType         string      `json:"content_type"`
+	Digest              string      `json:"digest"`
+}
+
+type ImageInfo struct {
+	Architecture string    `json:"architecture"`
+	Features     string    `json:"features"`
+	Variant      *string   `json:"variant"` // 可能是 null
+	Digest       string    `json:"digest"`
+	OS           string    `json:"os"`
+	OSFeatures   string    `json:"os_features"`
+	OSVersion    *string   `json:"os_version"` // 可能是 null
+	Size         int64     `json:"size"`
+	Status       string    `json:"status"`
+	LastPulled   time.Time `json:"last_pulled"`
+	LastPushed   time.Time `json:"last_pushed"`
+}
+
+func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
 		Type:                    1,
@@ -59,23 +108,25 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 		RepositorySearchRequest: req,
 	})
 	if err != nil {
+		klog.Errorf("序列化(%v)失败 %v", req, err)
 		return nil, err
 	}
-	if err = client.Send(&pb.Response{Result: data}); err != nil {
-		klog.Errorf("调用 Client(%v)失败 %v", req.ClientId, err)
-		return nil, fmt.Errorf("调用 Client(%v) 失败 %v", req.ClientId, err)
+
+	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	if err != nil {
+		return nil, err
 	}
 
-	return s.GetResult(ctx, key)
+	var searchResp HubSearchResponse
+	if err = json.Unmarshal(val, &searchResp); err != nil {
+		klog.Errorf("序列化 HubSearchResponse失败: %v", err)
+		return nil, fmt.Errorf("序列化 HubSearchResponse失败: %v", err)
+	}
+
+	return searchResp, nil
 }
 
 func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
-	client := GetRpcClient(req.ClientId, RpcClients)
-	if client == nil {
-		klog.Errorf("client not connected or register")
-		return nil, fmt.Errorf("client not connected or register")
-	}
-
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
 		Type:             2,
@@ -83,14 +134,50 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 		TagSearchRequest: req,
 	})
 	if err != nil {
+		klog.Errorf("序列化(%v)失败 %v", req, err)
 		return nil, err
 	}
-	if err = client.Send(&pb.Response{Result: data}); err != nil {
-		klog.Errorf("调用 Client(%v)失败 %v", req.ClientId, err)
-		return nil, fmt.Errorf("调用 Client(%v) 失败 %v", req.ClientId, err)
+
+	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	if err != nil {
+		return nil, err
 	}
 
-	return s.GetResult(ctx, key)
+	var tagResp HubTagResponse
+	if err = json.Unmarshal(val, &tagResp); err != nil {
+		return nil, err
+	}
+	return tagResp, nil
+}
+
+func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
+	client := GetRpcClient(clientId, RpcClients)
+	if client == nil {
+		klog.Errorf("client not connected or register")
+		return nil, fmt.Errorf("client not connected or register")
+	}
+
+	if err := client.Send(&pb.Response{Result: data}); err != nil {
+		klog.Errorf("调用 Client(%v)失败 %v", clientId, err)
+		return nil, fmt.Errorf("调用 Client(%v) 失败 %v", clientId, err)
+	}
+
+	val, err := s.GetResult(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	var sr types.SearchResult
+	if err = json.Unmarshal([]byte(val), &sr); err != nil {
+		klog.Errorf("反序列化（%v）失败 %v", val, err)
+		return nil, err
+	}
+	if sr.StatusCode != 0 {
+		klog.Errorf("远程调用失败 %v", err)
+		return nil, fmt.Errorf(sr.ErrMessage)
+	}
+
+	return sr.Result, nil
 }
 
 func (s *ServerController) GetResult(ctx context.Context, key string) (string, error) {
@@ -133,7 +220,7 @@ func (s *ServerController) GetResult(ctx context.Context, key string) (string, e
 				}
 			}
 		case <-waitCtx.Done():
-			return "", fmt.Errorf("wait timeout for key: %s", key)
+			return "", fmt.Errorf("wait timeout for search(%s)", key)
 		}
 	}
 }

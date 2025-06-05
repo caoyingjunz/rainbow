@@ -64,7 +64,7 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 	}
 
 	var (
-		result interface{}
+		result []byte
 		err    error
 	)
 	switch reqMeta.Type {
@@ -75,13 +75,21 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 	default:
 		return fmt.Errorf("unsupported req type %d", reqMeta.Type)
 	}
+
+	statusCode, errMessage := 0, ""
 	if err != nil {
+		statusCode, errMessage = 1, err.Error()
 		klog.Errorf("远程搜索失败 %v", err)
+	}
+	data, err := json.Marshal(types.SearchResult{Result: result, ErrMessage: errMessage, StatusCode: statusCode})
+	if err != nil {
+		klog.Errorf("序列化查询结果失败 %v", err)
+		return fmt.Errorf("序列化查询结果失败 %v", err)
 	}
 
 	// 保存 60s
 	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.Set(ctx, reqMeta.Uid, types.SearchResult{Result: result, Err: err}, 30*time.Second)
+		pipe.Set(ctx, reqMeta.Uid, data, 30*time.Second)
 		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", reqMeta.Uid), "set")
 		return nil
 	}); err != nil {
@@ -92,20 +100,20 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 	return nil
 }
 
-func (s *AgentController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
+func (s *AgentController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]byte, error) {
 	switch req.Hub {
 	case "dockerhub":
-		url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories/?query=%s", req.Query)
+		url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories?query=%s&page=%s&page_size=%s", req.Query, req.Page, req.PageSize)
 		return DoHttpRequest(url)
 	}
 
 	return nil, nil
 }
 
-func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
+func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
 	switch req.Hub {
 	case "dockerhub":
-		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags/?page_size=%s&page=%s", req.Namespace, req.Repository, req.PageSize, req.Page)
+		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags?page_size=%s&page=%s", req.Namespace, req.Repository, req.PageSize, req.Page)
 		return DoHttpRequest(url)
 	}
 
@@ -132,21 +140,27 @@ func (s *AgentController) report(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		newAgent, err := s.factory.Agent().GetByName(ctx, s.name)
+		old, err := s.factory.Agent().GetByName(ctx, s.name)
 		if err != nil {
 			klog.Error("failed to get agent status %v", err)
 			continue
 		}
 
+		// 已离线的agent不在发送心跳同步
+		if old.Status == model.UnRunAgentType {
+			continue
+		}
+
 		updates := map[string]interface{}{"last_transition_time": time.Now()}
-		if newAgent.Status == model.UnknownAgentType {
+		if old.Status == model.UnknownAgentType {
 			updates["status"] = model.RunAgentType
 			updates["message"] = "Agent started posting status"
 		}
 
-		err = s.factory.Agent().UpdateByName(ctx, s.name, updates)
-		if err != nil {
-			klog.Error("failed to sync agent status %v", err)
+		if err = s.factory.Agent().UpdateByName(ctx, s.name, updates); err != nil {
+			klog.Error("同步 agent(%s) 心跳失败%v", s.name, err)
+		} else {
+			klog.V(2).Infof("同步 agent(%s) 心跳成功 %v", s.name, updates)
 		}
 	}
 }

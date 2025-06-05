@@ -48,6 +48,7 @@ const (
 )
 
 type SearchResult struct {
-	Result interface{}
-	Err    error
+	Result     []byte
+	ErrMessage string
+	StatusCode int
 }
