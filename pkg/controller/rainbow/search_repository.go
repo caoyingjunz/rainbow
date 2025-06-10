@@ -157,7 +157,6 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 
 func (s *ServerController) SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) (interface{}, error) {
 	key := uuid.NewString()
-	fmt.Println(req.Hub)
 	data, err := json.Marshal(types.RemoteMetaRequest{
 		Type:             3,
 		Uid:              key,
