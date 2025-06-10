@@ -67,8 +67,6 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 				continue
 			}
 
-			fmt.Printf("镜像 %s 来自 Docker Hub\n", image)
-
 			// 准备查询镜像信息的请求
 			var reqImage types.RemoteImageInfoRequest
 			reqImage.Hub = "dockerhub"
@@ -83,7 +81,6 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 				continue
 			}
 
-			fmt.Println("调用", imageInfoResp)
 			// 类型断言
 			infoResp, ok := imageInfoResp.(HubImageInfoResponse)
 			if !ok {
