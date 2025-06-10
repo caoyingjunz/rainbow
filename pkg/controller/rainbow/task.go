@@ -101,10 +101,7 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 				}
 			}
 		}
-
-		if len(errs) > 0 {
-			return utilerrors.NewAggregate(errs)
-		}
+		return utilerrors.NewAggregate(errs)
 	}
 
 	return nil
