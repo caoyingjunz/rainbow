@@ -15,6 +15,8 @@ type Config struct {
 	Registry Registry     `yaml:"registry"`
 
 	Agent AgentOption `yaml:"agent"`
+
+	RateLimit RateLimitOption `yaml:"rate_limit"`
 }
 
 type DefaultOption struct {
@@ -73,6 +75,11 @@ type AgentOption struct {
 	Name      string `yaml:"name"`
 	DataDir   string `yaml:"data_dir"`
 	RpcServer string `yaml:"rpc_server"`
+}
+
+type RateLimitOption struct {
+	MaxRequests int64 `yaml:"max_requests"`
+	TimeWindow  int64 `yaml:"time_window"`
 }
 
 type PluginTemplateConfig struct {

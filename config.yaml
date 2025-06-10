@@ -3,7 +3,11 @@ default:
   mode: debug
   push_kubernetes: false
   push_images: false
-
+rate_limit:
+  # 每分钟单个clientId最大请求次数
+  max_request: 10
+  # 限速时间窗口
+  time_window: 60
 server:
   auth:
     access_key: access_key
@@ -21,14 +25,14 @@ plugin:
   driver: docker #skopeo or docker
 
 mysql:
-  host: peng
-  user: root
+  host: 127.0.0.1
+  user: rainbow
   password: Pixiu868686
   port: 3306
   name: rainbow
 
 redis:
-  addr: redis:6379
+  addr: 127.0.0.1:6379
   password: ""
   db: 0
 
