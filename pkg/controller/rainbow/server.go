@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"net"
 	"os"
@@ -10,8 +11,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/go-redis/redis/v8"
 
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
