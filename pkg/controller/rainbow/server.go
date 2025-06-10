@@ -58,6 +58,7 @@ type ServerInterface interface {
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	GetImageTags(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error)
 
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error)
