@@ -116,7 +116,6 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		klog.Errorf("创建任务前置检查未通过 %v", err)
 		return err
 	}
-	fmt.Println("前置检查完成")
 
 	if req.RegisterId == 0 {
 		req.RegisterId = *RegistryId
