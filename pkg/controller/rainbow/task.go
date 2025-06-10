@@ -35,8 +35,6 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 		var errs []error
 
 		for _, image := range req.Images {
-			fmt.Println("原始image:", image)
-
 			// 分割镜像名称和版本
 			parts := strings.Split(image, ":")
 			if len(parts) != 2 {
