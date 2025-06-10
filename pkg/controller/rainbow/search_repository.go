@@ -86,6 +86,11 @@ type TagResult struct {
 	Digest              string      `json:"digest"`
 }
 
+type HubImageInfoResponse struct {
+	Creator int         `json:"creator"`
+	Images  []ImageInfo `json:"images"`
+}
+
 type ImageInfo struct {
 	Architecture string    `json:"architecture"`
 	Features     string    `json:"features"`
@@ -142,12 +147,36 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 	if err != nil {
 		return nil, err
 	}
-
 	var tagResp HubTagResponse
 	if err = json.Unmarshal(val, &tagResp); err != nil {
 		return nil, err
 	}
 	return tagResp, nil
+}
+
+func (s *ServerController) SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) (interface{}, error) {
+	key := uuid.NewString()
+	fmt.Println(req.Hub)
+	data, err := json.Marshal(types.RemoteMetaRequest{
+		Type:             3,
+		Uid:              key,
+		ImageInfoRequest: req,
+	})
+	if err != nil {
+		klog.Errorf("序列化(%v)失败 %v", req, err)
+		return nil, err
+	}
+
+	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	if err != nil {
+		return nil, err
+	}
+
+	var infoResp HubImageInfoResponse
+	if err = json.Unmarshal(val, &infoResp); err != nil {
+		return nil, err
+	}
+	return infoResp, nil
 }
 
 func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {

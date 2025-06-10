@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"net"
 	"os"
@@ -11,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
@@ -88,6 +89,7 @@ type ServerInterface interface {
 
 	SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error)
 	SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error)
+	SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 }

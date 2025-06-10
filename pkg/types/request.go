@@ -175,11 +175,22 @@ type (
 		PageSize   string `json:"page_size" form:"page_size"`
 	}
 
+	RemoteImageInfoRequest struct {
+		Hub        string `json:"hub" form:"hub"`
+		ClientId   string `json:"client_id" form:"client_id"`
+		Namespace  string `json:"namespace" form:"namespace"`
+		Repository string `json:"repository" form:"repository"`
+		Query      string `json:"query" form:"query"`
+		Arch       string `json:"arch" form:"arch"`
+		Tag        string `json:"tag" form:"tag"`
+	}
+
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
 		RepositorySearchRequest RemoteSearchRequest
 		TagSearchRequest        RemoteTagSearchRequest
+		ImageInfoRequest        RemoteImageInfoRequest
 	}
 )
 
