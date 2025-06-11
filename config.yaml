@@ -25,14 +25,14 @@ plugin:
   driver: docker #skopeo or docker
 
 mysql:
-  host: peng
+  host: 127.0.0.1
   user: root
   password: Pixiu868686
   port: 3306
   name: rainbow
 
 redis:
-  addr: redis:6379
+  addr: 127.0.0.1:6379
   password: ""
   db: 0
 

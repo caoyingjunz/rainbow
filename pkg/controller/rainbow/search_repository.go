@@ -143,7 +143,6 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 		klog.Errorf("序列化(%v)失败 %v", req, err)
 		return nil, err
 	}
-
 	val, err := s.doSearch(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
@@ -157,11 +156,10 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 }
 
 func (s *ServerController) checkRateLimit(ctx context.Context, clientId string) error {
-	rateKey := fmt.Sprintf("rate_limit: %s", clientId)
+	rateKey := fmt.Sprintf("rate_limit:%s", clientId)
 	now := time.Now().Unix()
 	pipe := s.redisClient.TxPipeline()
 	defer pipe.Close()
-
 	// 获取当前令牌数
 	pipe.ZRemRangeByScore(ctx, rateKey, "0", fmt.Sprintf("%d", now-s.cfg.RateLimit.TimeWindow))
 	pipe.ZCard(ctx, rateKey)
@@ -177,6 +175,12 @@ func (s *ServerController) checkRateLimit(ctx context.Context, clientId string) 
 		return fmt.Errorf("请求过于频繁，请稍后再试")
 	}
 
+	// 设置键的过期时间为 60 秒
+	_, err = s.redisClient.Expire(ctx, rateKey, 60*time.Second).Result()
+	if err != nil {
+		klog.Errorf("设置限速令牌过期时间失败: %v", err)
+		return fmt.Errorf("限速检查失败")
+	}
 	// 添加新令牌
 	_, err = s.redisClient.ZAdd(ctx, rateKey, &redis.Z{
 		Score:  float64(now),
