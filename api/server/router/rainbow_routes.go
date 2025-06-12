@@ -171,6 +171,25 @@ func (cr *rainbowRouter) deleteTask(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) reRunTask(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.UpdateTaskRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().ReRunTask(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) getTask(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -460,26 +479,6 @@ func (cr *rainbowRouter) deleteImage(c *gin.Context) {
 		return
 	}
 	if err = cr.c.Server().DeleteImage(c, idMeta.ID); err != nil {
-		httputils.SetFailed(c, resp, err)
-		return
-	}
-
-	httputils.SetSuccess(c, resp)
-}
-
-func (cr *rainbowRouter) getImageTags(c *gin.Context) {
-	resp := httputils.NewResponse()
-
-	var (
-		idMeta     types.IdMeta
-		listOption types.ListOptions
-		err        error
-	)
-	if err = httputils.ShouldBindAny(c, nil, &idMeta, &listOption); err != nil {
-		httputils.SetFailed(c, resp, err)
-		return
-	}
-	if resp.Result, err = cr.c.Server().GetImageTags(c, idMeta.ID, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

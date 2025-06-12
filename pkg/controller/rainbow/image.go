@@ -160,54 +160,6 @@ func (s *ServerController) ListPublicImages(ctx context.Context, listOption type
 
 }
 
-func (s *ServerController) GetImageTags(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error) {
-	object, err := s.factory.Image().Get(ctx, imageId, false)
-	if err != nil {
-		return nil, err
-	}
-	if !s.isDefaultRepo(object.RegisterId) {
-		return object.Tags, nil
-	}
-
-	targetName := object.Name
-	if strings.Contains(targetName, "/") {
-		targetName = strings.ReplaceAll(targetName, "/", "$")
-	}
-	resp, err := SwrClient.ListRepositoryTags(&swrmodel.ListRepositoryTagsRequest{
-		Namespace:  HuaweiNamespace,
-		Repository: targetName,
-	})
-	if err != nil {
-		klog.Errorf("获取远端镜像版本失败 %v", err)
-		return object.Tags, nil
-	}
-
-	tags := *resp.Body
-	tagMap := make(map[string]swrmodel.ShowReposTagResp)
-	for _, tag := range tags {
-		object.Size = object.Size + tag.Size
-		tagMap[tag.Tag] = tag
-	}
-	objTags := object.Tags
-	for i, oldTag := range objTags {
-		name := oldTag.Name
-		exists, ok := tagMap[name]
-		if !ok {
-			continue
-		}
-		//if oldTag.Status != types.SyncImageComplete {
-		//	continue
-		//}
-
-		oldTag.Size = exists.Size
-		oldTag.Manifest = exists.Manifest
-		oldTag.Digest = exists.Digest
-		objTags[i] = oldTag
-	}
-
-	return objTags, nil
-}
-
 func (s *ServerController) isDefaultRepo(regId int64) bool {
 	return regId == *RegistryId
 }
@@ -227,7 +179,7 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 		targetName = strings.ReplaceAll(targetName, "/", "$")
 	}
 
-	resp, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{
+	resp2, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{
 		Namespace:  HuaweiNamespace,
 		Repository: targetName,
 	})
@@ -235,8 +187,41 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 		klog.Errorf("获取远端镜像详情失败 %v", err)
 		return object, nil
 	}
-	object.Pull = *resp.NumDownload
+	object.Pull = *resp2.NumDownload
 
+	resp, err := SwrClient.ListRepositoryTags(&swrmodel.ListRepositoryTagsRequest{
+		Namespace:  HuaweiNamespace,
+		Repository: targetName,
+	})
+	if err != nil {
+		klog.Errorf("获取远端镜像版本失败 %v", err)
+		return object, nil
+	}
+
+	tags := *resp.Body
+	tagMap := make(map[string]swrmodel.ShowReposTagResp)
+	for _, tag := range tags {
+		object.Size = object.Size + tag.Size
+		tagMap[tag.Tag] = tag
+	}
+
+	objTags := object.Tags
+	for i, oldTag := range objTags {
+		name := oldTag.Name
+		exists, ok := tagMap[name]
+		if !ok {
+			continue
+		}
+		if oldTag.Status != types.SyncImageComplete {
+			continue
+		}
+
+		oldTag.Size = exists.Size
+		oldTag.Manifest = exists.Manifest
+		oldTag.Digest = exists.Digest
+		objTags[i] = oldTag
+	}
+	object.Tags = objTags
 	return object, nil
 }
 
