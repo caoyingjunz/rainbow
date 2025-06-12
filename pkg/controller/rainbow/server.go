@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
 	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"net"
@@ -24,7 +25,6 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
-	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
 )
 
 type ServerGetter interface {

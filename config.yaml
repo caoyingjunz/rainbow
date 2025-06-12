@@ -3,7 +3,11 @@ default:
   mode: debug
   push_kubernetes: false
   push_images: false
-
+rate_limit:
+  # 每分钟单个clientId最大请求次数
+  max_requests: 10
+  # 限速时间窗口
+  time_window: 60
 server:
   auth:
     access_key: access_key
