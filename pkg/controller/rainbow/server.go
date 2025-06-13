@@ -89,6 +89,7 @@ type ServerInterface interface {
 
 	SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error)
 	SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error)
+	SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 }
