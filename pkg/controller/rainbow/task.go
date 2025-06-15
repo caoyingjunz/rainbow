@@ -275,6 +275,12 @@ func (s *ServerController) ReRunTask(ctx context.Context, req *types.UpdateTaskR
 		klog.Errorf("重新执行任务 %d 失败 %v", req.Id, err)
 		return err
 	}
+
+	// 重置任务过程信息
+	if err := s.factory.Task().DeleteTaskMessages(ctx, req.Id); err != nil {
+		klog.Errorf("清理任务(%d)过程信息失败 %v", req.Id, err)
+	}
+
 	return nil
 }
 
