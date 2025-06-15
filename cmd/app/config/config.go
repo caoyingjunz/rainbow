@@ -80,6 +80,13 @@ type AgentOption struct {
 type RateLimitOption struct {
 	NormalRateLimit  NormalRateLimit  `yaml:"normal_rate_limit"`
 	SpecialRateLimit SpecialRateLimit `yaml:"special_rate_limit"`
+	UserRateLimit    UserRateLimit    `yaml:"user_rate_limit"`
+}
+
+type UserRateLimit struct {
+	Cap      int `yaml:"cap"`
+	Quantum  int `yaml:"quantum"`
+	Capacity int `yaml:"capacity"`
 }
 
 type NormalRateLimit struct {

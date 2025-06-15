@@ -5,22 +5,23 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/caoyingjunz/pixiulib/httputils"
+	"github.com/caoyingjunz/pixiulib/strutil"
+	"github.com/caoyingjunz/rainbow/cmd/app/options"
+	"github.com/caoyingjunz/rainbow/pkg/util/lru"
+	"github.com/gin-gonic/gin"
+	"github.com/juju/ratelimit"
 	"golang.org/x/time/rate"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/caoyingjunz/pixiulib/httputils"
-	"github.com/caoyingjunz/pixiulib/strutil"
-	"github.com/gin-gonic/gin"
-
-	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
 
 func NewMiddlewares(o *options.ServerOptions) {
 	o.HttpEngine.Use(
 		Authentication(o),
 		Limiter(o),
+		UserRateLimiter(o),
 	)
 }
 
@@ -31,11 +32,11 @@ func Limiter(o *options.ServerOptions) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if isRateLimitedPath(c.Request.URL.Path, o.ComponentConfig.RateLimit.SpecialRateLimit.RateLimitedPath) {
 			if !specialLimiter.Allow() {
-				httputils.AbortFailedWithCode(c, http.StatusForbidden, fmt.Errorf("too many requests"))
+				httputils.AbortFailedWithCode(c, http.StatusTooManyRequests, fmt.Errorf("too many requests"))
 			}
 		} else {
 			if !limiter.Allow() {
-				httputils.AbortFailedWithCode(c, http.StatusForbidden, fmt.Errorf("too many requests"))
+				httputils.AbortFailedWithCode(c, http.StatusTooManyRequests, fmt.Errorf("too many requests"))
 			}
 		}
 	}
@@ -49,6 +50,30 @@ func isRateLimitedPath(path string, rateLimitedPaths []string) bool {
 		}
 	}
 	return false
+}
+
+func UserRateLimiter(o *options.ServerOptions) gin.HandlerFunc {
+
+	cache := lru.NewLRUCache(o.ComponentConfig.RateLimit.UserRateLimit.Cap)
+
+	return func(c *gin.Context) {
+		clientIP := c.ClientIP()
+		if !cache.Contains(clientIP) {
+			cache.Add(clientIP, ratelimit.NewBucketWithQuantum(time.Second, int64(o.ComponentConfig.RateLimit.UserRateLimit.Capacity), int64(o.ComponentConfig.RateLimit.UserRateLimit.Quantum)))
+			return
+		}
+		// 通过 ClientIP 取出 bucket
+		val := cache.Get(clientIP)
+		if val == nil {
+			return
+		}
+
+		// 判断是否还有可用的 bucket
+		bucket := val.(*ratelimit.Bucket)
+		if bucket.TakeAvailable(1) == 0 {
+			httputils.AbortFailedWithCode(c, http.StatusTooManyRequests, fmt.Errorf("too many requests"))
+		}
+	}
 }
 
 // Authentication 身份认证
