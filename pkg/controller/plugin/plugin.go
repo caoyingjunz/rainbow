@@ -498,10 +498,8 @@ func (p *PluginController) CreateTaskMessage(msg string) error {
 		return nil
 	}
 
-	err := p.httpClient.Post(
-		fmt.Sprintf("%s/rainbow/images/batches", p.Callback),
-		&resp,
-		map[string]interface{}{"task_id": p.TaskId, "names": names})
-
-	return resp.Result, err
+	return p.httpClient.Post(
+		fmt.Sprintf("%s/rainbow/%d/messages", p.Callback, p.TaskId),
+		nil,
+		map[string]interface{}{"message": msg})
 }
