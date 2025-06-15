@@ -46,6 +46,7 @@ type ServerInterface interface {
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
 	ListTaskImages(ctx context.Context, taskId int64) (interface{}, error)
+	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)

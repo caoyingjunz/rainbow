@@ -14,6 +14,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
+	"github.com/caoyingjunz/rainbow/pkg/util/uuid"
 )
 
 const (
@@ -50,6 +51,11 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		return err
 	}
 
+	// 填充任务名称
+	if len(strings.TrimSpace(req.Name)) == 0 {
+		req.Name = uuid.NewRandName(8)
+	}
+	// 初始化仓库
 	if req.RegisterId == 0 {
 		req.RegisterId = *RegistryId
 	}
@@ -148,6 +154,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					Mirror:     mirror,
 					IsPublic:   req.PublicImage,
 					IsOfficial: req.IsOfficial,
+					IsLocked:   true,
 				})
 				if err != nil {
 					return err
@@ -256,6 +263,19 @@ func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int6
 
 func (s *ServerController) GetTask(ctx context.Context, taskId int64) (interface{}, error) {
 	return s.factory.Task().Get(ctx, taskId)
+}
+
+func (s *ServerController) ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error {
+	if err := s.factory.Task().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+		"agent_name": "",
+		"status":     TaskWaitStatus,
+		"process":    0,
+		"message":    "触发重新执行",
+	}); err != nil {
+		klog.Errorf("重新执行任务 %d 失败 %v", req.Id, err)
+		return err
+	}
+	return nil
 }
 
 func (s *ServerController) ListTaskImages(ctx context.Context, taskId int64) (interface{}, error) {
