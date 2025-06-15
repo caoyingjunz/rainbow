@@ -514,7 +514,7 @@ func (p *PluginController) CreateTaskMessage(msg string) {
 	}
 
 	if err := p.httpClient.Post(
-		fmt.Sprintf("%s/rainbow/%d/messages", p.Callback, p.TaskId),
+		fmt.Sprintf("%s/rainbow/tasks/%d/messages", p.Callback, p.TaskId),
 		nil,
 		map[string]interface{}{"message": msg}); err != nil {
 		klog.Errorf("创建 %s 失败 %v", msg, err)
