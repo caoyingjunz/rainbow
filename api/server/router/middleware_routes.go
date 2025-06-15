@@ -5,15 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
+	"time"
 	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/pixiulib/strutil"
 	"github.com/caoyingjunz/rainbow/pkg/util/lru"
 	"github.com/gin-gonic/gin"
 	"github.com/juju/ratelimit"
 	"golang.org/x/time/rate"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
@@ -21,7 +21,7 @@ import (
 func NewMiddlewares(o *options.ServerOptions) {
 	o.HttpEngine.Use(
 		Authentication(o),
-		//UserRateLimiter(o),
+		UserRateLimiter(o),
 		Limiter(o),
 	)
 }
