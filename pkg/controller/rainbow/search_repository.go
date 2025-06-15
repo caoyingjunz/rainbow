@@ -104,7 +104,9 @@ type ImageInfo struct {
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
 	req.Query = strings.TrimSpace(req.Query)
 	if len(req.Query) == 0 {
-		return HubSearchResponse{}, nil
+		return HubSearchResponse{
+			Results: []RepositoryResult{},
+		}, nil
 	}
 
 	key := uuid.NewString()

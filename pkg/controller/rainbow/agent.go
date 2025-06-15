@@ -94,6 +94,7 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 		return nil
 	}); err != nil {
 		klog.Errorf("临时存储失败 %v", err)
+		return err
 	}
 
 	klog.Infof("搜索(%s)结果已暂存 key(%s)", reqMeta.RepositorySearchRequest.Query, reqMeta.Uid)
