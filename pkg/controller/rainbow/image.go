@@ -157,7 +157,6 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 
 func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	return s.factory.Image().List(ctx, db.WithPublic(), db.WithNameLike(listOption.NameSelector), db.WithLimit(listOption.Limit))
-
 }
 
 func (s *ServerController) isDefaultRepo(regId int64) bool {

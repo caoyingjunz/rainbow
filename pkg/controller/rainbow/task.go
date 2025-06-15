@@ -92,6 +92,10 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	}
 
 	taskId := object.Id
+	if err = s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: "同步已启动"}); err != nil {
+		klog.Warningf("初始化任务信息失败 %v", err)
+	}
+
 	if err = s.CreateImageWithTag(ctx, taskId, req); err != nil {
 		_ = s.DeleteTaskWithImages(ctx, taskId)
 		return fmt.Errorf("failed to create tasks images %v", err)
