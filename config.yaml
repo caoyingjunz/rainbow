@@ -4,10 +4,12 @@ default:
   push_kubernetes: false
   push_images: false
 rate_limit:
-  # 每分钟单个clientId最大请求次数
-  max_requests: 10
-  # 限速时间窗口
-  time_window: 60
+  normal_rate_limit:
+    max_requests: 10
+  special_rate_limit:
+    rate_limited_path:
+      - "/rainbow/search"
+    max_requests: 1
 server:
   auth:
     access_key: access_key

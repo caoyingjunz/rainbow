@@ -155,50 +155,7 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 	return tagResp, nil
 }
 
-func (s *ServerController) checkRateLimit(ctx context.Context, clientId string) error {
-	rateKey := fmt.Sprintf("rate_limit:%s", clientId)
-	now := time.Now().Unix()
-	pipe := s.redisClient.TxPipeline()
-	defer pipe.Close()
-	// 获取当前令牌数
-	pipe.ZRemRangeByScore(ctx, rateKey, "0", fmt.Sprintf("%d", now-s.cfg.RateLimit.TimeWindow))
-	pipe.ZCard(ctx, rateKey)
-
-	cmds, err := pipe.Exec(ctx)
-	if err != nil {
-		klog.Errorf("限速检查失败: %v", err)
-		return fmt.Errorf("限速检查失败")
-	}
-
-	tokenCount := cmds[1].(*redis.IntCmd).Val()
-	if tokenCount >= s.cfg.RateLimit.MaxRequests {
-		return fmt.Errorf("请求过于频繁，请稍后再试")
-	}
-
-	// 设置键的过期时间为 60 秒
-	_, err = s.redisClient.Expire(ctx, rateKey, 60*time.Second).Result()
-	if err != nil {
-		klog.Errorf("设置限速令牌过期时间失败: %v", err)
-		return fmt.Errorf("限速检查失败")
-	}
-	// 添加新令牌
-	_, err = s.redisClient.ZAdd(ctx, rateKey, &redis.Z{
-		Score:  float64(now),
-		Member: fmt.Sprintf("%d", now),
-	}).Result()
-	if err != nil {
-		klog.Errorf("更新限速令牌失败: %v", err)
-		return fmt.Errorf("限速检查失败")
-	}
-
-	return nil
-}
-
 func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
-	//检查限速
-	if err := s.checkRateLimit(ctx, clientId); err != nil {
-		return nil, err
-	}
 	client := GetRpcClient(clientId, RpcClients)
 	if client == nil {
 		klog.Errorf("client not connected or register")

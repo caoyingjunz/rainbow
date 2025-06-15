@@ -78,8 +78,16 @@ type AgentOption struct {
 }
 
 type RateLimitOption struct {
-	MaxRequests int64 `yaml:"max_requests"`
-	TimeWindow  int64 `yaml:"time_window"`
+	NormalRateLimit  NormalRateLimit  `yaml:"normal_rate_limit"`
+	SpecialRateLimit SpecialRateLimit `yaml:"special_rate_limit"`
+}
+
+type NormalRateLimit struct {
+	MaxRequests int `yaml:"max_requests"`
+}
+type SpecialRateLimit struct {
+	RateLimitedPath []string `yaml:"rate_limited_path"`
+	MaxRequests     int      `yaml:"max_requests"`
 }
 
 type PluginTemplateConfig struct {

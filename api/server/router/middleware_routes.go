@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"golang.org/x/time/rate"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/caoyingjunz/pixiulib/httputils"
@@ -18,7 +20,35 @@ import (
 func NewMiddlewares(o *options.ServerOptions) {
 	o.HttpEngine.Use(
 		Authentication(o),
+		Limiter(o),
 	)
+}
+
+// Limiter 限速
+func Limiter(o *options.ServerOptions) gin.HandlerFunc {
+	limiter := rate.NewLimiter(rate.Limit(o.ComponentConfig.RateLimit.NormalRateLimit.MaxRequests), o.ComponentConfig.RateLimit.NormalRateLimit.MaxRequests)
+	specialLimiter := rate.NewLimiter(rate.Limit(o.ComponentConfig.RateLimit.SpecialRateLimit.MaxRequests), o.ComponentConfig.RateLimit.SpecialRateLimit.MaxRequests)
+	return func(c *gin.Context) {
+		if isRateLimitedPath(c.Request.URL.Path, o.ComponentConfig.RateLimit.SpecialRateLimit.RateLimitedPath) {
+			if !specialLimiter.Allow() {
+				httputils.AbortFailedWithCode(c, http.StatusForbidden, fmt.Errorf("too many requests"))
+			}
+		} else {
+			if !limiter.Allow() {
+				httputils.AbortFailedWithCode(c, http.StatusForbidden, fmt.Errorf("too many requests"))
+			}
+		}
+	}
+}
+
+// 检查请求路径是否在限速列表中
+func isRateLimitedPath(path string, rateLimitedPaths []string) bool {
+	for _, limitedPath := range rateLimitedPaths {
+		if strings.Contains(path, limitedPath) {
+			return true
+		}
+	}
+	return false
 }
 
 // Authentication 身份认证
