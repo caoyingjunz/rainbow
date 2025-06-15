@@ -435,7 +435,7 @@ func (p *PluginController) Run() error {
 	}
 
 	p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
-	p.CreateTaskMessage("执行完成")
+	p.CreateTaskMessage("镜像任务执行完成")
 	return nil
 }
 
