@@ -33,6 +33,10 @@ type TaskInterface interface {
 	ListReview(ctx context.Context) ([]model.Review, error)
 	AddDailyReview(ctx context.Context, object *model.Daily) error
 	CountDailyReview(ctx context.Context) (int64, error)
+
+	CreateTaskMessage(ctx context.Context, object *model.TaskMessage) error
+	DeleteTaskMessages(ctx context.Context, taskId int64) error
+	ListTaskMessages(ctx context.Context, opts ...Options) ([]model.TaskMessage, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -240,4 +244,30 @@ func (a *task) CountDailyReview(ctx context.Context) (int64, error) {
 	}
 
 	return total, nil
+}
+
+func (a *task) CreateTaskMessage(ctx context.Context, object *model.TaskMessage) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	err := a.db.WithContext(ctx).Create(object).Error
+	return err
+}
+
+func (a *task) DeleteTaskMessages(ctx context.Context, taskId int64) error {
+	return a.db.WithContext(ctx).Where("task_id = ?", taskId).Delete(&model.TaskMessage{}).Error
+}
+
+func (a *task) ListTaskMessages(ctx context.Context, opts ...Options) ([]model.TaskMessage, error) {
+	var audits []model.TaskMessage
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+	return audits, nil
 }

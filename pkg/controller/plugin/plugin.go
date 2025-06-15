@@ -492,3 +492,16 @@ func (p *PluginController) CreateImages(names []string) ([]model.Image, error) {
 
 	return resp.Result, err
 }
+
+func (p *PluginController) CreateTaskMessage(msg string) error {
+	if !p.Synced {
+		return nil
+	}
+
+	err := p.httpClient.Post(
+		fmt.Sprintf("%s/rainbow/images/batches", p.Callback),
+		&resp,
+		map[string]interface{}{"task_id": p.TaskId, "names": names})
+
+	return resp.Result, err
+}

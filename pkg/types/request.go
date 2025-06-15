@@ -181,6 +181,11 @@ type (
 		RepositorySearchRequest RemoteSearchRequest
 		TagSearchRequest        RemoteTagSearchRequest
 	}
+
+	CreateTaskMessageRequest struct {
+		Id      int64  `json:"id"`
+		Message string `json:"message"`
+	}
 )
 
 // ListOptions is the query options to a standard REST list call.

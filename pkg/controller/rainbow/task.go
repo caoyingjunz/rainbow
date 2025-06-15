@@ -281,3 +281,14 @@ func (s *ServerController) ReRunTask(ctx context.Context, req *types.UpdateTaskR
 func (s *ServerController) ListTaskImages(ctx context.Context, taskId int64) (interface{}, error) {
 	return s.factory.Image().ListTags(ctx, db.WithTask(taskId))
 }
+
+func (s *ServerController) CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error {
+	return s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{
+		Message: req.Message,
+		TaskId:  req.Id,
+	})
+}
+
+func (s *ServerController) ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error) {
+	return s.factory.Task().ListTaskMessages(ctx, db.WithTask(taskId))
+}
