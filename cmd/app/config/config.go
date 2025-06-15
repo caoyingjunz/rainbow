@@ -15,6 +15,8 @@ type Config struct {
 	Registry Registry     `yaml:"registry"`
 
 	Agent AgentOption `yaml:"agent"`
+
+	RateLimit RateLimitOption `yaml:"rate_limit"`
 }
 
 type DefaultOption struct {
@@ -73,6 +75,26 @@ type AgentOption struct {
 	Name      string `yaml:"name"`
 	DataDir   string `yaml:"data_dir"`
 	RpcServer string `yaml:"rpc_server"`
+}
+
+type RateLimitOption struct {
+	NormalRateLimit  NormalRateLimit  `yaml:"normal_rate_limit"`
+	SpecialRateLimit SpecialRateLimit `yaml:"special_rate_limit"`
+	UserRateLimit    UserRateLimit    `yaml:"user_rate_limit"`
+}
+
+type UserRateLimit struct {
+	Cap      int `yaml:"cap"`
+	Quantum  int `yaml:"quantum"`
+	Capacity int `yaml:"capacity"`
+}
+
+type NormalRateLimit struct {
+	MaxRequests int `yaml:"max_requests"`
+}
+type SpecialRateLimit struct {
+	RateLimitedPath []string `yaml:"rate_limited_path"`
+	MaxRequests     int      `yaml:"max_requests"`
 }
 
 type PluginTemplateConfig struct {

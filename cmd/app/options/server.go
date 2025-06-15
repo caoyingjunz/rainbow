@@ -55,7 +55,6 @@ func (o *ServerOptions) Complete() error {
 	if err := c.Binding(&o.ComponentConfig); err != nil {
 		klog.Fatal(err)
 	}
-
 	// 注册依赖组件
 	if err := o.register(); err != nil {
 		return err

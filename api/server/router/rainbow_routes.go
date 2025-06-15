@@ -831,7 +831,6 @@ func (cr *rainbowRouter) listNamespaces(c *gin.Context) {
 
 func (cr *rainbowRouter) searchRepositories(c *gin.Context) {
 	resp := httputils.NewResponse()
-
 	var (
 		req types.RemoteSearchRequest
 		err error

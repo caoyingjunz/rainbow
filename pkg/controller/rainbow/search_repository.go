@@ -145,7 +145,6 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 		klog.Errorf("序列化(%v)失败 %v", req, err)
 		return nil, err
 	}
-
 	val, err := s.doSearch(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
