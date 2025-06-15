@@ -20,6 +20,12 @@ func WithOrderByDesc() Options {
 	}
 }
 
+func WithUpdateOrderByDesc() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("gmt_modified DESC")
+	}
+}
+
 func WithOffset(offset int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Offset(offset)
