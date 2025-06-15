@@ -416,11 +416,11 @@ func (p *PluginController) Run() error {
 
 			err := p.doPushImage(image)
 			if err != nil {
-				p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步失败，原因: %v", image.Name, err))
+				p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步失败，原因: %v", image.Path, err))
 				errCh <- err
 				return
 			}
-			p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步完成", image.Name))
+			p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步完成", image.Path))
 		}(imageToPush)
 	}
 	wg.Wait()
