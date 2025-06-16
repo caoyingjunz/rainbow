@@ -267,7 +267,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 	// 根据type判断是镜像列表推送还是k8s镜像组推送
 	switch task.Type {
 	case 0:
-		tags, err := s.factory.Image().ListTags(ctx, db.WithTask(taskId))
+		tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId))
 		if err != nil {
 			klog.Errorf("获取任务所属 tags 失败 %v", err)
 			return nil, err

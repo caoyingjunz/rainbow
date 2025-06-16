@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -17,6 +18,12 @@ func WithOrderByASC() Options {
 func WithOrderByDesc() Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Order("id DESC")
+	}
+}
+
+func WithModifyOrderByDesc() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("gmt_modified DESC")
 	}
 }
 
@@ -105,6 +112,15 @@ func WithTask(taskId int64) Options {
 			return tx
 		}
 		return tx.Where("task_id = ?", taskId)
+	}
+}
+
+func WithTaskLike(taskId int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if taskId == 0 {
+			return tx
+		}
+		return tx.Where("task_ids like ?", "%"+fmt.Sprintf("%d", taskId)+"%")
 	}
 }
 

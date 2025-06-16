@@ -48,8 +48,9 @@ type Tag struct {
 	GmtDeleted gorm.DeletedAt
 
 	ImageId  int64  `gorm:"index:idx_image" json:"image_id"`
+	TaskIds  string `json:"task_ids"` // 关联的任务IDs 多个id以逗号隔开
 	Path     string `json:"path"`
-	TaskId   int64  `json:"task_id"`
+	Mirror   string `json:"mirror"`
 	Name     string `json:"name"`
 	Size     int64  `json:"size"`
 	Status   string `json:"status"`
