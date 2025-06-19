@@ -363,9 +363,11 @@ func (p *PluginController) doPushImage(img config.Image) error {
 		err := p.sync(imageToPush, targetImage, img)
 		if err != nil {
 			p.SyncImageStatus(targetImage, rainbowtypes.SyncImageError, err.Error(), img)
+			p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步失败，原因: %v", imageToPush, err))
 			continue
 		}
 		p.SyncImageStatus(targetImage, rainbowtypes.SyncImageComplete, "", img)
+		p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步完成", imageToPush))
 	}
 
 	return nil
@@ -398,7 +400,7 @@ func (p *PluginController) Run() error {
 	}
 
 	p.SyncTaskStatus("开始同步镜像", "", 1)
-	p.CreateTaskMessage("开始同步镜像")
+	p.CreateTaskMessage("开始同步镜像，请稍等")
 
 	klog.Infof("待推送镜像列表为 %v", p.Images)
 
@@ -416,11 +418,9 @@ func (p *PluginController) Run() error {
 
 			err := p.doPushImage(image)
 			if err != nil {
-				p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步失败，原因: %v", image.Path, err))
 				errCh <- err
 				return
 			}
-			p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步完成", image.Path))
 		}(imageToPush)
 	}
 	wg.Wait()

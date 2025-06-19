@@ -101,6 +101,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		return fmt.Errorf("failed to create tasks images %v", err)
 	}
 
+	if err = s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: "数据校验中，预计等待 1 分钟"}); err != nil {
+		klog.Warningf("初始化任务数据检验失败 %v", err)
+	}
 	return nil
 }
 
