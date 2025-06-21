@@ -37,6 +37,9 @@ type TaskInterface interface {
 	CreateTaskMessage(ctx context.Context, object *model.TaskMessage) error
 	DeleteTaskMessages(ctx context.Context, taskId int64) error
 	ListTaskMessages(ctx context.Context, opts ...Options) ([]model.TaskMessage, error)
+
+	CreateUser(ctx context.Context, object *model.User) error
+	ListUsers(ctx context.Context, opts ...Options) ([]model.User, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -270,4 +273,12 @@ func (a *task) ListTaskMessages(ctx context.Context, opts ...Options) ([]model.T
 		return nil, err
 	}
 	return audits, nil
+}
+
+func (a *task) CreateUser(ctx context.Context, object *model.User) error {
+	return nil
+}
+
+func (a *task) ListUsers(ctx context.Context, opts ...Options) ([]model.User, error) {
+	return nil, nil
 }
