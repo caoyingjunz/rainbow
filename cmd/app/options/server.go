@@ -56,6 +56,9 @@ func (o *ServerOptions) Complete() error {
 		klog.Fatal(err)
 	}
 
+	// 设置配置默认值
+	o.ComponentConfig.SetDefaults()
+
 	// 注册依赖组件
 	if err := o.register(); err != nil {
 		return err

@@ -1,5 +1,36 @@
 package config
 
+const (
+	DefaultNormalRateLimitMaxRequests  = 100
+	DefaultSpecialRateLimitMaxRequests = 50
+	DefaultSpecialRateLimitedPath      = "/rainbow/search"
+	DefaultUserRateLimitCap            = 1000
+	DefaultUserRateLimitQuantum        = 10
+	DefaultUserRateLimitCapacity       = 100
+)
+
+// SetDefaults 设置配置的默认值
+func (c *Config) SetDefaults() {
+	if c.RateLimit.NormalRateLimit.MaxRequests == 0 {
+		c.RateLimit.NormalRateLimit.MaxRequests = DefaultNormalRateLimitMaxRequests
+	}
+	if c.RateLimit.SpecialRateLimit.MaxRequests == 0 {
+		c.RateLimit.SpecialRateLimit.MaxRequests = DefaultSpecialRateLimitMaxRequests
+	}
+	if c.RateLimit.UserRateLimit.Cap == 0 {
+		c.RateLimit.UserRateLimit.Cap = DefaultUserRateLimitCap
+	}
+	if c.RateLimit.UserRateLimit.Quantum == 0 {
+		c.RateLimit.UserRateLimit.Quantum = DefaultUserRateLimitQuantum
+	}
+	if c.RateLimit.UserRateLimit.Capacity == 0 {
+		c.RateLimit.UserRateLimit.Capacity = DefaultUserRateLimitCapacity
+	}
+	if c.RateLimit.SpecialRateLimit.RateLimitedPath == nil {
+		c.RateLimit.SpecialRateLimit.RateLimitedPath = []string{DefaultSpecialRateLimitedPath}
+	}
+}
+
 type Config struct {
 	Default DefaultOption `yaml:"default"`
 
@@ -84,17 +115,17 @@ type RateLimitOption struct {
 }
 
 type UserRateLimit struct {
-	Cap      int `yaml:"cap" default:"200"`
-	Quantum  int `yaml:"quantum" default:"100"`
-	Capacity int `yaml:"capacity" default:"20"`
+	Cap      int `yaml:"cap"`
+	Quantum  int `yaml:"quantum"`
+	Capacity int `yaml:"capacity"`
 }
 
 type NormalRateLimit struct {
-	MaxRequests int `yaml:"max_requests" default:"100"`
+	MaxRequests int `yaml:"max_requests"`
 }
 type SpecialRateLimit struct {
 	RateLimitedPath []string `yaml:"rate_limited_path"`
-	MaxRequests     int      `yaml:"max_requests" default:"1"`
+	MaxRequests     int      `yaml:"max_requests"`
 }
 
 type PluginTemplateConfig struct {
