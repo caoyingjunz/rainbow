@@ -48,3 +48,17 @@ images:
     tags:
       - latest
       - v1.0.1
+rate_limit:
+  user_rate_limit:
+    ## 最大存储客户端IP数量
+    cap: 200
+    ## 单个客户端IP最大令牌数
+    capacity: 100
+    ## 每次补充令牌数
+    quantum: 20
+  normal_rate_limit:
+    max_requests: 1000
+  special_rate_limit:
+    rate_limited_path:
+      - "/rainbow/search"
+    max_requests: 100

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -106,6 +107,13 @@ type ImageInfo struct {
 }
 
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
+	req.Query = strings.TrimSpace(req.Query)
+	if len(req.Query) == 0 {
+		return HubSearchResponse{
+			Results: []RepositoryResult{},
+		}, nil
+	}
+
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
 		Type:                    1,

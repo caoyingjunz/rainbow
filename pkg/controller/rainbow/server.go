@@ -46,6 +46,7 @@ type ServerInterface interface {
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
 	ListTaskImages(ctx context.Context, taskId int64) (interface{}, error)
+	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)
@@ -89,6 +90,9 @@ type ServerInterface interface {
 	SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error)
 	SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error)
 	SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) (interface{}, error)
+
+	CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error
+	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 }

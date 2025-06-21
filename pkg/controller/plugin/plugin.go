@@ -240,11 +240,15 @@ func (p *PluginController) Complete() error {
 		p.Cfg.Plugin.Driver = DockerDriver
 	}
 
+	// 执行前校验
+	msgResult := "数据校验完成"
 	status, msg, process := "初始化成功", "初始化环境结束", 1
 	var err error
 	if err = p.doComplete(); err != nil {
+		msgResult = fmt.Sprintf("数据校验失败，原因：%v", err)
 		status, msg, process = "初始化失败", err.Error(), 3
 	}
+	p.CreateTaskMessage(msgResult)
 	p.SyncTaskStatus(status, msg, process)
 	return err
 }
@@ -359,9 +363,11 @@ func (p *PluginController) doPushImage(img config.Image) error {
 		err := p.sync(imageToPush, targetImage, img)
 		if err != nil {
 			p.SyncImageStatus(targetImage, rainbowtypes.SyncImageError, err.Error(), img)
+			p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步失败，原因: %v", imageToPush, err))
 			continue
 		}
 		p.SyncImageStatus(targetImage, rainbowtypes.SyncImageComplete, "", img)
+		p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步完成", imageToPush))
 	}
 
 	return nil
@@ -379,14 +385,22 @@ func (p *PluginController) Run() error {
 
 	for _, runner := range p.Runners {
 		name := runner.GetName()
-		if err := runner.Run(); err != nil {
+		msgResult := name + "完成"
+
+		err := runner.Run()
+		if err != nil {
+			msgResult = fmt.Sprintf("%s失败，原因：%v", name, err)
+			p.CreateTaskMessage(msgResult)
 			p.SyncTaskStatus(name, name+"失败", 3)
 			return err
 		} else {
+			p.CreateTaskMessage(msgResult)
 			p.SyncTaskStatus(name, name+"完成", 1)
 		}
 	}
+
 	p.SyncTaskStatus("开始同步镜像", "", 1)
+	p.CreateTaskMessage("开始同步镜像，请稍等")
 
 	klog.Infof("待推送镜像列表为 %v", p.Images)
 
@@ -421,6 +435,7 @@ func (p *PluginController) Run() error {
 	}
 
 	p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
+	p.CreateTaskMessage("镜像任务执行完成")
 	return nil
 }
 
@@ -491,4 +506,19 @@ func (p *PluginController) CreateImages(names []string) ([]model.Image, error) {
 		map[string]interface{}{"task_id": p.TaskId, "names": names})
 
 	return resp.Result, err
+}
+
+func (p *PluginController) CreateTaskMessage(msg string) {
+	if !p.Synced {
+		return
+	}
+
+	if err := p.httpClient.Post(
+		fmt.Sprintf("%s/rainbow/tasks/%d/messages", p.Callback, p.TaskId),
+		nil,
+		map[string]interface{}{"message": msg}); err != nil {
+		klog.Errorf("创建 %s 失败 %v", msg, err)
+	} else {
+		klog.Infof("创建 %s 成功", msg)
+	}
 }

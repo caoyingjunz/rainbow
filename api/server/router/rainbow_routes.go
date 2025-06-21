@@ -171,6 +171,25 @@ func (cr *rainbowRouter) deleteTask(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) reRunTask(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.UpdateTaskRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().ReRunTask(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) getTask(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -821,6 +840,7 @@ func (cr *rainbowRouter) searchRepositories(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+	// TODO: 默认值自动设置
 	if len(req.Hub) == 0 {
 		req.Hub = "dockerhub"
 	}
@@ -877,6 +897,45 @@ func (cr *rainbowRouter) searchImageInfo(c *gin.Context) {
 		req.Hub = "dockerhub"
 	}
 	if resp.Result, err = cr.c.Server().SearchImageInfo(c, req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+    
+  func (cr *rainbowRouter) createTaskMessage(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		req    types.CreateTaskMessageRequest
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.Id = idMeta.ID
+	if err = cr.c.Server().CreateTaskMessage(c, req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listTaskMessages(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListTaskMessages(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

@@ -5,7 +5,7 @@ import (
 )
 
 func init() {
-	register(&Task{})
+	register(&Task{}, &TaskMessage{})
 }
 
 type Task struct {
@@ -31,4 +31,15 @@ type Task struct {
 
 func (t *Task) TableName() string {
 	return "tasks"
+}
+
+type TaskMessage struct {
+	rainbow.Model
+
+	TaskId  int64  `json:"task_id" gorm:"index:idx"`
+	Message string `json:"message"`
+}
+
+func (t *TaskMessage) TableName() string {
+	return "task_messages"
 }
