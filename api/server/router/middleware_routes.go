@@ -10,7 +10,11 @@ import (
 
 	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/pixiulib/strutil"
+	"github.com/caoyingjunz/rainbow/pkg/util/lru"
 	"github.com/gin-gonic/gin"
+	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
+	"strings"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
@@ -18,6 +22,8 @@ import (
 func NewMiddlewares(o *options.ServerOptions) {
 	o.HttpEngine.Use(
 		Authentication(o),
+		UserRateLimiter(o),
+		Limiter(o),
 	)
 }
 
@@ -74,4 +80,55 @@ func verifySignature(accessKey, secretKey, signature, timestamp string) bool {
 
 	// 比较签名
 	return hmac.Equal([]byte(signature), []byte(expectedSignature))
+}
+
+// Limiter 限速
+func Limiter(o *options.ServerOptions) gin.HandlerFunc {
+	limiter := rate.NewLimiter(rate.Limit(o.ComponentConfig.RateLimit.NormalRateLimit.MaxRequests), o.ComponentConfig.RateLimit.NormalRateLimit.MaxRequests)
+	specialLimiter := rate.NewLimiter(rate.Limit(o.ComponentConfig.RateLimit.SpecialRateLimit.MaxRequests), o.ComponentConfig.RateLimit.SpecialRateLimit.MaxRequests)
+	return func(c *gin.Context) {
+		if isRateLimitedPath(c.Request.URL.Path, o.ComponentConfig.RateLimit.SpecialRateLimit.RateLimitedPath) {
+			if !specialLimiter.Allow() {
+				httputils.AbortFailedWithCode(c, http.StatusTooManyRequests, fmt.Errorf("too many requests"))
+			}
+		} else {
+			if !limiter.Allow() {
+				httputils.AbortFailedWithCode(c, http.StatusTooManyRequests, fmt.Errorf("too many requests"))
+			}
+		}
+	}
+}
+
+// 检查请求路径是否在限速列表中
+func isRateLimitedPath(path string, rateLimitedPaths []string) bool {
+	for _, limitedPath := range rateLimitedPaths {
+		if strings.Contains(path, limitedPath) {
+			return true
+		}
+	}
+	return false
+}
+
+func UserRateLimiter(o *options.ServerOptions) gin.HandlerFunc {
+
+	cache := lru.NewLRUCache(o.ComponentConfig.RateLimit.UserRateLimit.Cap)
+
+	return func(c *gin.Context) {
+		clientIP := c.ClientIP()
+		if !cache.Contains(clientIP) {
+			cache.Add(clientIP, ratelimit.NewBucketWithQuantum(time.Second, int64(o.ComponentConfig.RateLimit.UserRateLimit.Capacity), int64(o.ComponentConfig.RateLimit.UserRateLimit.Quantum)))
+			return
+		}
+		// 通过 ClientIP 取出 bucket
+		val := cache.Get(clientIP)
+		if val == nil {
+			return
+		}
+
+		// 判断是否还有可用的 bucket
+		bucket := val.(*ratelimit.Bucket)
+		if bucket.TakeAvailable(1) == 0 {
+			httputils.AbortFailedWithCode(c, http.StatusTooManyRequests, fmt.Errorf("too many requests"))
+		}
+	}
 }

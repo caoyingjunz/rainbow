@@ -878,6 +878,32 @@ func (cr *rainbowRouter) searchRepositoryTags(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) searchRepositoryTagInfo(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req      types.RemoteTagInfoSearchRequest
+		nameMeta types.NameMeta
+		err      error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &nameMeta, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.Repository = nameMeta.Name
+	req.Namespace = nameMeta.Namespace
+	req.Tag = c.Param("tag")
+	if len(req.Hub) == 0 {
+		req.Hub = "dockerhub"
+	}
+	if resp.Result, err = cr.c.Server().SearchRepositoryTagInfo(c, req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createTaskMessage(c *gin.Context) {
 	resp := httputils.NewResponse()
 	var (

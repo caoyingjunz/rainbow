@@ -31,8 +31,12 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 		var errs []error
 		// TODO: 其他不合规检查
 		for _, image := range req.Images {
-			if strings.Contains(image, "\"") {
+			if strings.Contains(image, "\"") { // 分割镜像名称和版本
 				errs = append(errs, fmt.Errorf("invaild image(%s)", image))
+				parts := strings.Split(image, ":")
+				if len(parts) != 2 {
+					errs = append(errs, fmt.Errorf("invalid image format, should be 'name:tag' (%s)", image))
+				}
 			}
 		}
 		return utilerrors.NewAggregate(errs)

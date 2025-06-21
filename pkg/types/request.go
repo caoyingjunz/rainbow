@@ -175,11 +175,25 @@ type (
 		PageSize   string `json:"page_size" form:"page_size"`
 	}
 
+	RemoteTagInfoSearchRequest struct {
+		Hub        string `json:"hub" form:"hub"`
+		ClientId   string `json:"client_id" form:"client_id"`
+		Namespace  string `json:"namespace" form:"namespace"`
+		Repository string `json:"repository" form:"repository"`
+		Tag        string `json:"tag" form:"tag"`
+		Arch       string `json:"arch" form:"arch"`
+
+		Query    string `json:"query" form:"query"`
+		Page     string `json:"page" form:"page"`
+		PageSize string `json:"page_size" form:"page_size"`
+	}
+
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
 		RepositorySearchRequest RemoteSearchRequest
 		TagSearchRequest        RemoteTagSearchRequest
+		TagInfoSearchRequest    RemoteTagInfoSearchRequest
 	}
 
 	CreateTaskMessageRequest struct {
