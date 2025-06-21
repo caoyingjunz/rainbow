@@ -878,11 +878,11 @@ func (cr *rainbowRouter) searchRepositoryTags(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) searchImageInfo(c *gin.Context) {
+func (cr *rainbowRouter) searchRepositoryTagInfo(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		req      types.RemoteImageInfoRequest
+		req      types.RemoteTagInfoSearchRequest
 		nameMeta types.NameMeta
 		err      error
 	)
@@ -896,15 +896,15 @@ func (cr *rainbowRouter) searchImageInfo(c *gin.Context) {
 	if len(req.Hub) == 0 {
 		req.Hub = "dockerhub"
 	}
-	if resp.Result, err = cr.c.Server().SearchImageInfo(c, req); err != nil {
+	if resp.Result, err = cr.c.Server().SearchRepositoryTagInfo(c, req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
 
 	httputils.SetSuccess(c, resp)
 }
-    
-  func (cr *rainbowRouter) createTaskMessage(c *gin.Context) {
+
+func (cr *rainbowRouter) createTaskMessage(c *gin.Context) {
 	resp := httputils.NewResponse()
 	var (
 		req    types.CreateTaskMessageRequest

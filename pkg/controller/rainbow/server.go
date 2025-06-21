@@ -89,7 +89,7 @@ type ServerInterface interface {
 
 	SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error)
 	SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error)
-	SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) (interface{}, error)
+	SearchRepositoryTagInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) (interface{}, error)
 
 	CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error
 	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)

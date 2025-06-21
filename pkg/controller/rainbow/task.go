@@ -28,72 +28,14 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 			return fmt.Errorf("invaild kubernetes version (%s)", req.KubernetesVersion)
 		}
 	} else {
-		// 1. 首先检查镜像数量是否超过5个
-		if len(req.Images) > 5 {
-			return fmt.Errorf("number of images exceeds limit (max 5, got %d)", len(req.Images))
-		}
-
 		var errs []error
-
+		// TODO: 其他不合规检查
 		for _, image := range req.Images {
-			// 分割镜像名称和版本
-			parts := strings.Split(image, ":")
-			if len(parts) != 2 {
-				errs = append(errs, fmt.Errorf("invalid image format, should be 'name:tag' (%s)", image))
-				continue
-			}
-
-			name := parts[0]
-			tag := parts[1]
-
-			// 检查名称是否包含非法字符
-			if strings.Contains(name, "\"") || strings.Contains(tag, "\"") {
-				errs = append(errs, fmt.Errorf("invalid image name or tag (%s)", image))
-				continue
-			}
-
-			// 检查是否来自 Docker Hub
-			isFromDockerHub := true
-			if strings.Contains(name, "/") {
-				firstPart := strings.Split(name, "/")[0]
-				if strings.Contains(firstPart, ".") {
-					isFromDockerHub = false
-				}
-			}
-
-			if !isFromDockerHub {
-				errs = append(errs, fmt.Errorf("image %s is not from Docker Hub", image))
-				continue
-			}
-
-			// 准备查询镜像信息的请求
-			var reqImage types.RemoteImageInfoRequest
-			reqImage.Hub = "dockerhub"
-			reqImage.Namespace = "library"
-			reqImage.Repository = name
-			reqImage.Tag = tag
-
-			// 调用 SearchImageInfo
-			imageInfoResp, err := s.SearchImageInfo(ctx, reqImage)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("failed to search image %s:%s: %v", name, tag, err))
-				continue
-			}
-
-			// 类型断言
-			infoResp, ok := imageInfoResp.(HubImageInfoResponse)
-			if !ok {
-				errs = append(errs, fmt.Errorf("invalid image info response type for %s", image))
-				continue
-			}
-
-			// 检查amd64架构的镜像大小
-			for _, imgInfo := range infoResp.Images {
-				if imgInfo.Architecture == "amd64" {
-					if imgInfo.Size > 2*1024*1024*1024 {
-						errs = append(errs, fmt.Errorf("image %s size (%d bytes) exceeds 2GB limit", image, imgInfo.Size))
-						break
-					}
+			if strings.Contains(image, "\"") { // 分割镜像名称和版本
+				errs = append(errs, fmt.Errorf("invaild image(%s)", image))
+				parts := strings.Split(image, ":")
+				if len(parts) != 2 {
+					errs = append(errs, fmt.Errorf("invalid image format, should be 'name:tag' (%s)", image))
 				}
 			}
 		}

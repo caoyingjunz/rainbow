@@ -87,7 +87,7 @@ type TagResult struct {
 	Digest              string      `json:"digest"`
 }
 
-type HubImageInfoResponse struct {
+type HubTagInfoResponse struct {
 	Creator int         `json:"creator"`
 	Images  []ImageInfo `json:"images"`
 }
@@ -163,12 +163,12 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 	return tagResp, nil
 }
 
-func (s *ServerController) SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) (interface{}, error) {
+func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) (interface{}, error) {
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:             3,
-		Uid:              key,
-		ImageInfoRequest: req,
+		Type:                 3,
+		Uid:                  key,
+		TagInfoSearchRequest: req,
 	})
 	if err != nil {
 		klog.Errorf("序列化(%v)失败 %v", req, err)
@@ -180,7 +180,7 @@ func (s *ServerController) SearchImageInfo(ctx context.Context, req types.Remote
 		return nil, err
 	}
 
-	var infoResp HubImageInfoResponse
+	var infoResp HubTagInfoResponse
 	if err = json.Unmarshal(val, &infoResp); err != nil {
 		return nil, err
 	}

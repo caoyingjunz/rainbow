@@ -73,7 +73,7 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 	case 2:
 		result, err = s.SearchTags(ctx, reqMeta.TagSearchRequest)
 	case 3:
-		result, err = s.SearchImageInfo(ctx, reqMeta.ImageInfoRequest)
+		result, err = s.SearchImageInfo(ctx, reqMeta.TagInfoSearchRequest)
 	default:
 		return fmt.Errorf("unsupported req type %d", reqMeta.Type)
 	}
@@ -123,7 +123,7 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 	return nil, nil
 }
 
-func (s *AgentController) SearchImageInfo(ctx context.Context, req types.RemoteImageInfoRequest) ([]byte, error) {
+func (s *AgentController) SearchImageInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) ([]byte, error) {
 	switch req.Hub {
 	case "dockerhub":
 		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags/%s/", req.Namespace, req.Repository, req.Tag)
