@@ -234,14 +234,15 @@ func (cr *rainbowRouter) listTaskImages(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		idMeta types.IdMeta
-		err    error
+		idMeta     types.IdMeta
+		listOption types.ListOptions
+		err        error
 	)
-	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, &listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	if resp.Result, err = cr.c.Server().ListTaskImages(c, idMeta.ID); err != nil {
+	if resp.Result, err = cr.c.Server().ListTaskImages(c, idMeta.ID, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

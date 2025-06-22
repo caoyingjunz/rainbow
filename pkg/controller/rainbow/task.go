@@ -314,8 +314,8 @@ func (s *ServerController) ReRunTask(ctx context.Context, req *types.UpdateTaskR
 	return nil
 }
 
-func (s *ServerController) ListTaskImages(ctx context.Context, taskId int64) (interface{}, error) {
-	return s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId))
+func (s *ServerController) ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId), db.WithNameLike(listOption.NameSelector))
 }
 
 func (s *ServerController) CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error {

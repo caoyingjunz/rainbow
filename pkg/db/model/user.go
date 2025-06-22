@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 	"time"
+
+	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
 
 func init() {
