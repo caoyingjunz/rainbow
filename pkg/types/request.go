@@ -136,6 +136,10 @@ type (
 		Description     string `json:"description"`
 	}
 
+	CreateUserRequest struct {
+		Name string `json:"name"`
+	}
+
 	UpdateAgentStatusRequest struct {
 		AgentName string `json:"agent_name"`
 		Status    string `json:"status"`

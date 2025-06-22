@@ -100,6 +100,15 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		nsRoute.GET("", cr.listNamespaces)
 	}
 
+	userRoute := httpEngine.Group("/rainbow/users")
+	{
+		userRoute.POST("", cr.createUser)
+		userRoute.PUT("/:Id", cr.updateUser)
+		userRoute.DELETE("/:Id", cr.deleteUser)
+		userRoute.GET("/:Id", cr.getUser)
+		userRoute.GET("", cr.listUsers)
+	}
+
 	// 镜像汇总
 	overviewRoute := httpEngine.Group("/rainbow/overview")
 	{

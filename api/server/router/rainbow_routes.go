@@ -943,3 +943,27 @@ func (cr *rainbowRouter) listTaskMessages(c *gin.Context) {
 
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) createUser(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateUserRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateUser(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateUser(c *gin.Context) {}
+func (cr *rainbowRouter) deleteUser(c *gin.Context) {}
+func (cr *rainbowRouter) getUser(c *gin.Context)    {}
+func (cr *rainbowRouter) listUsers(c *gin.Context)  {}

@@ -94,6 +94,8 @@ type ServerInterface interface {
 	CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error
 	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
 
+	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
+
 	Run(ctx context.Context, workers int) error
 }
 
