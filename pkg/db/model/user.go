@@ -13,8 +13,9 @@ func init() {
 type User struct {
 	rainbow.Model
 
-	UserId     string    `json:"user_id"`
 	Name       string    `json:"name"`
+	UserId     string    `json:"user_id"`
+	UserType   string    `json:"user_type"` // 个人版，专有版
 	ExpireTime time.Time `json:"expire_time"`
 }
 
