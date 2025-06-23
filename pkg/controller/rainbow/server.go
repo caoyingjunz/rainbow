@@ -95,6 +95,8 @@ type ServerInterface interface {
 	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
 
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
+	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
+	GetUser(ctx context.Context, userId string) (*model.User, error)
 
 	Run(ctx context.Context, workers int) error
 }

@@ -13,8 +13,8 @@ func init() {
 type User struct {
 	rainbow.Model
 
+	UserId     string    `gorm:"index:idx_user" json:"user_id"` // 所属用户
 	Name       string    `json:"name"`
-	UserId     string    `json:"user_id"`
 	UserType   string    `json:"user_type"` // 个人版，专有版
 	ExpireTime time.Time `json:"expire_time"`
 }
