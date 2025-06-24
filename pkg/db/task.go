@@ -41,8 +41,8 @@ type TaskInterface interface {
 	CreateUser(ctx context.Context, object *model.User) error
 	ListUsers(ctx context.Context, opts ...Options) ([]model.User, error)
 	GetUser(ctx context.Context, userId string) (*model.User, error)
-	DeleteUser(ctx context.Context, userId int64) error
-	UpdateUser(ctx context.Context, taskId int64, resourceVersion int64, updates map[string]interface{}) error
+	DeleteUser(ctx context.Context, userId string) error
+	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -287,11 +287,11 @@ func (a *task) CreateUser(ctx context.Context, object *model.User) error {
 	return err
 }
 
-func (a *task) UpdateUser(ctx context.Context, taskId int64, resourceVersion int64, updates map[string]interface{}) error {
+func (a *task) UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error {
 	updates["gmt_modified"] = time.Now()
 	updates["resource_version"] = resourceVersion + 1
 
-	f := a.db.WithContext(ctx).Model(&model.User{}).Where("id = ? and resource_version = ?", taskId, resourceVersion).Updates(updates)
+	f := a.db.WithContext(ctx).Model(&model.User{}).Where("user_id = ? and resource_version = ?", userId, resourceVersion).Updates(updates)
 	if f.Error != nil {
 		return f.Error
 	}
@@ -324,6 +324,6 @@ func (a *task) ListUsers(ctx context.Context, opts ...Options) ([]model.User, er
 	return audits, nil
 }
 
-func (a *task) DeleteUser(ctx context.Context, userId int64) error {
-	return nil
+func (a *task) DeleteUser(ctx context.Context, userId string) error {
+	return a.db.WithContext(ctx).Where("user_id = ?", userId).Delete(&model.User{}).Error
 }

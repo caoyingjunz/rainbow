@@ -143,6 +143,12 @@ type (
 		ExpireTime string `json:"expire_time"`
 	}
 
+	UpdateUserRequest struct {
+		ResourceVersion int64 `json:"resource_version"`
+
+		CreateUserRequest `json:",inline"`
+	}
+
 	UpdateAgentStatusRequest struct {
 		AgentName string `json:"agent_name"`
 		Status    string `json:"status"`

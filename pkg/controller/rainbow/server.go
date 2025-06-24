@@ -95,8 +95,10 @@ type ServerInterface interface {
 	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
 
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
+	UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error
 	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
 	GetUser(ctx context.Context, userId string) (*model.User, error)
+	DeleteUser(ctx context.Context, userId string) error
 
 	Run(ctx context.Context, workers int) error
 }

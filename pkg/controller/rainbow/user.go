@@ -60,3 +60,17 @@ func (s *ServerController) ListUsers(ctx context.Context, listOption types.ListO
 func (s *ServerController) GetUser(ctx context.Context, userId string) (*model.User, error) {
 	return s.factory.Task().GetUser(ctx, userId)
 }
+
+func (s *ServerController) UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error {
+	t, err := parseTime(req.ExpireTime)
+	if err != nil {
+		klog.Errorf("%v", err)
+		return err
+	}
+
+	return s.factory.Task().UpdateUser(ctx, req.UserId, req.ResourceVersion, map[string]interface{}{"name": req.Name, "user_type": req.UserType, "expire_time": t})
+}
+
+func (s *ServerController) DeleteUser(ctx context.Context, userId string) error {
+	return s.factory.Task().DeleteUser(ctx, userId)
+}
