@@ -46,6 +46,11 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		taskRoute.GET("", cr.listTasks)
 
 		taskRoute.PUT("/:Id/status", cr.UpdateTaskStatus)
+		taskRoute.GET(":Id/images", cr.listTaskImages)
+		taskRoute.POST("/rerun", cr.reRunTask)
+
+		taskRoute.POST("/:Id/messages", cr.createTaskMessage)
+		taskRoute.GET(":Id/messages", cr.listTaskMessages)
 	}
 
 	registryRoute := httpEngine.Group("/rainbow/registries")
@@ -74,11 +79,66 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		imageRoute.PUT("/status", cr.UpdateImageStatus)
 		imageRoute.POST("/batches", cr.createImages)
+		imageRoute.DELETE("/:Id/tags/:name", cr.deleteImageTag)
+	}
+
+	searchRoute := httpEngine.Group("/rainbow/search")
+	{
+		searchRoute.GET("/public/images", cr.listPublicImages)
 	}
 
 	collectRoute := httpEngine.Group("/rainbow/collections")
 	{
 		collectRoute.GET("", cr.getCollections)
 		collectRoute.POST("/add/review", cr.AddDailyReview)
+	}
+
+	labelRoute := httpEngine.Group("/rainbow/labels")
+	{
+		labelRoute.POST("", cr.createLabel)
+		labelRoute.DELETE("/:Id", cr.deleteLabel)
+		labelRoute.PUT("/:Id", cr.updateLabel)
+		labelRoute.GET("", cr.listLabels)
+	}
+
+	logoRoute := httpEngine.Group("/rainbow/logos")
+	{
+		logoRoute.POST("", cr.createLogo)
+		logoRoute.DELETE("/:Id", cr.deleteLogo)
+		logoRoute.PUT("/:Id", cr.updateLogo)
+		logoRoute.GET("", cr.listLogos)
+	}
+
+	nsRoute := httpEngine.Group("/rainbow/namespaces")
+	{
+		nsRoute.POST("", cr.createNamespace)
+		nsRoute.PUT("/:Id", cr.updateNamespace)
+		nsRoute.DELETE("/:Id", cr.deleteNamespace)
+		nsRoute.GET("", cr.listNamespaces)
+	}
+
+	userRoute := httpEngine.Group("/rainbow/users")
+	{
+		userRoute.POST("", cr.createUser)
+		userRoute.PUT("/:Id", cr.updateUser)
+		userRoute.DELETE("/:Id", cr.deleteUser)
+		userRoute.GET("/:Id", cr.getUser)
+		userRoute.GET("", cr.listUsers)
+	}
+
+	// 镜像汇总
+	overviewRoute := httpEngine.Group("/rainbow/overview")
+	{
+		overviewRoute.GET("", cr.overview)
+		overviewRoute.GET("/downflow/daily", cr.downflow)
+		overviewRoute.GET("/store/daily", cr.store)
+		overviewRoute.GET("/image/daily", cr.getImageDownflow)
+	}
+
+	repoRoute := httpEngine.Group("/rainbow/search")
+	{
+		repoRoute.GET("/repositories", cr.searchRepositories)
+		repoRoute.GET("/repositories/:namespace/:name/tags", cr.searchRepositoryTags)
+		repoRoute.GET("/repositories/:namespace/:name/tags/:tag", cr.searchRepositoryTagInfo)
 	}
 }

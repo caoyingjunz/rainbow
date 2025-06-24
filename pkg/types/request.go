@@ -14,7 +14,18 @@ type (
 
 	CreateLabelRequest struct {
 		Name string `json:"name" binding:"required"`
+	}
+
+	CreateLogoRequest struct {
+		Name string `json:"name" binding:"required"`
 		Logo string `json:"logo"`
+	}
+
+	UpdateLogoRequest struct {
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Name            string `json:"name" binding:"required"`
+		Logo            string `json:"logo"`
 	}
 
 	UpdateLabelRequest struct {
@@ -22,7 +33,6 @@ type (
 		ResourceVersion int64 `json:"resource_version"`
 
 		Name string `json:"name" binding:"required"`
-		Logo string `json:"logo"`
 	}
 
 	CreateTaskRequest struct {
@@ -37,6 +47,9 @@ type (
 		Mode              int64    `json:"mode"`
 		PublicImage       bool     `json:"public_image"`
 		Driver            string   `json:"driver"`
+		Logo              string   `json:"logo"`
+		Namespace         string   `json:"namespace"`
+		IsOfficial        bool     `json:"is_official"`
 	}
 
 	UpdateTaskRequest struct {
@@ -91,6 +104,7 @@ type (
 		Status     string `json:"status"`
 		Message    string `json:"message"`
 		IsPublic   bool   `json:"is_public"`
+		IsLocked   bool   `json:"is_locked"`
 	}
 
 	CreateImagesRequest struct {
@@ -103,9 +117,12 @@ type (
 		Id              int64  `json:"id"`
 		ResourceVersion int64  `json:"resource_version"`
 		Name            string `json:"name"`
-		Status          string `json:"status"`
-		Message         string `json:"message"`
+		Namespace       string `json:"namespace"`
+		Label           string `json:"label"`
 		IsPublic        bool   `json:"is_public"`
+		Logo            string `json:"logo"`
+		Description     string `json:"description"`
+		IsLocked        bool   `json:"is_locked"`
 	}
 
 	UpdateImageStatusRequest struct {
@@ -116,6 +133,31 @@ type (
 		Status     string `json:"status"`
 		Message    string `json:"message"`
 		Target     string `json:"target"`
+	}
+
+	CreateNamespaceRequest struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+
+	UpdateNamespaceRequest struct {
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Name            string `json:"name"`
+		Description     string `json:"description"`
+	}
+
+	CreateUserRequest struct {
+		Name       string `json:"name"`
+		UserId     string `json:"user_id"`
+		UserType   string `json:"user_type"` // 个人版，专有版
+		ExpireTime string `json:"expire_time"`
+	}
+
+	UpdateUserRequest struct {
+		ResourceVersion int64 `json:"resource_version"`
+
+		CreateUserRequest `json:",inline"`
 	}
 
 	UpdateAgentStatusRequest struct {
@@ -137,6 +179,50 @@ type (
 	CustomMeta struct {
 		Status int `form:"status"`
 		Limits int `form:"limits"`
+	}
+
+	RemoteSearchRequest struct {
+		Hub      string `json:"hub" form:"hub"`
+		ClientId string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
+		Query    string `json:"query" form:"query"`
+		Page     string `json:"page" form:"page"`
+		PageSize string `json:"page_size" form:"page_size"`
+	}
+
+	RemoteTagSearchRequest struct {
+		Hub        string `json:"hub" form:"hub"`
+		ClientId   string `json:"client_id" form:"client_id"`
+		Namespace  string `json:"namespace" form:"namespace"`
+		Repository string `json:"repository" form:"repository"`
+		Query      string `json:"query" form:"query"`
+		Page       string `json:"page" form:"page"`
+		PageSize   string `json:"page_size" form:"page_size"`
+	}
+
+	RemoteTagInfoSearchRequest struct {
+		Hub        string `json:"hub" form:"hub"`
+		ClientId   string `json:"client_id" form:"client_id"`
+		Namespace  string `json:"namespace" form:"namespace"`
+		Repository string `json:"repository" form:"repository"`
+		Tag        string `json:"tag" form:"tag"`
+		Arch       string `json:"arch" form:"arch"`
+
+		Query    string `json:"query" form:"query"`
+		Page     string `json:"page" form:"page"`
+		PageSize string `json:"page_size" form:"page_size"`
+	}
+
+	RemoteMetaRequest struct {
+		Type                    int
+		Uid                     string `json:"uid"`
+		RepositorySearchRequest RemoteSearchRequest
+		TagSearchRequest        RemoteTagSearchRequest
+		TagInfoSearchRequest    RemoteTagInfoSearchRequest
+	}
+
+	CreateTaskMessageRequest struct {
+		Id      int64  `json:"id"`
+		Message string `json:"message"`
 	}
 )
 

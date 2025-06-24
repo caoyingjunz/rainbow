@@ -16,6 +16,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/config"
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	rainbowtypes "github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
@@ -81,6 +82,7 @@ func (l *login) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to login in image %v %v", string(out), err)
 	}
+	klog.Infof("镜像仓库登录完成")
 	return nil
 }
 
@@ -98,13 +100,35 @@ func (i *image) Run() error {
 	if i.p.Cfg.Default.PushKubernetes {
 		kubeImages, err := i.p.getImages()
 		if err != nil {
+			klog.Errorf("获取 k8s 镜像失败: %v", err)
 			return fmt.Errorf("获取 k8s 镜像失败: %v", err)
 		}
-
-		if err = i.p.CreateImages(kubeImages); err != nil {
-			klog.Errorf("回写k8s镜像失败: %v", err)
+		is, err := i.p.CreateImages(kubeImages)
+		if err != nil {
+			klog.Errorf("回调API创建 kubernetes 镜像失败: %v", err)
+			return err
 		}
-		images = append(images, kubeImages...)
+		klog.Infof("已完成 kubernetes 镜像的回调创建，镜像列表为 %v", is)
+
+		imageMap := make(map[string]model.Image)
+		for _, ii := range is {
+			imageMap[ii.Path] = ii
+		}
+		var tplImages []config.Image
+		for _, kubeImage := range kubeImages {
+			parts := strings.Split(kubeImage, ":")
+
+			path := parts[0]
+			tag := parts[1]
+
+			tplImages = append(tplImages, config.Image{
+				Path: path,
+				Name: imageMap[path].Name,
+				Tags: []string{tag},
+				Id:   imageMap[path].Id,
+			})
+		}
+		i.p.Images = tplImages
 	}
 
 	if i.p.Cfg.Default.PushImages {
@@ -153,6 +177,7 @@ func (p *PluginController) Validate() error {
 		return err
 	}
 
+	klog.Infof("plugin validate completed")
 	return nil
 }
 
@@ -196,8 +221,11 @@ func (p *PluginController) doComplete() error {
 		cmd2 := []string{"sudo", "install", "-o", "root", "-g", "root", "-m", "0755", "kubeadm", "/usr/local/bin/kubeadm"}
 		out, err = p.exec.Command(cmd2[0], cmd2[1:]...).CombinedOutput()
 		if err != nil {
+			klog.Errorf("安装 kubeadm 失败 %v %v", string(out), err)
 			return fmt.Errorf("failed to install kubeadm %v %v", string(out), err)
 		}
+
+		klog.Infof("kubeadm 已安装完成")
 	}
 
 	p.Runners = []Runner{
@@ -212,11 +240,15 @@ func (p *PluginController) Complete() error {
 		p.Cfg.Plugin.Driver = DockerDriver
 	}
 
+	// 执行前校验
+	msgResult := "数据校验完成"
 	status, msg, process := "初始化成功", "初始化环境结束", 1
 	var err error
 	if err = p.doComplete(); err != nil {
+		msgResult = fmt.Sprintf("数据校验失败，原因：%v", err)
 		status, msg, process = "初始化失败", err.Error(), 3
 	}
+	p.CreateTaskMessage(msgResult)
 	p.SyncTaskStatus(status, msg, process)
 	return err
 }
@@ -331,9 +363,11 @@ func (p *PluginController) doPushImage(img config.Image) error {
 		err := p.sync(imageToPush, targetImage, img)
 		if err != nil {
 			p.SyncImageStatus(targetImage, rainbowtypes.SyncImageError, err.Error(), img)
+			p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步失败，原因: %v", imageToPush, err))
 			continue
 		}
 		p.SyncImageStatus(targetImage, rainbowtypes.SyncImageComplete, "", img)
+		p.CreateTaskMessage(fmt.Sprintf("镜像 %s 同步完成", imageToPush))
 	}
 
 	return nil
@@ -351,19 +385,28 @@ func (p *PluginController) Run() error {
 
 	for _, runner := range p.Runners {
 		name := runner.GetName()
-		if err := runner.Run(); err != nil {
+		msgResult := name + "完成"
+
+		err := runner.Run()
+		if err != nil {
+			msgResult = fmt.Sprintf("%s失败，原因：%v", name, err)
+			p.CreateTaskMessage(msgResult)
 			p.SyncTaskStatus(name, name+"失败", 3)
 			return err
 		} else {
+			p.CreateTaskMessage(msgResult)
 			p.SyncTaskStatus(name, name+"完成", 1)
 		}
 	}
+
 	p.SyncTaskStatus("开始同步镜像", "", 1)
+	p.CreateTaskMessage("开始同步镜像，请稍等")
+
+	klog.Infof("待推送镜像列表为 %v", p.Images)
 
 	diff := len(p.Images)
 	maxCh := make(chan struct{}, MaxConcurrency)
 	errCh := make(chan error, diff)
-
 	var wg sync.WaitGroup
 	for _, imageToPush := range p.Images {
 		wg.Add(1)
@@ -392,6 +435,7 @@ func (p *PluginController) Run() error {
 	}
 
 	p.SyncTaskStatus("镜像同步完成", "镜像全部同步完成", 2)
+	p.CreateTaskMessage("镜像任务执行完成")
 	return nil
 }
 
@@ -450,13 +494,31 @@ func (p *PluginController) SyncImageStatus(target string, status string, msg str
 	}
 }
 
-func (p *PluginController) CreateImages(names []string) error {
+func (p *PluginController) CreateImages(names []string) ([]model.Image, error) {
 	if !p.Synced {
-		return nil
+		return nil, nil
 	}
 
-	return p.httpClient.Post(
+	var resp rainbowtypes.Response
+	err := p.httpClient.Post(
 		fmt.Sprintf("%s/rainbow/images/batches", p.Callback),
-		nil,
+		&resp,
 		map[string]interface{}{"task_id": p.TaskId, "names": names})
+
+	return resp.Result, err
+}
+
+func (p *PluginController) CreateTaskMessage(msg string) {
+	if !p.Synced {
+		return
+	}
+
+	if err := p.httpClient.Post(
+		fmt.Sprintf("%s/rainbow/tasks/%d/messages", p.Callback, p.TaskId),
+		nil,
+		map[string]interface{}{"message": msg}); err != nil {
+		klog.Errorf("创建 %s 失败 %v", msg, err)
+	} else {
+		klog.Infof("创建 %s 成功", msg)
+	}
 }

@@ -2,7 +2,9 @@ package rainbow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"path/filepath"
 	"strings"
@@ -17,6 +19,7 @@ import (
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
+	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
@@ -26,11 +29,13 @@ type AgentGetter interface {
 }
 type Interface interface {
 	Run(ctx context.Context, workers int) error
+	Search(ctx context.Context, date []byte) error
 }
 
 type AgentController struct {
-	factory db.ShareDaoFactory
-	cfg     rainbowconfig.Config
+	factory     db.ShareDaoFactory
+	cfg         rainbowconfig.Config
+	redisClient *redis.Client
 
 	queue workqueue.RateLimitingInterface
 
@@ -39,15 +44,92 @@ type AgentController struct {
 	baseDir  string
 }
 
-func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config) *AgentController {
+func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *AgentController {
 	return &AgentController{
-		factory:  f,
-		cfg:      cfg,
-		name:     cfg.Agent.Name,
-		baseDir:  cfg.Agent.DataDir,
-		callback: cfg.Plugin.Callback,
-		queue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
+		factory:     f,
+		cfg:         cfg,
+		redisClient: redisClient,
+		name:        cfg.Agent.Name,
+		baseDir:     cfg.Agent.DataDir,
+		callback:    cfg.Plugin.Callback,
+		queue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
 	}
+}
+
+func (s *AgentController) Search(ctx context.Context, date []byte) error {
+	var reqMeta types.RemoteMetaRequest
+	if err := json.Unmarshal(date, &reqMeta); err != nil {
+		klog.Errorf("failed to unmarshal remote meta request", err)
+		return err
+	}
+
+	var (
+		result []byte
+		err    error
+	)
+	switch reqMeta.Type {
+	case 1:
+		result, err = s.SearchRepositories(ctx, reqMeta.RepositorySearchRequest)
+	case 2:
+		result, err = s.SearchTags(ctx, reqMeta.TagSearchRequest)
+	case 3:
+		result, err = s.SearchImageInfo(ctx, reqMeta.TagInfoSearchRequest)
+	default:
+		return fmt.Errorf("unsupported req type %d", reqMeta.Type)
+	}
+
+	statusCode, errMessage := 0, ""
+	if err != nil {
+		statusCode, errMessage = 1, err.Error()
+		klog.Errorf("远程搜索失败 %v", err)
+	}
+	data, err := json.Marshal(types.SearchResult{Result: result, ErrMessage: errMessage, StatusCode: statusCode})
+	if err != nil {
+		klog.Errorf("序列化查询结果失败 %v", err)
+		return fmt.Errorf("序列化查询结果失败 %v", err)
+	}
+
+	// 保存 60s
+	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Set(ctx, reqMeta.Uid, data, 30*time.Second)
+		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", reqMeta.Uid), "set")
+		return nil
+	}); err != nil {
+		klog.Errorf("临时存储失败 %v", err)
+		return err
+	}
+
+	klog.Infof("搜索(%s)结果已暂存 key(%s)", reqMeta.RepositorySearchRequest.Query, reqMeta.Uid)
+	return nil
+}
+
+func (s *AgentController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]byte, error) {
+	switch req.Hub {
+	case "dockerhub":
+		url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories?query=%s&page=%s&page_size=%s", req.Query, req.Page, req.PageSize)
+		return DoHttpRequest(url)
+	}
+
+	return nil, nil
+}
+
+func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
+	switch req.Hub {
+	case "dockerhub":
+		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags?page_size=%s&page=%s", req.Namespace, req.Repository, req.PageSize, req.Page)
+		return DoHttpRequest(url)
+	}
+
+	return nil, nil
+}
+
+func (s *AgentController) SearchImageInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) ([]byte, error) {
+	switch req.Hub {
+	case "dockerhub":
+		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags/%s/", req.Namespace, req.Repository, req.Tag)
+		return DoHttpRequest(url)
+	}
+	return nil, nil
 }
 
 func (s *AgentController) Run(ctx context.Context, workers int) error {
@@ -57,9 +139,7 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 	}
 
 	go s.report(ctx)
-
 	go s.getNextWorkItems(ctx)
-
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
 	}
@@ -72,21 +152,27 @@ func (s *AgentController) report(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		newAgent, err := s.factory.Agent().GetByName(ctx, s.name)
+		old, err := s.factory.Agent().GetByName(ctx, s.name)
 		if err != nil {
 			klog.Error("failed to get agent status %v", err)
 			continue
 		}
 
+		// 已离线的agent不在发送心跳同步
+		if old.Status == model.UnRunAgentType {
+			continue
+		}
+
 		updates := map[string]interface{}{"last_transition_time": time.Now()}
-		if newAgent.Status == model.UnknownAgentType {
+		if old.Status == model.UnknownAgentType {
 			updates["status"] = model.RunAgentType
 			updates["message"] = "Agent started posting status"
 		}
 
-		err = s.factory.Agent().UpdateByName(ctx, s.name, updates)
-		if err != nil {
-			klog.Error("failed to sync agent status %v", err)
+		if err = s.factory.Agent().UpdateByName(ctx, s.name, updates); err != nil {
+			klog.Error("同步 agent(%s) 心跳失败%v", s.name, err)
+		} else {
+			klog.V(2).Infof("同步 agent(%s) 心跳成功 %v", s.name, updates)
 		}
 	}
 }
@@ -137,10 +223,12 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 func (s *AgentController) GetOneAdminRegistry(ctx context.Context) (*model.Registry, error) {
 	regs, err := s.factory.Registry().GetAdminRegistries(ctx)
 	if err != nil {
+		klog.Errorf("获取默认镜像仓库失败: %v", err)
 		return nil, err
 	}
 	if len(regs) == 0 {
-		return nil, fmt.Errorf("no admin or defualt registry found")
+		klog.Errorf("no admin or default registry found")
+		return nil, fmt.Errorf("no admin or default registry found")
 	}
 
 	// 随机分，暂时不考虑负载情况，后续优化
@@ -190,22 +278,45 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 	// 根据type判断是镜像列表推送还是k8s镜像组推送
 	switch task.Type {
 	case 0:
-		images, err := s.factory.Image().ListImagesWithTag(ctx, db.WithTask(taskId))
+		tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId))
 		if err != nil {
-			return nil, fmt.Errorf("failed to get images %v", err)
+			klog.Errorf("获取任务所属 tags 失败 %v", err)
+			return nil, err
+		}
+
+		var imageIds []int64
+		imageMap := make(map[int64][]model.Tag)
+		for _, tag := range tags {
+			imageIds = append(imageIds, tag.ImageId)
+			old, ok := imageMap[tag.ImageId]
+			if ok {
+				imageMap[tag.ImageId] = append(old, tag)
+			} else {
+				imageMap[tag.ImageId] = []model.Tag{tag}
+			}
+		}
+		images, err := s.factory.Image().List(ctx, db.WithIDIn(imageIds...))
+		if err != nil {
+			klog.Errorf("获取任务所属镜像失败 %v", err)
+			return nil, err
 		}
 
 		var img []rainbowconfig.Image
 		for _, i := range images {
-			var tags []string
-			for _, tag := range i.Tags {
-				tags = append(tags, tag.Name)
+			ts, ok := imageMap[i.Id]
+			if !ok {
+				klog.Warningf("未能找到镜像(%d)的tags", i.Name)
+				continue
+			}
+			var tagStr []string
+			for _, tt := range ts {
+				tagStr = append(tagStr, tt.Name)
 			}
 			img = append(img, rainbowconfig.Image{
 				Name: i.Name,
 				Id:   i.Id,
 				Path: i.Path,
-				Tags: tags,
+				Tags: tagStr,
 			})
 		}
 		pluginTemplateConfig.Default.PushImages = true

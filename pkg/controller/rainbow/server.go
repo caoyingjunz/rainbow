@@ -3,18 +3,28 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
+	"github.com/go-redis/redis/v8"
 	"math/rand"
+	"net"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
+	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
+	"github.com/robfig/cron/v3"
+	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
+	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
 )
 
 type ServerGetter interface {
@@ -43,7 +53,11 @@ type ServerInterface interface {
 	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error
 	ListTasks(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	DeleteTask(ctx context.Context, taskId int64) error
+	GetTask(ctx context.Context, taskId int64) (interface{}, error)
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
+
+	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
+	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)
@@ -55,11 +69,47 @@ type ServerInterface interface {
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
-	CreateImages(ctx context.Context, req *types.CreateImagesRequest) error
+	CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error)
+	DeleteImageTag(ctx context.Context, imageId int64, name string) error
 
 	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	AddDailyReview(ctx context.Context, page string) error
+
+	CreateLabel(ctx context.Context, req *types.CreateLabelRequest) error
+	DeleteLabel(ctx context.Context, labelId int64) error
+	UpdateLabel(ctx context.Context, req *types.UpdateLabelRequest) error
+	ListLabels(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	CreateLogo(ctx context.Context, req *types.CreateLogoRequest) error
+	UpdateLogo(ctx context.Context, req *types.UpdateLogoRequest) error
+	DeleteLogo(ctx context.Context, logoId int64) error
+	ListLogos(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	CreateNamespace(ctx context.Context, req *types.CreateNamespaceRequest) error
+	UpdateNamespace(ctx context.Context, req *types.UpdateNamespaceRequest) error
+	DeleteNamespace(ctx context.Context, objectId int64) error
+	ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	Overview(ctx context.Context) (interface{}, error)
+	Downflow(ctx context.Context) (interface{}, error)
+	Store(ctx context.Context) (interface{}, error)
+	ImageDownflow(ctx context.Context, downflowMeta types.DownflowMeta) (interface{}, error)
+
+	SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error)
+	SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error)
+	SearchRepositoryTagInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) (interface{}, error)
+
+	CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error
+	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
+
+	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
+	UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error
+	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
+	GetUser(ctx context.Context, userId string) (*model.User, error)
+	DeleteUser(ctx context.Context, userId string) error
 
 	Run(ctx context.Context, workers int) error
 }
@@ -70,14 +120,20 @@ var (
 )
 
 type ServerController struct {
-	factory db.ShareDaoFactory
-	cfg     rainbowconfig.Config
+	factory     db.ShareDaoFactory
+	cfg         rainbowconfig.Config
+	redisClient *redis.Client
+
+	// rpcServer
+	pb.UnimplementedTunnelServer
+	lock sync.RWMutex
 }
 
-func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config) *ServerController {
+func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *ServerController {
 	sc := &ServerController{
-		factory: f,
-		cfg:     cfg,
+		factory:     f,
+		cfg:         cfg,
+		redisClient: redisClient,
 	}
 
 	if SwrClient == nil || RegistryId == nil {
@@ -120,10 +176,56 @@ func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) 
 }
 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
-	go s.monitor(ctx)
 	go s.schedule(ctx)
+	go s.sync(ctx)
+	go s.startSyncDailyPulls(ctx)
+	go s.startRpcServer(ctx)
+	go s.startAgentHeartbeat(ctx)
 
 	return nil
+}
+
+func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
+	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
+	c := cron.New(cron.WithLocation(location))
+	_, err := c.AddFunc("* * * * *", func() {
+		klog.Infof("执行每日 0 点任务...")
+		s.syncPulls(ctx)
+	})
+	if err != nil {
+		klog.Fatal("定时任务配置错误:", err)
+	}
+	c.Start()
+	klog.Infof("定时任务已启动")
+
+	// 优雅关闭（可选）
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	c.Stop()
+	klog.Infof("定时任务已停止")
+}
+
+func (s *ServerController) startRpcServer(ctx context.Context) {
+	listener, err := net.Listen("tcp", ":8091")
+	if err != nil {
+		klog.Fatalf("failed to listen %v", err)
+	}
+	gs := grpc.NewServer()
+	pb.RegisterTunnelServer(gs, s)
+
+	klog.Infof("starting rpc server (listening at %v)", listener.Addr())
+	if err = gs.Serve(listener); err != nil {
+		klog.Fatalf("failed to start rpc serve %v", err)
+	}
+}
+
+func (s *ServerController) syncPulls(ctx context.Context) {
+	_, err := s.factory.Image().List(ctx)
+	if err != nil {
+		klog.Errorf("获取镜像列表失败 %v", err)
+		return
+	}
 }
 
 func (s *ServerController) schedule(ctx context.Context) {
@@ -161,6 +263,65 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *ServerController) sync(ctx context.Context) {
+	if SwrClient == nil {
+		klog.Infof("未设置默认远程仓库，无需镜像同步")
+		return
+	}
+
+	klog.Infof("starting remote image sync controller")
+	ticker := time.NewTicker(300 * time.Second)
+	defer ticker.Stop()
+
+	defaultNamespace := HuaweiNamespace
+	for range ticker.C {
+		//overview, err := SwrClient.ShowDomainOverview(&swrmodel.ShowDomainOverviewRequest{})
+		//if err != nil {
+		//	klog.Errorf("获取远程仓库概览失败", err)
+		//	continue
+		//}
+		//klog.Infof("获取远程仓库概览成功 %v", overview)
+
+		// TODO: 后续分页查询
+		resp, err := SwrClient.ListReposDetails(&swrmodel.ListReposDetailsRequest{Namespace: &defaultNamespace})
+		if err != nil {
+			klog.Errorf("获取远程镜像列表失败", err)
+			continue
+		}
+		if resp.Body == nil || len(*resp.Body) == 0 {
+			klog.Infof("获取远程镜像为空")
+			return
+		}
+
+		var imageNames []string
+		imageMap := make(map[string]int64)
+		for _, reRepo := range *resp.Body {
+			imageNames = append(imageNames, reRepo.Name)
+			imageMap[reRepo.Name] = reRepo.NumDownload
+		}
+
+		targetImages, err := s.factory.Image().List(ctx, db.WithNameIn(imageNames...))
+		if err != nil {
+			klog.Errorf("查询本地镜像列表失败", err)
+			continue
+		}
+		for _, targetImage := range targetImages {
+			pull := imageMap[targetImage.Name]
+			if targetImage.Pull == pull {
+				klog.Infof("镜像(%s)下载量未发生变量，无需更新", targetImage.Name)
+				continue
+			}
+
+			klog.Infof("镜像(%s)下载量已发生变量，延迟更新", targetImage.Name)
+			err = s.factory.Image().Update(ctx, targetImage.Id, targetImage.ResourceVersion, map[string]interface{}{"pull": pull})
+			if err != nil {
+				klog.Errorf("更新镜像(%s)的下载量失败 %v", targetImage.Name, err)
+			}
+		}
+
+	}
 }
 
 func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
@@ -228,8 +389,8 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 	}
 }
 
-func (s *ServerController) monitor(ctx context.Context) {
-	klog.Infof("starting agent monitor")
+func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
+	klog.Infof("starting agent heartbeat")
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()

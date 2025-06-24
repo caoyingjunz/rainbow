@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -20,6 +21,12 @@ func WithOrderByDesc() Options {
 	}
 }
 
+func WithModifyOrderByDesc() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("gmt_modified DESC")
+	}
+}
+
 func WithOffset(offset int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Offset(offset)
@@ -29,6 +36,18 @@ func WithOffset(offset int) Options {
 func WithCreatedBefore(t time.Time) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("gmt_create < ?", t)
+	}
+}
+
+func WithCreatedAfter(t time.Time) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("gmt_create > ?", t)
+	}
+}
+
+func WithPublic() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("is_public = 1")
 	}
 }
 
@@ -49,6 +68,35 @@ func WithIDIn(ids ...int64) Options {
 	}
 }
 
+func WithNameIn(names ...string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(names) == 0 {
+			return tx
+		}
+
+		// e.g. `WHERE id IN (1, 2, 3)`
+		return tx.Where("name IN ?", names)
+	}
+}
+
+func WithLabelIn(labels ...string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(labels) == 0 {
+			return tx
+		}
+		return tx.Where("label IN ?", labels)
+	}
+}
+
+func WithId(id int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if id == 0 {
+			return tx
+		}
+		return tx.Where("id = ?", id)
+	}
+}
+
 func WithUser(userId string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(userId) == 0 {
@@ -64,6 +112,15 @@ func WithTask(taskId int64) Options {
 			return tx
 		}
 		return tx.Where("task_id = ?", taskId)
+	}
+}
+
+func WithTaskLike(taskId int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if taskId == 0 {
+			return tx
+		}
+		return tx.Where("task_ids like ?", "%"+fmt.Sprintf("%d", taskId)+"%")
 	}
 }
 

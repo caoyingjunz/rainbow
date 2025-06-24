@@ -1,0 +1,18 @@
+syntax="proto3";
+
+option go_package = "github.com/caoyingjunz/rainbow/api/rpc/proto/tunnel";
+
+package tunnel;
+
+service Tunnel {
+  rpc Connect(stream Request) returns (stream Response);
+}
+
+message Request {
+  string clientId = 1;
+  bytes payload = 2;
+}
+
+message Response {
+  bytes result = 1;
+}

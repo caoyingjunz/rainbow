@@ -33,6 +33,16 @@ type TaskInterface interface {
 	ListReview(ctx context.Context) ([]model.Review, error)
 	AddDailyReview(ctx context.Context, object *model.Daily) error
 	CountDailyReview(ctx context.Context) (int64, error)
+
+	CreateTaskMessage(ctx context.Context, object *model.TaskMessage) error
+	DeleteTaskMessages(ctx context.Context, taskId int64) error
+	ListTaskMessages(ctx context.Context, opts ...Options) ([]model.TaskMessage, error)
+
+	CreateUser(ctx context.Context, object *model.User) error
+	ListUsers(ctx context.Context, opts ...Options) ([]model.User, error)
+	GetUser(ctx context.Context, userId string) (*model.User, error)
+	DeleteUser(ctx context.Context, userId string) error
+	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -240,4 +250,80 @@ func (a *task) CountDailyReview(ctx context.Context) (int64, error) {
 	}
 
 	return total, nil
+}
+
+func (a *task) CreateTaskMessage(ctx context.Context, object *model.TaskMessage) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	err := a.db.WithContext(ctx).Create(object).Error
+	return err
+}
+
+func (a *task) DeleteTaskMessages(ctx context.Context, taskId int64) error {
+	return a.db.WithContext(ctx).Where("task_id = ?", taskId).Delete(&model.TaskMessage{}).Error
+}
+
+func (a *task) ListTaskMessages(ctx context.Context, opts ...Options) ([]model.TaskMessage, error) {
+	var audits []model.TaskMessage
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+	return audits, nil
+}
+
+func (a *task) CreateUser(ctx context.Context, object *model.User) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	err := a.db.WithContext(ctx).Create(object).Error
+	return err
+}
+
+func (a *task) UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := a.db.WithContext(ctx).Model(&model.User{}).Where("user_id = ? and resource_version = ?", userId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
+}
+
+func (a *task) GetUser(ctx context.Context, userId string) (*model.User, error) {
+	var audit model.User
+	if err := a.db.WithContext(ctx).Where("user_id = ?", userId).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
+func (a *task) ListUsers(ctx context.Context, opts ...Options) ([]model.User, error) {
+	var audits []model.User
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *task) DeleteUser(ctx context.Context, userId string) error {
+	return a.db.WithContext(ctx).Where("user_id = ?", userId).Delete(&model.User{}).Error
 }
