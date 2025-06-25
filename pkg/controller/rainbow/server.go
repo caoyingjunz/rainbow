@@ -393,11 +393,16 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 	for range ticker.C {
 		agents, err := s.factory.Agent().List(ctx)
 		if err != nil {
-			klog.Error("failed to get agents %v", err)
+			klog.Error("获取 agents 列表失败，等待下一次重试 %v", err)
 			continue
 		}
 
 		for _, agent := range agents {
+			if agent.Status == model.UnRunAgentType {
+				klog.Infof("agent(%s)被设置为离线", agent.Name)
+				continue
+			}
+
 			diff := time.Now().Sub(agent.LastTransitionTime)
 			if diff > time.Minute*5 {
 				if agent.Status == model.UnknownAgentType {
@@ -406,6 +411,8 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 				err = s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"status": model.UnknownAgentType, "message": "Agent stopped posting status"})
 				if err != nil {
 					klog.Error("failed to sync agent %s status %v", agent.Name, err)
+				} else {
+					klog.Infof("agent(%s)被设置成未知", agent.Name)
 				}
 			}
 		}

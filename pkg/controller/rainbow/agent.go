@@ -160,6 +160,7 @@ func (s *AgentController) report(ctx context.Context) {
 
 		// 已离线的agent不在发送心跳同步
 		if old.Status == model.UnRunAgentType {
+			klog.Infof("agent(%s)状态为离线", old.Name)
 			continue
 		}
 
