@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	TaskWaitStatus  = "等待执行"
+	TaskWaitStatus  = "调度中"
 	HuaweiNamespace = "pixiu-public"
 )
 
