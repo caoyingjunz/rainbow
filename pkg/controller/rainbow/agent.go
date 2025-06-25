@@ -158,16 +158,12 @@ func (s *AgentController) report(ctx context.Context) {
 			continue
 		}
 
-		// 已离线的agent不在发送心跳同步
-		if old.Status == model.UnRunAgentType {
-			klog.Infof("agent(%s)状态为离线", old.Name)
-			continue
-		}
-
 		updates := map[string]interface{}{"last_transition_time": time.Now()}
-		if old.Status == model.UnknownAgentType {
-			updates["status"] = model.RunAgentType
-			updates["message"] = "Agent started posting status"
+		if old.Status != model.UnRunAgentType {
+			if old.Status == model.UnknownAgentType {
+				updates["status"] = model.RunAgentType
+				updates["message"] = "Agent started posting status"
+			}
 		}
 
 		if err = s.factory.Agent().UpdateByName(ctx, s.name, updates); err != nil {
