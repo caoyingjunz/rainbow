@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"math/rand"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+	"github.com/robfig/cron/v3"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
@@ -138,8 +142,10 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 		return err
 	}
 
-	go s.report(ctx)
+	go s.startHeartbeat(ctx)
 	go s.getNextWorkItems(ctx)
+	go s.startSyncActionUsage(ctx)
+
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
 	}
@@ -147,7 +153,34 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
-func (s *AgentController) report(ctx context.Context) {
+func (s *AgentController) startSyncActionUsage(ctx context.Context) {
+	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
+	c := cron.New(cron.WithLocation(location))
+	_, err := c.AddFunc("* * * * *", func() {
+		klog.Infof("执行每日 0 点任务...")
+		s.syncActionUsage(ctx)
+	})
+	if err != nil {
+		klog.Fatal("定时任务配置错误:", err)
+	}
+	c.Start()
+	klog.Infof("启动 agent action usage syncer")
+
+	// 优雅关闭（可选）
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	c.Stop()
+	klog.Infof("定时任务已停止")
+}
+
+func (s *AgentController) syncActionUsage(ctx context.Context) {
+
+}
+
+func (s *AgentController) startHeartbeat(ctx context.Context) {
+	klog.Infof("启动 agent 心跳检测")
+
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
