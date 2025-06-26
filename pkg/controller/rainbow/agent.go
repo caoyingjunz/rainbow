@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -150,6 +152,8 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 }
 
 func (s *AgentController) startSyncActionUsage(ctx context.Context) {
+	rand.Seed(time.Now().UnixNano())
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
@@ -178,12 +182,61 @@ func (s *AgentController) syncActionUsage(ctx context.Context) {
 			continue
 		}
 		klog.Infof("完成同步 agent(%s) 的 usage", agent.Name)
+
+		// 随机等待一段时间
+		time.Sleep(time.Duration(rand.Int63n(int64(5*time.Second-1*time.Second))) * time.Second)
 	}
 }
 
 func (s *AgentController) syncOne(ctx context.Context, agent model.Agent) error {
+	url := fmt.Sprintf("https://api.github.com/users/%s/settings/billing/usage", agent.GithubUser)
+	client := &http.Client{Timeout: 30 * time.Second}
+	request, err := http.NewRequest("", url, nil)
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Accept", "application/vnd.github+json")
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", agent.GithubToken))
+	request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
-	return nil
+	resp, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error resp %s", resp.Status)
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	var ud UsageData
+	if err = json.Unmarshal(data, &ud); err != nil {
+		return err
+	}
+	ga := ud.UsageItems[len(ud.UsageItems)-1]
+
+	return s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"gross_amount": ga.GrossAmount})
+}
+
+type UsageData struct {
+	UsageItems []UsageItem `json:"usageItems"`
+}
+
+type UsageItem struct {
+	Date           time.Time `json:"date"`
+	Product        string    `json:"product"`
+	SKU            string    `json:"sku"`
+	Quantity       float64   `json:"quantity"`
+	UnitType       string    `json:"unitType"`
+	PricePerUnit   float64   `json:"pricePerUnit"`
+	GrossAmount    float64   `json:"grossAmount"`
+	DiscountAmount float64   `json:"discountAmount"`
+	NetAmount      float64   `json:"netAmount"`
+	RepositoryName string    `json:"repositoryName"`
 }
 
 func (s *AgentController) startHeartbeat(ctx context.Context) {
