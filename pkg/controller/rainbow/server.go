@@ -54,6 +54,7 @@ type ServerInterface interface {
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
+	UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)
 	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
@@ -164,6 +165,14 @@ func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interfa
 
 func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
+}
+
+func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
+	updates := make(map[string]interface{})
+	updates["github_user"] = req.GithubUser
+	updates["github_repository"] = req.GithubRepository
+	updates["github_token"] = req.GithubToken
+	return s.factory.Agent().UpdateByName(ctx, req.AgentName, updates)
 }
 
 func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) {

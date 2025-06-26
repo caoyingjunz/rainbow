@@ -5,15 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/robfig/cron/v3"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
@@ -154,28 +150,40 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 }
 
 func (s *AgentController) startSyncActionUsage(ctx context.Context) {
-	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
-	c := cron.New(cron.WithLocation(location))
-	_, err := c.AddFunc("* * * * *", func() {
-		klog.Infof("执行每日 0 点任务...")
-		s.syncActionUsage(ctx)
-	})
-	if err != nil {
-		klog.Fatal("定时任务配置错误:", err)
-	}
-	c.Start()
-	klog.Infof("启动 agent action usage syncer")
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
-	// 优雅关闭（可选）
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	<-sig
-	c.Stop()
-	klog.Infof("定时任务已停止")
+	for range ticker.C {
+		s.syncActionUsage(ctx)
+	}
 }
 
 func (s *AgentController) syncActionUsage(ctx context.Context) {
+	agents, err := s.factory.Agent().List(ctx)
+	if err != nil {
+		klog.Errorf("获取 agent 失败 %v 等待下次同步", err)
+		return
+	}
 
+	for _, agent := range agents {
+		if len(agent.GithubUser) == 0 || len(agent.GithubRepository) == 0 || len(agent.GithubToken) == 0 {
+			klog.Infof("agent(%s) 的 github 属性存在空值，忽略", agent.Name)
+			continue
+		}
+
+		// TODO: 随机等待一段时间
+		klog.Infof("开始同步 agent(%s) 的 usage", agent.Name)
+		if err = s.syncOne(ctx, agent); err != nil {
+			klog.Errorf("agent(%s) 同步 usage 失败 %v", agent.Name, err)
+			continue
+		}
+		klog.Infof("完成同步 agent(%s) 的 usage", agent.Name)
+	}
+}
+
+func (s *AgentController) syncOne(ctx context.Context, agent model.Agent) error {
+
+	return nil
 }
 
 func (s *AgentController) startHeartbeat(ctx context.Context) {

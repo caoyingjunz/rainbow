@@ -453,6 +453,29 @@ func (cr *rainbowRouter) listRegistries(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) updateAgent(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			Name string `uri:"Name" binding:"required"`
+		}
+		req types.UpdateAgentRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.AgentName = idMeta.Name
+	if err = cr.c.Server().UpdateAgent(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) getAgent(c *gin.Context) {
 	resp := httputils.NewResponse()
 

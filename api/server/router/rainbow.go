@@ -56,6 +56,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 	agentRoute := httpEngine.Group("/rainbow/agents")
 	{
+		agentRoute.PUT("/:Name", cr.updateAgent)
 		agentRoute.GET("/:Id", cr.getAgent)
 		agentRoute.GET("", cr.listAgents)
 		agentRoute.PUT("/status", cr.updateAgentStatus)

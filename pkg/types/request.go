@@ -160,6 +160,14 @@ type (
 		CreateUserRequest `json:",inline"`
 	}
 
+	UpdateAgentRequest struct {
+		AgentName string `json:"agent_name"`
+
+		GithubUser       string `json:"github_user"`       // github 后端用户名
+		GithubRepository string `json:"github_repository"` // github 仓库地址
+		GithubToken      string `json:"github_token"`      // github token
+	}
+
 	UpdateAgentStatusRequest struct {
 		AgentName string `json:"agent_name"`
 		Status    string `json:"status"`
