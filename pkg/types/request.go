@@ -39,6 +39,7 @@ type (
 		Logo              string   `json:"logo"`
 		Namespace         string   `json:"namespace"`
 		IsOfficial        bool     `json:"is_official"`
+		Architecture      string   `json:"architecture"`
 	}
 
 	UpdateTaskRequest struct {

@@ -261,11 +261,12 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 			Time: time.Now().Unix(), // 注入时间戳，确保每次内容都不相同
 		},
 		Plugin: rainbowconfig.PluginOption{
-			Callback:   s.callback,
-			TaskId:     taskId,
-			RegistryId: registry.Id,
-			Synced:     true,
-			Driver:     task.Driver,
+			Callback:     s.callback,
+			TaskId:       taskId,
+			RegistryId:   registry.Id,
+			Synced:       true,
+			Driver:       task.Driver,
+			Architecture: task.Architecture,
 		},
 		Registry: rainbowconfig.Registry{
 			Repository: registry.Repository,
