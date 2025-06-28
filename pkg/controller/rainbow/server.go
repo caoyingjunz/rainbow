@@ -191,8 +191,8 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 
 func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 	c := cron.New()
-	_, err := c.AddFunc("* * * * *", func() {
-		klog.Infof("执行每日 0 点任务...")
+	_, err := c.AddFunc("0 1 * * *", func() {
+		klog.Infof("执行每天凌晨 1 点任务...")
 		s.syncPulls(ctx)
 	})
 	if err != nil {
