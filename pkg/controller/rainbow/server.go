@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"net"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"github.com/robfig/cron/v3"
@@ -190,8 +190,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 }
 
 func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
-	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
-	c := cron.New(cron.WithLocation(location))
+	c := cron.New()
 	_, err := c.AddFunc("* * * * *", func() {
 		klog.Infof("执行每日 0 点任务...")
 		s.syncPulls(ctx)
