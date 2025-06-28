@@ -154,7 +154,8 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 	rand.Seed(time.Now().UnixNano())
 
-	ticker := time.NewTicker(10 * time.Second)
+	// 30分钟同步一次
+	ticker := time.NewTicker(1800 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -165,6 +166,10 @@ func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 		}
 		if len(agent.GithubUser) == 0 || len(agent.GithubRepository) == 0 || len(agent.GithubToken) == 0 {
 			klog.Infof("agent(%s) 的 github 属性存在空值，忽略", agent.Name)
+			continue
+		}
+		if agent.Status == model.UnRunAgentType || agent.Status == model.UnknownAgentType {
+			klog.Warningf("agent 处于未运行状态，忽略")
 			continue
 		}
 
@@ -207,7 +212,17 @@ func (s *AgentController) syncActionUsage(ctx context.Context, agent model.Agent
 	if err = json.Unmarshal(data, &ud); err != nil {
 		return err
 	}
+
+	klog.Infof("最近 grossAmount 为:")
+	for _, item := range ud.UsageItems {
+		klog.Infof(fmt.Sprintf("%v", item.GrossAmount))
+	}
+
 	ga := ud.UsageItems[len(ud.UsageItems)-1]
+	if agent.GrossAmount == ga.GrossAmount {
+		klog.Infof("agent 的 grossAmount 未发生变化，等待下一次同步")
+		return nil
+	}
 
 	return s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"gross_amount": ga.GrossAmount})
 }

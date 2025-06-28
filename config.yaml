@@ -11,7 +11,7 @@ server:
 
 agent:
   rpc_server: 127.0.0.1:8091
-  name: test-agent
+  name: agent-dev
   data_dir: /tmp
 
 plugin:
