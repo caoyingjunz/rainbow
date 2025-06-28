@@ -158,18 +158,11 @@ func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		s.syncActionUsage(ctx)
-	}
-}
-
-func (s *AgentController) syncActionUsage(ctx context.Context) {
-	agents, err := s.factory.Agent().List(ctx)
-	if err != nil {
-		klog.Errorf("获取 agent 失败 %v 等待下次同步", err)
-		return
-	}
-
-	for _, agent := range agents {
+		agent, err := s.factory.Agent().GetByName(ctx, s.name)
+		if err != nil {
+			klog.Errorf("获取 agent 失败 %v 等待下次同步", err)
+			continue
+		}
 		if len(agent.GithubUser) == 0 || len(agent.GithubRepository) == 0 || len(agent.GithubToken) == 0 {
 			klog.Infof("agent(%s) 的 github 属性存在空值，忽略", agent.Name)
 			continue
@@ -177,18 +170,15 @@ func (s *AgentController) syncActionUsage(ctx context.Context) {
 
 		// TODO: 随机等待一段时间
 		klog.Infof("开始同步 agent(%s) 的 usage", agent.Name)
-		if err = s.syncOne(ctx, agent); err != nil {
+		if err = s.syncActionUsage(ctx, *agent); err != nil {
 			klog.Errorf("agent(%s) 同步 usage 失败 %v", agent.Name, err)
 			continue
 		}
 		klog.Infof("完成同步 agent(%s) 的 usage", agent.Name)
-
-		// 随机等待一段时间
-		time.Sleep(time.Duration(rand.Int63n(int64(5*time.Second-1*time.Second))) * time.Second)
 	}
 }
 
-func (s *AgentController) syncOne(ctx context.Context, agent model.Agent) error {
+func (s *AgentController) syncActionUsage(ctx context.Context, agent model.Agent) error {
 	url := fmt.Sprintf("https://api.github.com/users/%s/settings/billing/usage", agent.GithubUser)
 	client := &http.Client{Timeout: 30 * time.Second}
 	request, err := http.NewRequest("", url, nil)
@@ -302,6 +292,7 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	defer s.queue.Done(key)
 
 	taskId, resourceVersion, err := KeyFunc(key)
+	klog.Infof("任务(%v)被调度到本节点，即将开始处理", key)
 	if err != nil {
 		s.handleErr(ctx, err, key)
 	} else {
@@ -428,6 +419,7 @@ func (s *AgentController) sync(ctx context.Context, taskId int64, resourceVersio
 		}
 		return fmt.Errorf("failted to get one task %d %v", taskId, err)
 	}
+	klog.Infof("开始处理任务(%s),任务ID(%d)", task.Name, taskId)
 
 	tplCfg, err := s.makePluginConfig(ctx, *task)
 	cfg, err := yaml.Marshal(tplCfg)
