@@ -323,7 +323,6 @@ func (s *ServerController) sync(ctx context.Context) {
 				klog.Errorf("更新镜像(%s)的下载量失败 %v", targetImage.Name, err)
 			}
 		}
-
 	}
 }
 

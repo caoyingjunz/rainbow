@@ -154,8 +154,8 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 	rand.Seed(time.Now().UnixNano())
 
-	// 30分钟同步一次
-	ticker := time.NewTicker(1800 * time.Second)
+	// 15分钟同步一次
+	ticker := time.NewTicker(900 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
