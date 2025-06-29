@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	TaskWaitStatus  = "等待执行"
+	TaskWaitStatus  = "调度中"
 	HuaweiNamespace = "pixiu-public"
 )
 
@@ -31,8 +31,12 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 		var errs []error
 		// TODO: 其他不合规检查
 		for _, image := range req.Images {
-			if strings.Contains(image, "\"") {
+			if strings.Contains(image, "\"") { // 分割镜像名称和版本
 				errs = append(errs, fmt.Errorf("invaild image(%s)", image))
+				parts := strings.Split(image, ":")
+				if len(parts) != 2 {
+					errs = append(errs, fmt.Errorf("invalid image format, should be 'name:tag' (%s)", image))
+				}
 			}
 		}
 		return utilerrors.NewAggregate(errs)
@@ -101,6 +105,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		return fmt.Errorf("failed to create tasks images %v", err)
 	}
 
+	if err = s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: "数据校验中，预计等待 1 分钟"}); err != nil {
+		klog.Warningf("初始化任务数据检验失败 %v", err)
+	}
 	return nil
 }
 
@@ -143,7 +150,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 
 		mirror := reg.Repository + "/" + reg.Namespace + "/" + name
 
-		oldImage, err := s.factory.Image().GetByPath(ctx, path, mirror)
+		oldImage, err := s.factory.Image().GetByPath(ctx, path, mirror, db.WithUser(req.UserId))
 		if err != nil {
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
@@ -171,17 +178,36 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			imageId = oldImage.Id
 		}
 
+		// 版本需要和任务关联
 		for _, tag := range tags {
-			_, err = s.factory.Image().CreateTag(ctx, &model.Tag{
-				Path:    path,
-				ImageId: imageId,
-				TaskId:  taskId,
-				Name:    tag,
-				Status:  types.SyncImageInitializing,
-			})
-			if err != nil {
-				klog.Errorf("创建镜像(%s)的版本(%s)失败 %v", path, tag, err)
-				return err
+			oldTag, tagErr := s.factory.Image().GetTag(ctx, imageId, tag, false)
+			if tagErr != nil {
+				if !errors.IsNotFound(tagErr) {
+					klog.Errorf("获取镜像(%d)的版本(%s)失败: %v", imageId, tag, tagErr)
+					return tagErr
+				}
+
+				// tag 不存在则创建
+				if _, err = s.factory.Image().CreateTag(ctx, &model.Tag{
+					Path:    path,
+					Mirror:  mirror,
+					ImageId: imageId,
+					TaskIds: fmt.Sprintf("%d", taskId),
+					Name:    tag,
+					Status:  types.SyncImageInitializing,
+				}); err != nil {
+					klog.Errorf("创建镜像(%s)的版本(%s)失败 %v", path, tag, err)
+					return err
+				}
+			} else {
+				// 已经存在则写入新关联的 taskId
+				newTaskIds := strings.Join([]string{oldTag.TaskIds, fmt.Sprintf("%d", taskId)}, ",")
+				if err = s.factory.Image().UpdateTag(ctx, imageId, tag, map[string]interface{}{
+					"task_ids": newTaskIds,
+				}); err != nil {
+					klog.Errorf("更新镜像(%s)的版本(%s)任务Id失败 %v", path, tag, err)
+					return err
+				}
 			}
 		}
 	}
@@ -288,8 +314,8 @@ func (s *ServerController) ReRunTask(ctx context.Context, req *types.UpdateTaskR
 	return nil
 }
 
-func (s *ServerController) ListTaskImages(ctx context.Context, taskId int64) (interface{}, error) {
-	return s.factory.Image().ListTags(ctx, db.WithTask(taskId))
+func (s *ServerController) ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId), db.WithNameLike(listOption.NameSelector))
 }
 
 func (s *ServerController) CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error {

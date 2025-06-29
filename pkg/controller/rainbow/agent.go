@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis/v8"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
@@ -72,6 +74,8 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 		result, err = s.SearchRepositories(ctx, reqMeta.RepositorySearchRequest)
 	case 2:
 		result, err = s.SearchTags(ctx, reqMeta.TagSearchRequest)
+	case 3:
+		result, err = s.SearchImageInfo(ctx, reqMeta.TagInfoSearchRequest)
 	default:
 		return fmt.Errorf("unsupported req type %d", reqMeta.Type)
 	}
@@ -121,14 +125,25 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 	return nil, nil
 }
 
+func (s *AgentController) SearchImageInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) ([]byte, error) {
+	switch req.Hub {
+	case "dockerhub":
+		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags/%s/", req.Namespace, req.Repository, req.Tag)
+		return DoHttpRequest(url)
+	}
+	return nil, nil
+}
+
 func (s *AgentController) Run(ctx context.Context, workers int) error {
 	// 注册 rainbow 代理
 	if err := s.RegisterAgentIfNotExist(ctx); err != nil {
 		return err
 	}
 
-	go s.report(ctx)
+	go s.startHeartbeat(ctx)
 	go s.getNextWorkItems(ctx)
+	go s.startSyncActionUsage(ctx)
+
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
 	}
@@ -136,7 +151,102 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
-func (s *AgentController) report(ctx context.Context) {
+func (s *AgentController) startSyncActionUsage(ctx context.Context) {
+	rand.Seed(time.Now().UnixNano())
+
+	// 30分钟同步一次
+	ticker := time.NewTicker(1800 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		agent, err := s.factory.Agent().GetByName(ctx, s.name)
+		if err != nil {
+			klog.Errorf("获取 agent 失败 %v 等待下次同步", err)
+			continue
+		}
+		if len(agent.GithubUser) == 0 || len(agent.GithubRepository) == 0 || len(agent.GithubToken) == 0 {
+			klog.Infof("agent(%s) 的 github 属性存在空值，忽略", agent.Name)
+			continue
+		}
+		if agent.Status == model.UnRunAgentType || agent.Status == model.UnknownAgentType {
+			klog.Warningf("agent 处于未运行状态，忽略")
+			continue
+		}
+
+		// TODO: 随机等待一段时间
+		klog.Infof("开始同步 agent(%s) 的 usage", agent.Name)
+		if err = s.syncActionUsage(ctx, *agent); err != nil {
+			klog.Errorf("agent(%s) 同步 usage 失败 %v", agent.Name, err)
+			continue
+		}
+		klog.Infof("完成同步 agent(%s) 的 usage", agent.Name)
+	}
+}
+
+func (s *AgentController) syncActionUsage(ctx context.Context, agent model.Agent) error {
+	url := fmt.Sprintf("https://api.github.com/users/%s/settings/billing/usage", agent.GithubUser)
+	client := &http.Client{Timeout: 30 * time.Second}
+	request, err := http.NewRequest("", url, nil)
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Accept", "application/vnd.github+json")
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", agent.GithubToken))
+	request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+	resp, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error resp %s", resp.Status)
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	var ud UsageData
+	if err = json.Unmarshal(data, &ud); err != nil {
+		return err
+	}
+
+	klog.Infof("最近 grossAmount 为:")
+	for _, item := range ud.UsageItems {
+		klog.Infof(fmt.Sprintf("%v", item.GrossAmount))
+	}
+
+	ga := ud.UsageItems[len(ud.UsageItems)-1]
+	if agent.GrossAmount == ga.GrossAmount {
+		klog.Infof("agent 的 grossAmount 未发生变化，等待下一次同步")
+		return nil
+	}
+
+	return s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"gross_amount": ga.GrossAmount})
+}
+
+type UsageData struct {
+	UsageItems []UsageItem `json:"usageItems"`
+}
+
+type UsageItem struct {
+	Date           time.Time `json:"date"`
+	Product        string    `json:"product"`
+	SKU            string    `json:"sku"`
+	Quantity       float64   `json:"quantity"`
+	UnitType       string    `json:"unitType"`
+	PricePerUnit   float64   `json:"pricePerUnit"`
+	GrossAmount    float64   `json:"grossAmount"`
+	DiscountAmount float64   `json:"discountAmount"`
+	NetAmount      float64   `json:"netAmount"`
+	RepositoryName string    `json:"repositoryName"`
+}
+
+func (s *AgentController) startHeartbeat(ctx context.Context) {
+	klog.Infof("启动 agent 心跳检测")
+
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
@@ -147,15 +257,12 @@ func (s *AgentController) report(ctx context.Context) {
 			continue
 		}
 
-		// 已离线的agent不在发送心跳同步
-		if old.Status == model.UnRunAgentType {
-			continue
-		}
-
 		updates := map[string]interface{}{"last_transition_time": time.Now()}
-		if old.Status == model.UnknownAgentType {
-			updates["status"] = model.RunAgentType
-			updates["message"] = "Agent started posting status"
+		if old.Status != model.UnRunAgentType {
+			if old.Status == model.UnknownAgentType {
+				updates["status"] = model.RunAgentType
+				updates["message"] = "Agent started posting status"
+			}
 		}
 
 		if err = s.factory.Agent().UpdateByName(ctx, s.name, updates); err != nil {
@@ -200,6 +307,7 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	defer s.queue.Done(key)
 
 	taskId, resourceVersion, err := KeyFunc(key)
+	klog.Infof("任务(%v)被调度到本节点，即将开始处理", key)
 	if err != nil {
 		s.handleErr(ctx, err, key)
 	} else {
@@ -267,7 +375,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 	// 根据type判断是镜像列表推送还是k8s镜像组推送
 	switch task.Type {
 	case 0:
-		tags, err := s.factory.Image().ListTags(ctx, db.WithTask(taskId))
+		tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId))
 		if err != nil {
 			klog.Errorf("获取任务所属 tags 失败 %v", err)
 			return nil, err
@@ -326,6 +434,7 @@ func (s *AgentController) sync(ctx context.Context, taskId int64, resourceVersio
 		}
 		return fmt.Errorf("failted to get one task %d %v", taskId, err)
 	}
+	klog.Infof("开始处理任务(%s),任务ID(%d)", task.Name, taskId)
 
 	tplCfg, err := s.makePluginConfig(ctx, *task)
 	cfg, err := yaml.Marshal(tplCfg)

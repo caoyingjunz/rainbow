@@ -20,6 +20,15 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
+	DockerfileRoute := httpEngine.Group("/rainbow/dockerfiles")
+	{
+		DockerfileRoute.POST("", cr.createDockerfile)
+		DockerfileRoute.DELETE("/:Id", cr.deleteDockerfile)
+		DockerfileRoute.PUT("/:Id", cr.updateDockerfile)
+		DockerfileRoute.GET("", cr.listDockerfile)
+		DockerfileRoute.GET("/:Id", cr.getDockerfile)
+	}
+
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
@@ -47,6 +56,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 	agentRoute := httpEngine.Group("/rainbow/agents")
 	{
+		agentRoute.PUT("/:Name", cr.updateAgent)
 		agentRoute.GET("/:Id", cr.getAgent)
 		agentRoute.GET("", cr.listAgents)
 		agentRoute.PUT("/status", cr.updateAgentStatus)
@@ -100,6 +110,15 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		nsRoute.GET("", cr.listNamespaces)
 	}
 
+	userRoute := httpEngine.Group("/rainbow/users")
+	{
+		userRoute.POST("", cr.createUser)
+		userRoute.PUT("/:Id", cr.updateUser)
+		userRoute.DELETE("/:Id", cr.deleteUser)
+		userRoute.GET("/:Id", cr.getUser)
+		userRoute.GET("", cr.listUsers)
+	}
+
 	// 镜像汇总
 	overviewRoute := httpEngine.Group("/rainbow/overview")
 	{
@@ -113,5 +132,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	{
 		repoRoute.GET("/repositories", cr.searchRepositories)
 		repoRoute.GET("/repositories/:namespace/:name/tags", cr.searchRepositoryTags)
+		repoRoute.GET("/repositories/:namespace/:name/tags/:tag", cr.searchRepositoryTagInfo)
 	}
 }

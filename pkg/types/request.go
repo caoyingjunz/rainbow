@@ -1,6 +1,17 @@
 package types
 
 type (
+	CreateDockerfileRequest struct {
+		Name       string `json:"name"`
+		Dockerfile string `json:"dockerfile"`
+	}
+
+	UpdateDockerfileRequest struct {
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Dockerfile      string `json:"dockerfile"`
+	}
+
 	CreateLabelRequest struct {
 		Name string `json:"name" binding:"required"`
 	}
@@ -136,6 +147,27 @@ type (
 		Description     string `json:"description"`
 	}
 
+	CreateUserRequest struct {
+		Name       string `json:"name"`
+		UserId     string `json:"user_id"`
+		UserType   string `json:"user_type"` // 个人版，专有版
+		ExpireTime string `json:"expire_time"`
+	}
+
+	UpdateUserRequest struct {
+		ResourceVersion int64 `json:"resource_version"`
+
+		CreateUserRequest `json:",inline"`
+	}
+
+	UpdateAgentRequest struct {
+		AgentName string `json:"agent_name"`
+
+		GithubUser       string `json:"github_user"`       // github 后端用户名
+		GithubRepository string `json:"github_repository"` // github 仓库地址
+		GithubToken      string `json:"github_token"`      // github token
+	}
+
 	UpdateAgentStatusRequest struct {
 		AgentName string `json:"agent_name"`
 		Status    string `json:"status"`
@@ -175,11 +207,25 @@ type (
 		PageSize   string `json:"page_size" form:"page_size"`
 	}
 
+	RemoteTagInfoSearchRequest struct {
+		Hub        string `json:"hub" form:"hub"`
+		ClientId   string `json:"client_id" form:"client_id"`
+		Namespace  string `json:"namespace" form:"namespace"`
+		Repository string `json:"repository" form:"repository"`
+		Tag        string `json:"tag" form:"tag"`
+		Arch       string `json:"arch" form:"arch"`
+
+		Query    string `json:"query" form:"query"`
+		Page     string `json:"page" form:"page"`
+		PageSize string `json:"page_size" form:"page_size"`
+	}
+
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
 		RepositorySearchRequest RemoteSearchRequest
 		TagSearchRequest        RemoteTagSearchRequest
+		TagInfoSearchRequest    RemoteTagInfoSearchRequest
 	}
 
 	CreateTaskMessageRequest struct {

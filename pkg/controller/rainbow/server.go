@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"net"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"github.com/robfig/cron/v3"
@@ -32,6 +32,12 @@ type ServerGetter interface {
 }
 
 type ServerInterface interface {
+	CreateDockerfile(ctx context.Context, req *types.CreateDockerfileRequest) error
+	DeleteDockerfile(ctx context.Context, dockerfileId int64) error
+	UpdateDockerfile(ctx context.Context, req *types.UpdateDockerfileRequest) error
+	ListDockerfile(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error)
+
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
@@ -45,9 +51,10 @@ type ServerInterface interface {
 	GetTask(ctx context.Context, taskId int64) (interface{}, error)
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
-	ListTaskImages(ctx context.Context, taskId int64) (interface{}, error)
+	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
+	UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context) (interface{}, error)
 	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
@@ -89,9 +96,16 @@ type ServerInterface interface {
 
 	SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error)
 	SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error)
+	SearchRepositoryTagInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) (interface{}, error)
 
 	CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error
 	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
+
+	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
+	UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error
+	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
+	GetUser(ctx context.Context, userId string) (*model.User, error)
+	DeleteUser(ctx context.Context, userId string) error
 
 	Run(ctx context.Context, workers int) error
 }
@@ -153,6 +167,14 @@ func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.Upd
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
 }
 
+func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
+	updates := make(map[string]interface{})
+	updates["github_user"] = req.GithubUser
+	updates["github_repository"] = req.GithubRepository
+	updates["github_token"] = req.GithubToken
+	return s.factory.Agent().UpdateByName(ctx, req.AgentName, updates)
+}
+
 func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) {
 	return s.factory.Agent().List(ctx)
 }
@@ -168,10 +190,9 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 }
 
 func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
-	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
-	c := cron.New(cron.WithLocation(location))
-	_, err := c.AddFunc("* * * * *", func() {
-		klog.Infof("执行每日 0 点任务...")
+	c := cron.New()
+	_, err := c.AddFunc("0 1 * * *", func() {
+		klog.Infof("执行每天凌晨 1 点任务...")
 		s.syncPulls(ctx)
 	})
 	if err != nil {
@@ -380,11 +401,16 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 	for range ticker.C {
 		agents, err := s.factory.Agent().List(ctx)
 		if err != nil {
-			klog.Error("failed to get agents %v", err)
+			klog.Error("获取 agents 列表失败，等待下一次重试 %v", err)
 			continue
 		}
 
 		for _, agent := range agents {
+			if agent.Status == model.UnRunAgentType {
+				klog.Infof("agent(%s)被设置为离线", agent.Name)
+				continue
+			}
+
 			diff := time.Now().Sub(agent.LastTransitionTime)
 			if diff > time.Minute*5 {
 				if agent.Status == model.UnknownAgentType {
@@ -393,6 +419,8 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 				err = s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"status": model.UnknownAgentType, "message": "Agent stopped posting status"})
 				if err != nil {
 					klog.Error("failed to sync agent %s status %v", agent.Name, err)
+				} else {
+					klog.Infof("agent(%s)被设置成未知", agent.Name)
 				}
 			}
 		}

@@ -9,6 +9,109 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
+func (cr *rainbowRouter) createDockerfile(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateDockerfileRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().CreateDockerfile(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteDockerfile(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if err = cr.c.Server().DeleteDockerfile(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateDockerfile(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req    types.UpdateDockerfileRequest
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	req.Id = idMeta.ID
+
+	if err = cr.c.Server().UpdateDockerfile(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listDockerfile(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err        error
+		listOption types.ListOptions
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().ListDockerfile(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) getDockerfile(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().GetDockerfile(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createLabel(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -234,14 +337,15 @@ func (cr *rainbowRouter) listTaskImages(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		idMeta types.IdMeta
-		err    error
+		idMeta     types.IdMeta
+		listOption types.ListOptions
+		err        error
 	)
-	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, &listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	if resp.Result, err = cr.c.Server().ListTaskImages(c, idMeta.ID); err != nil {
+	if resp.Result, err = cr.c.Server().ListTaskImages(c, idMeta.ID, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -342,6 +446,29 @@ func (cr *rainbowRouter) listRegistries(c *gin.Context) {
 	}
 
 	if resp.Result, err = cr.c.Server().ListRegistries(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateAgent(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			Name string `uri:"Name" binding:"required"`
+		}
+		req types.UpdateAgentRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.AgentName = idMeta.Name
+	if err = cr.c.Server().UpdateAgent(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -878,6 +1005,32 @@ func (cr *rainbowRouter) searchRepositoryTags(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) searchRepositoryTagInfo(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req      types.RemoteTagInfoSearchRequest
+		nameMeta types.NameMeta
+		err      error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &nameMeta, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.Repository = nameMeta.Name
+	req.Namespace = nameMeta.Namespace
+	req.Tag = c.Param("tag")
+	if len(req.Hub) == 0 {
+		req.Hub = "dockerhub"
+	}
+	if resp.Result, err = cr.c.Server().SearchRepositoryTagInfo(c, req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createTaskMessage(c *gin.Context) {
 	resp := httputils.NewResponse()
 	var (
@@ -910,6 +1063,111 @@ func (cr *rainbowRouter) listTaskMessages(c *gin.Context) {
 		return
 	}
 	if resp.Result, err = cr.c.Server().ListTaskMessages(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) createUser(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateUserRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateUser(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateUser(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID string `uri:"Id" binding:"required"`
+		}
+		req types.UpdateUserRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	req.UserId = idMeta.ID
+	if err = cr.c.Server().UpdateUser(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteUser(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID string `uri:"Id" binding:"required"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().DeleteUser(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+
+}
+
+func (cr *rainbowRouter) getUser(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID string `uri:"Id" binding:"required"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().GetUser(c, idMeta.ID); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+
+}
+func (cr *rainbowRouter) listUsers(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		listOption types.ListOptions
+		err        error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListUsers(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

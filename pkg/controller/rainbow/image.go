@@ -97,8 +97,18 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 
 	parts := strings.Split(req.Target, ":")
 	tag := parts[1]
+	if err = s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status, "message": req.Message}); err != nil {
+		klog.Errorf("更新镜像(%d)的版本(%d)状态失败:%v", req.ImageId, tag, err)
+		return err
+	}
 
-	return s.factory.Image().UpdateTag(ctx, req.ImageId, tag, map[string]interface{}{"status": req.Status, "message": req.Message})
+	// 当状态已经变成完成时，更新镜像的修改时间
+	if req.Status == types.SyncImageComplete {
+		if err = s.factory.Image().Update(ctx, req.ImageId, old.ResourceVersion, map[string]interface{}{}); err != nil {
+			klog.Errorf("更新镜像(%d)的修改时间失败:%v", req.ImageId, err)
+		}
+	}
+	return nil
 }
 
 // DeleteImage 删除镜像和对应的tags
@@ -143,16 +153,11 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 }
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	if listOption.Limits == 0 {
-		parts := make([]string, 0)
-		if len(listOption.LabelSelector) != 0 {
-			parts = strings.Split(listOption.LabelSelector, ",")
-		}
-		return s.factory.Image().ListImagesWithTag(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector), db.WithLabelIn(parts...))
-	}
-
-	// TODO: 临时实现，后续再优化
-	return s.factory.Image().ListImagesWithTag(ctx, db.WithStatus("同步完成"), db.WithLimit(listOption.Limits))
+	return s.factory.Image().ListImagesWithTag(ctx,
+		db.WithUser(listOption.UserId),
+		db.WithNameLike(listOption.NameSelector),
+		db.WithLimit(listOption.Limit),
+		db.WithModifyOrderByDesc())
 }
 
 func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
