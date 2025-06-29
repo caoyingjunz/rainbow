@@ -70,6 +70,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if req.Namespace == defaultNamespace {
 		req.Namespace = ""
 	}
+	if req.Architecture == "" {
+		req.Architecture = "amd64"
+	}
 
 	object, err := s.factory.Task().Create(ctx, &model.Task{
 		Name:              req.Name,
@@ -86,6 +89,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		IsPublic:          req.PublicImage,
 		Logo:              req.Logo,
 		IsOfficial:        req.IsOfficial,
+		Architecture:      req.Architecture,
 	})
 	if err != nil {
 		return err
@@ -155,17 +159,18 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
 				newImage, err := s.factory.Image().Create(ctx, &model.Image{
-					UserId:     req.UserId,
-					UserName:   req.UserName,
-					RegisterId: req.RegisterId,
-					Namespace:  namespace,
-					Logo:       req.Logo,
-					Name:       name,
-					Path:       path,
-					Mirror:     mirror,
-					IsPublic:   req.PublicImage,
-					IsOfficial: req.IsOfficial,
-					IsLocked:   true,
+					UserId:       req.UserId,
+					UserName:     req.UserName,
+					RegisterId:   req.RegisterId,
+					Namespace:    namespace,
+					Logo:         req.Logo,
+					Name:         name,
+					Path:         path,
+					Mirror:       mirror,
+					IsPublic:     req.PublicImage,
+					IsOfficial:   req.IsOfficial,
+					Architecture: req.Architecture,
+					IsLocked:     true,
 				})
 				if err != nil {
 					return err
