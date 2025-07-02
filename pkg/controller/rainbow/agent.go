@@ -184,7 +184,11 @@ func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 }
 
 func (s *AgentController) syncActionUsage(ctx context.Context, agent model.Agent) error {
-	url := fmt.Sprintf("https://api.github.com/users/%s/settings/billing/usage", agent.GithubUser)
+	month := time.Now().Format("1")
+
+	url := fmt.Sprintf("https://api.github.com/users/%s/settings/billing/usage?month=%s", agent.GithubUser, month)
+	klog.Infof("当前 %s 月, 将通过请求 %s 获取账单", month, url)
+
 	client := &http.Client{Timeout: 30 * time.Second}
 	request, err := http.NewRequest("", url, nil)
 	if err != nil {
@@ -213,18 +217,17 @@ func (s *AgentController) syncActionUsage(ctx context.Context, agent model.Agent
 		return err
 	}
 
-	klog.Infof("最近 grossAmount 为:")
+	var grossAmount float64 = 0
 	for _, item := range ud.UsageItems {
-		klog.Infof(fmt.Sprintf("%v", item.GrossAmount))
+		grossAmount += item.GrossAmount
 	}
-
-	ga := ud.UsageItems[len(ud.UsageItems)-1]
-	if agent.GrossAmount == ga.GrossAmount {
-		klog.Infof("agent 的 grossAmount 未发生变化，等待下一次同步")
+	klog.Infof("Agent(%s)当月截止目前已经使用 %d 美金", agent.Name, grossAmount)
+	if agent.GrossAmount == grossAmount {
+		klog.Infof("agent(%s) 的 grossAmount 未发生变化，等待下一次同步", agent.Name)
 		return nil
 	}
 
-	return s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"gross_amount": ga.GrossAmount})
+	return s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"gross_amount": grossAmount})
 }
 
 type UsageData struct {
