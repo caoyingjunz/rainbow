@@ -224,7 +224,7 @@ func (p *PluginController) doComplete() error {
 			klog.Errorf("安装 kubeadm 失败 %v %v", string(out), err)
 			return fmt.Errorf("failed to install kubeadm %v %v", string(out), err)
 		}
-
+		p.CreateTaskMessage("kubernetes 镜像推送准备完成")
 		klog.Infof("kubeadm 已安装完成")
 	}
 

@@ -249,8 +249,9 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 		return err
 	}
 	if item == nil {
-		return err
+		return nil
 	}
+	klog.Infof("获取待处理任务 %v", item)
 
 	targetAgent, err := s.assignAgent(ctx)
 	if err != nil {
@@ -264,6 +265,7 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
+	klog.Infof("任务 %s 已被分配给 agent %s，等待处理中", item.Name, targetAgent)
 
 	return nil
 }
