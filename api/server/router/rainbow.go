@@ -134,4 +134,17 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		repoRoute.GET("/repositories/:namespace/:name/tags", cr.searchRepositoryTags)
 		repoRoute.GET("/repositories/:namespace/:name/tags/:tag", cr.searchRepositoryTagInfo)
 	}
+
+	notifyRoute := httpEngine.Group("/rainbow/notification")
+	{
+		notifyRoute.POST("", cr.createNotification)
+		notifyRoute.PUT("/:Id", cr.updateNotification)
+		notifyRoute.DELETE("/:Id", cr.deleteNotification)
+		notifyRoute.GET("/:Id", cr.getNotification)
+		notifyRoute.GET("", cr.listNotifications)
+	}
+	sendNotifyRoute := httpEngine.Group("/rainbow/send/notification")
+	{
+		sendNotifyRoute.POST("", cr.sendNotification)
+	}
 }

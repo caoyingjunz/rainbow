@@ -1,6 +1,11 @@
 package types
 
 type (
+	UserMetaRequest struct {
+		UserId   string `json:"user_id"`
+		UserName string `json:"user_name"`
+	}
+
 	CreateDockerfileRequest struct {
 		Name       string `json:"name"`
 		Dockerfile string `json:"dockerfile"`
@@ -171,6 +176,13 @@ type (
 	UpdateAgentStatusRequest struct {
 		AgentName string `json:"agent_name"`
 		Status    string `json:"status"`
+	}
+
+	CreateNotificationRequest struct {
+		UserMetaRequest `json:",inline"`
+	}
+	SendNotificationRequest struct {
+		UserMetaRequest `json:",inline"`
 	}
 
 	// PageRequest 分页配置

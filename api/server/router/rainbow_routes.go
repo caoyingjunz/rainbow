@@ -1174,3 +1174,65 @@ func (cr *rainbowRouter) listUsers(c *gin.Context) {
 
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) createNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateNotificationRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateNotify(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) getNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listNotifications(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) sendNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.SendNotificationRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().SendNotify(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}

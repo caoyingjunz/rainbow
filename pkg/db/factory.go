@@ -27,6 +27,7 @@ type ShareDaoFactory interface {
 	Image() ImageInterface
 	Label() LabelInterface
 	Dockerfile() DockerfileInterface
+	Notify() NotifyInterface
 }
 
 type shareDaoFactory struct {
@@ -39,6 +40,7 @@ func (f *shareDaoFactory) Registry() RegistryInterface     { return newRegistry(
 func (f *shareDaoFactory) Image() ImageInterface           { return newImage(f.db) }
 func (f *shareDaoFactory) Label() LabelInterface           { return newLabel(f.db) }
 func (f *shareDaoFactory) Dockerfile() DockerfileInterface { return newDockerfile(f.db) }
+func (f *shareDaoFactory) Notify() NotifyInterface         { return newNotify(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {
