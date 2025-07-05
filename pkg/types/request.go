@@ -173,6 +173,9 @@ type (
 		Status    string `json:"status"`
 	}
 
+	CreateNotificationRequest struct {
+	}
+
 	// PageRequest 分页配置
 	PageRequest struct {
 		Page  int `form:"page" json:"page"`   // 页数，表示第几页

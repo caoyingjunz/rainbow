@@ -1174,3 +1174,39 @@ func (cr *rainbowRouter) listUsers(c *gin.Context) {
 
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) createNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) updateNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) getNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listNotifications(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) sendNotification(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
