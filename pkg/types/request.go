@@ -175,6 +175,8 @@ type (
 
 	CreateNotificationRequest struct {
 	}
+	SendNotificationRequest struct {
+	}
 
 	// PageRequest 分页配置
 	PageRequest struct {

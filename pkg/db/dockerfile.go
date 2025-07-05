@@ -3,10 +3,12 @@ package db
 import (
 	"context"
 	"fmt"
-	"github.com/caoyingjunz/rainbow/pkg/db/model"
+	"time"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"time"
+
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 )
 
 type DockerfileInterface interface {
