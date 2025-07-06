@@ -24,7 +24,7 @@ func (s *ServerController) CreateRegistry(ctx context.Context, req *types.Create
 	return err
 }
 
-func (s *ServerController) TestRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
+func (s *ServerController) LoginRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
 	if err := docker.LoginDocker(req.Repository, req.Username, req.Password); err != nil {
 		return fmt.Errorf("failed login remote registry, please check input")
 	}

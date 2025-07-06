@@ -372,7 +372,7 @@ func (cr *rainbowRouter) createRegistry(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) testRegistry(c *gin.Context) {
+func (cr *rainbowRouter) loginRegistry(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
@@ -383,7 +383,7 @@ func (cr *rainbowRouter) testRegistry(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	if err = cr.c.Server().TestRegistry(c, &req); err != nil {
+	if err = cr.c.Server().LoginRegistry(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

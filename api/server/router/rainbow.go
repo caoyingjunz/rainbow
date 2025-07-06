@@ -48,7 +48,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	registryRoute := httpEngine.Group("/rainbow/registries")
 	{
 		registryRoute.POST("", cr.createRegistry)
-		registryRoute.POST("/test", cr.testRegistry)
+		registryRoute.POST("/login", cr.loginRegistry)
 		registryRoute.PUT("/:Id", cr.updateRegistry)
 		registryRoute.DELETE("/:Id", cr.deleteRegistry)
 		registryRoute.GET("/:Id", cr.getRegistry)

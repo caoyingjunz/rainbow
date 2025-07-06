@@ -39,7 +39,7 @@ type ServerInterface interface {
 	GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error)
 
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
-	TestRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
+	LoginRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
