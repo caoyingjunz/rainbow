@@ -2,10 +2,11 @@ package rainbow
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/docker"
 )
 
 func (s *ServerController) CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
@@ -20,6 +21,14 @@ func (s *ServerController) CreateRegistry(ctx context.Context, req *types.Create
 	})
 
 	return err
+}
+
+func (s *ServerController) TestRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
+	if err := docker.LoginDocker(req.Repository, req.Username, req.Password); err != nil {
+		return fmt.Errorf("failed login remote registry, please check input")
+	}
+	return nil
+
 }
 
 func (s *ServerController) UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error {
