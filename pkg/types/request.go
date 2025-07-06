@@ -180,6 +180,13 @@ type (
 
 	CreateNotificationRequest struct {
 		UserMetaRequest `json:",inline"`
+
+		Name      string `json:"name"`
+		Role      int    `json:"role"`
+		Enable    bool   `json:"enable"`
+		Type      string `json:"type"` // 支持 webhook, dingding, wecom
+		Content   string `json:"content"`
+		ShortDesc string `json:"short_desc"`
 	}
 	SendNotificationRequest struct {
 		UserMetaRequest `json:",inline"`
