@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -30,9 +31,26 @@ func (s *ServerController) CreateNotify(ctx context.Context, req *types.CreateNo
 
 	return err
 }
-func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotificationRequest) error {
 
-	fmt.Println("req", req)
+func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotificationRequest) error {
+	switch req.Role {
+	case 1:
+		return s.SendRegisterNotify(ctx, req)
+	default:
+		// TODO
+	}
+	return nil
+}
+
+func (s *ServerController) SendRegisterNotify(ctx context.Context, req *types.SendNotificationRequest) error {
+	notifies, err := s.factory.Notify().List(ctx, db.WithRole(req.Role), db.WithEnable(1))
+	if err != nil {
+		klog.Errorf("获取 notify 失败 %v", err)
+		return err
+	}
+	for _, notify := range notifies {
+		fmt.Println("notify", notify)
+	}
 
 	return nil
 }

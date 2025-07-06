@@ -182,7 +182,7 @@ type (
 		UserMetaRequest `json:",inline"`
 
 		Name      string `json:"name"`
-		Role      int    `json:"role"`
+		Role      int    `json:"role"` // 1 管理员 0 普通用户
 		Enable    bool   `json:"enable"`
 		Type      string `json:"type"` // 支持 webhook, dingding, wecom
 		Content   string `json:"content"`

@@ -51,6 +51,18 @@ func WithPublic() Options {
 	}
 }
 
+func WithEnable(enable int) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("enable = ?", enable)
+	}
+}
+
+func WithRole(role int) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("role = ?", role)
+	}
+}
+
 func WithLimit(limit int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if limit == 0 {
