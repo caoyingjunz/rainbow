@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/klog/v2"
 
@@ -30,5 +31,8 @@ func (s *ServerController) CreateNotify(ctx context.Context, req *types.CreateNo
 	return err
 }
 func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotificationRequest) error {
+
+	fmt.Println("req", req)
+
 	return nil
 }

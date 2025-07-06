@@ -189,7 +189,7 @@ type (
 		ShortDesc string `json:"short_desc"`
 	}
 	SendNotificationRequest struct {
-		UserMetaRequest `json:",inline"`
+		CreateNotificationRequest `json:",inline"`
 	}
 
 	// PageRequest 分页配置
