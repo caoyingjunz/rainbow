@@ -17,9 +17,9 @@ func getDockerCommand() string {
 	// 根据架构选择项目中的docker二进制
 	arch := runtime.GOARCH
 	if arch == "amd64" {
-		dockerPath = fmt.Sprintf("./bin/docker-%s", arch)
+		dockerPath = fmt.Sprintf("./docker-bin/docker-%s", arch)
 	} else {
-		dockerPath = "./bin/docker"
+		dockerPath = "./docker-bin/docker"
 	}
 
 	if _, err := os.Stat(dockerPath); err == nil {

@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
