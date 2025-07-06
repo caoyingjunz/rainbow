@@ -90,25 +90,31 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if err != nil {
 		return err
 	}
-	if req.Type == 1 {
-		klog.Infof("创建任务(%s)成功，状态为延迟执行", req.Name)
+
+	taskId := object.Id
+	s.CreateTaskMessages(ctx, taskId, "同步已启动", "数据校验中，预计等待 1 分钟")
+
+	// 如果是k8s类型的镜像，则由 plugin 回调创建
+	if req.Type != 1 {
+		klog.Infof("创建任务(%s)成功，其类型为 kubernetes，镜像由 plugin 回调创建", req.Name)
 		return nil
 	}
 
-	taskId := object.Id
-	if err = s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: "同步已启动"}); err != nil {
-		klog.Warningf("初始化任务信息失败 %v", err)
-	}
-
 	if err = s.CreateImageWithTag(ctx, taskId, req); err != nil {
+		s.CreateTaskMessages(ctx, taskId, fmt.Sprintf("创建镜像和版本失败 %v", err))
 		_ = s.DeleteTaskWithImages(ctx, taskId)
-		return fmt.Errorf("failed to create tasks images %v", err)
-	}
-
-	if err = s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: "数据校验中，预计等待 1 分钟"}); err != nil {
-		klog.Warningf("初始化任务数据检验失败 %v", err)
+		return err
 	}
 	return nil
+}
+
+// CreateTaskMessages 批量创建同步消息
+func (s *ServerController) CreateTaskMessages(ctx context.Context, taskId int64, messages ...string) {
+	for _, msg := range messages {
+		if err := s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: msg}); err != nil {
+			klog.Errorf("记录 %s 失败 %v", msg, err)
+		}
+	}
 }
 
 func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64, req *types.CreateTaskRequest) error {
