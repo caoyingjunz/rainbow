@@ -191,6 +191,8 @@ type (
 	}
 	SendNotificationRequest struct {
 		CreateNotificationRequest `json:",inline"`
+
+		Email string `json:"email"`
 	}
 
 	// PageRequest 分页配置

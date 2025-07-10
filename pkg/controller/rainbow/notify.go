@@ -57,7 +57,7 @@ func (s *ServerController) SendRegisterNotify(ctx context.Context, req *types.Se
 	}
 	for _, notify := range notifies {
 		http := util.NewHttpClient(5*time.Second, notify.Url)
-		msg := fmt.Sprintf("注册通知\n用户: %s\n时间: %v", req.UserName, time.Now().Format("2006-01-02 15:04:05"))
+		msg := fmt.Sprintf("注册通知\n用户名: %s\n时间: %v\nEmail: %s", req.UserName, time.Now().Format("2006-01-02 15:04:05"), req.Email)
 		if err = http.Post(notify.Url, nil,
 			PushMessage{Text: map[string]string{"content": msg}, Msgtype: "text"}, map[string]string{"Content-Type": "application/json"}); err != nil {
 			klog.Errorf("notify(%s) 推送失败 %v", notify.Name, err)
