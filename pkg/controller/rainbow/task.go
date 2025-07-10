@@ -95,7 +95,8 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	s.CreateTaskMessages(ctx, taskId, "同步已启动", "数据校验中，预计等待 1 分钟")
 
 	// 如果是k8s类型的镜像，则由 plugin 回调创建
-	if req.Type != 1 {
+	// 0：直接指定镜像列表 1: 指定 kubernetes 版本
+	if req.Type == 1 {
 		klog.Infof("创建任务(%s)成功，其类型为 kubernetes，镜像由 plugin 回调创建", req.Name)
 		return nil
 	}
