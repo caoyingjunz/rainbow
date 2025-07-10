@@ -15,7 +15,8 @@ type Notification struct {
 	Name      string `gorm:"index:idx_notifications_name,unique" json:"name"`
 	Role      int    `json:"role"`
 	Enable    bool   `json:"enable"`
-	Type      string `json:"type"` // 支持 webhook, dingding, wecom
+	Type      string `json:"type"` // 支持 webhook, dingtalk, wecom
+	Url       string `json:"url"`
 	Content   string `json:"content"`
 	ShortDesc string `json:"short_desc"`
 }

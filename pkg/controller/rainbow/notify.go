@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/klog/v2"
 
@@ -10,7 +11,13 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util"
 )
+
+type PushMessage struct {
+	Text    map[string]string `json:"text"`
+	Msgtype string            `json:"msgtype"`
+}
 
 func (s *ServerController) CreateNotify(ctx context.Context, req *types.CreateNotificationRequest) error {
 	_, err := s.factory.Notify().Create(ctx, &model.Notification{
@@ -22,7 +29,7 @@ func (s *ServerController) CreateNotify(ctx context.Context, req *types.CreateNo
 			UserId:   req.UserId,
 			UserName: req.UserName,
 		},
-		Content:   req.Content,
+		Url:       req.Url,
 		ShortDesc: req.ShortDesc,
 	})
 	if err != nil {
@@ -49,7 +56,14 @@ func (s *ServerController) SendRegisterNotify(ctx context.Context, req *types.Se
 		return err
 	}
 	for _, notify := range notifies {
-		fmt.Println("notify", notify)
+		http := util.NewHttpClient(5*time.Second, notify.Url)
+		msg := fmt.Sprintf("注册通知\n用户: %s\n时间: %v", req.UserName, time.Now().Format("2006-01-02 15:04:05"))
+		if err = http.Post(notify.Url, nil,
+			PushMessage{Text: map[string]string{"content": msg}, Msgtype: "text"}, map[string]string{"Content-Type": "application/json"}); err != nil {
+			klog.Errorf("notify(%s) 推送失败 %v", notify.Name, err)
+			continue
+		}
+		klog.Errorf("notify(%s) 推送成功", notify.Name)
 	}
 
 	return nil
