@@ -39,11 +39,12 @@ type ServerInterface interface {
 	GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error)
 
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
-	LoginRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
 	ListRegistries(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	LoginRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
 	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error

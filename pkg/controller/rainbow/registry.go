@@ -2,7 +2,7 @@ package rainbow
 
 import (
 	"context"
-	"fmt"
+	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -26,10 +26,14 @@ func (s *ServerController) CreateRegistry(ctx context.Context, req *types.Create
 
 func (s *ServerController) LoginRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
 	if err := docker.LoginDocker(req.Repository, req.Username, req.Password); err != nil {
-		return fmt.Errorf("failed login remote registry, please check input")
+		klog.Error("登陆镜像仓库 (%s) 失败 %v", req.Repository, err)
+		return err
+	}
+
+	if err := docker.LogoutDocker(req.Repository); err != nil {
+		klog.Warningf("退出 %s 异常 %v", req.Repository, err)
 	}
 	return nil
-
 }
 
 func (s *ServerController) UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error {

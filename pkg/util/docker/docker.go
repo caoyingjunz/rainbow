@@ -16,7 +16,17 @@ func LoginDocker(registry, username, password string) error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("docker login failed (using %s): %v, output: %s", "docker", err, string(output))
+		return fmt.Errorf("%v %s", err, string(output))
+	}
+
+	return nil
+}
+
+func LogoutDocker(registry string) error {
+	cmd := exec.Command("docker", "logout", registry)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v %s", err, string(output))
 	}
 
 	return nil
