@@ -144,11 +144,28 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 	go s.startHeartbeat(ctx)
 	go s.getNextWorkItems(ctx)
 	go s.startSyncActionUsage(ctx)
+	go s.startGC(ctx)
 
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
 	}
 
+	return nil
+}
+
+func (s *AgentController) startGC(ctx context.Context) {
+	ticker := time.NewTicker(3600 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := s.GarbageCollect(ctx); err != nil {
+			klog.Errorf("GarbageCollect 失败: %v", err)
+			continue
+		}
+		klog.Infof("GarbageCollect 完成")
+	}
+}
+func (s *AgentController) GarbageCollect(ctx context.Context) error {
 	return nil
 }
 
@@ -318,7 +335,15 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 		s.handleErr(ctx, err, key)
 	} else {
 		_ = s.factory.Task().UpdateDirectly(ctx, taskId, map[string]interface{}{"status": "镜像初始化", "message": "初始化环境中", "process": 1})
-		s.handleErr(ctx, s.sync(ctx, taskId, resourceVersion), key)
+		if err = s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: "节点调度完成"}); err != nil {
+			klog.Errorf("记录节点调度失败 %v", err)
+		}
+		if err = s.sync(ctx, taskId, resourceVersion); err != nil {
+			if msgErr := s.factory.Task().CreateTaskMessage(ctx, &model.TaskMessage{TaskId: taskId, Message: fmt.Sprintf("同步失败，原因: %v", err)}); msgErr != nil {
+				klog.Errorf("记录同步失败 %v", msgErr)
+			}
+			s.handleErr(ctx, err, key)
+		}
 	}
 	return true
 }

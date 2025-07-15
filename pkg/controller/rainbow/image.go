@@ -120,7 +120,7 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 	}
 	// 检查 Lock 字段，如果为 true 则不允许删除
 	if image.IsLocked {
-		return fmt.Errorf("镜像 %d 已被锁定，不允许删除", imageId)
+		return fmt.Errorf("镜像被锁定，不允许删除")
 	}
 
 	if err := s.factory.Image().Delete(ctx, imageId); err != nil {

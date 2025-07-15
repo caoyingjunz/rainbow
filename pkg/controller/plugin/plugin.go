@@ -503,7 +503,7 @@ func (p *PluginController) CreateImages(names []string) ([]model.Image, error) {
 	err := p.httpClient.Post(
 		fmt.Sprintf("%s/rainbow/images/batches", p.Callback),
 		&resp,
-		map[string]interface{}{"task_id": p.TaskId, "names": names})
+		map[string]interface{}{"task_id": p.TaskId, "names": names}, nil)
 
 	return resp.Result, err
 }
@@ -516,7 +516,7 @@ func (p *PluginController) CreateTaskMessage(msg string) {
 	if err := p.httpClient.Post(
 		fmt.Sprintf("%s/rainbow/tasks/%d/messages", p.Callback, p.TaskId),
 		nil,
-		map[string]interface{}{"message": msg}); err != nil {
+		map[string]interface{}{"message": msg}, nil); err != nil {
 		klog.Errorf("创建 %s 失败 %v", msg, err)
 	} else {
 		klog.Infof("创建 %s 成功", msg)

@@ -10,7 +10,7 @@ import (
 )
 
 type HttpInterface interface {
-	Post(url string, val interface{}, data map[string]interface{}) error
+	Post(url string, val interface{}, data interface{}, header map[string]string) error
 	Put(url string, val interface{}, data map[string]interface{}) error
 	Get(url string, val interface{}) error
 }
@@ -63,9 +63,12 @@ func (c *httpClient) Post(url string, val interface{}, data interface{}, header 
 	if err != nil {
 		return err
 	}
+
 	// 设置请求头
-	for key, value := range header {
-		req.Header.Set(key, value)
+	if header != nil {
+		for key, value := range header {
+			req.Header.Set(key, value)
+		}
 	}
 
 	resp, err := client.Do(req)
