@@ -103,9 +103,10 @@ type RedisOption struct {
 }
 
 type AgentOption struct {
-	Name      string `yaml:"name"`
-	DataDir   string `yaml:"data_dir"`
-	RpcServer string `yaml:"rpc_server"`
+	Name       string `yaml:"name"`
+	DataDir    string `yaml:"data_dir"`
+	RpcServer  string `yaml:"rpc_server"`
+	RetainDays int    `yaml:"retain_days"`
 }
 
 type RateLimitOption struct {
