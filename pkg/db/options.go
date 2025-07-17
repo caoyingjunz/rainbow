@@ -145,6 +145,15 @@ func WithNameLike(name string) Options {
 	}
 }
 
+func WithNamespace(ns string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(ns) == 0 {
+			return tx
+		}
+		return tx.Where("namespace = ?", ns)
+	}
+}
+
 func WithStatus(status string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(status) == 0 {

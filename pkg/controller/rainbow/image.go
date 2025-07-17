@@ -156,6 +156,7 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 	return s.factory.Image().ListImagesWithTag(ctx,
 		db.WithUser(listOption.UserId),
 		db.WithNameLike(listOption.NameSelector),
+		db.WithNamespace(listOption.Namespace),
 		db.WithLimit(listOption.Limit),
 		db.WithModifyOrderByDesc())
 }

@@ -207,8 +207,9 @@ type (
 	}
 
 	CustomMeta struct {
-		Status int `form:"status"`
-		Limits int `form:"limits"`
+		Status    int    `form:"status"`
+		Limits    int    `form:"limits"`
+		Namespace string `form:"namespace"`
 	}
 
 	RemoteSearchRequest struct {
@@ -265,4 +266,12 @@ type ListOptions struct {
 
 	PageRequest `json:",inline"` // 分页请求属性
 	QueryOption `json:",inline"` // 搜索内容
+}
+
+type PageResult struct {
+	PageRequest `json:",inline"`
+
+	Total     int64         `json:"total"`      // 总记录数
+	TotalPage int           `json:"total_page"` // 总页数
+	Items     []interface{} `json:"items"`      // 数据列表
 }
