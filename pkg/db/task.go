@@ -18,6 +18,7 @@ type TaskInterface interface {
 	Get(ctx context.Context, taskId int64) (*model.Task, error)
 	List(ctx context.Context, opts ...Options) ([]model.Task, error)
 
+	DeleteInBatch(ctx context.Context, taskIds []int64) error
 	UpdateDirectly(ctx context.Context, taskId int64, updates map[string]interface{}) error
 
 	GetOne(ctx context.Context, taskId int64, resourceVersion int64) (*model.Task, error)
@@ -94,6 +95,10 @@ func (a *task) UpdateDirectly(ctx context.Context, taskId int64, updates map[str
 
 func (a *task) Delete(ctx context.Context, taskId int64) error {
 	return a.db.WithContext(ctx).Where("id = ?", taskId).Delete(&model.Task{}).Error
+}
+
+func (a *task) DeleteInBatch(ctx context.Context, taskIds []int64) error {
+	return a.db.WithContext(ctx).Where("id in ?", taskIds).Delete(&model.Task{}).Error
 }
 
 func (a *task) Get(ctx context.Context, agentId int64) (*model.Task, error) {

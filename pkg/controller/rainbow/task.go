@@ -372,9 +372,9 @@ func (s *ServerController) ListTaskMessages(ctx context.Context, taskId int64) (
 }
 
 func (s *ServerController) ListTasksByIds(ctx context.Context, ids []int64) (interface{}, error) {
-	return nil, nil
+	return s.factory.Task().List(ctx, db.WithIDIn(ids...))
 }
 
 func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) error {
-	return nil
+	return s.factory.Task().DeleteInBatch(ctx, ids)
 }
