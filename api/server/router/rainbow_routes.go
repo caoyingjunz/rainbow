@@ -333,6 +333,46 @@ func (cr *rainbowRouter) listTasks(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) listTasksByIds(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		ids struct {
+			Ids []int64 `json:"ids"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &ids, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListTasksByIds(c, ids.Ids); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteTasksByIds(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		ids struct {
+			Ids []int64 `json:"ids"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &ids, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().DeleteTasksByIds(c, ids.Ids); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) listTaskImages(c *gin.Context) {
 	resp := httputils.NewResponse()
 

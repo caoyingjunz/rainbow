@@ -370,3 +370,11 @@ func (s *ServerController) CreateTaskMessage(ctx context.Context, req types.Crea
 func (s *ServerController) ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error) {
 	return s.factory.Task().ListTaskMessages(ctx, db.WithTask(taskId))
 }
+
+func (s *ServerController) ListTasksByIds(ctx context.Context, ids []int64) (interface{}, error) {
+	return nil, nil
+}
+
+func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) error {
+	return nil
+}
