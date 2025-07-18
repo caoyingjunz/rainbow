@@ -21,11 +21,12 @@ type ImageInterface interface {
 	CreateFlow(ctx context.Context, object *model.Downflow) error
 
 	CreateInBatch(ctx context.Context, objects []model.Image) error
+	DeleteInBatch(ctx context.Context, ids []int64) error
 	SoftDeleteInBatch(ctx context.Context, taskId int64) error
 	ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error)
 	ListWithUser(ctx context.Context, userId string, opts ...Options) ([]model.Image, error)
 
-	Count(ctx context.Context) (int64, error)
+	Count(ctx context.Context, opts ...Options) (int64, error)
 
 	GetByPath(ctx context.Context, path string, mirror string, opts ...Options) (*model.Image, error)
 	ListImagesWithTag(ctx context.Context, opts ...Options) ([]model.Image, error)
@@ -94,6 +95,15 @@ func (a *image) Delete(ctx context.Context, imageId int64) error {
 	return nil
 }
 
+func (a *image) DeleteInBatch(ctx context.Context, ids []int64) error {
+	for _, id := range ids {
+		if err := a.Delete(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (a *image) SoftDeleteInBatch(ctx context.Context, taskId int64) error {
 	updates := make(map[string]interface{})
 	updates["gmt_deleted"] = time.Now()
@@ -157,9 +167,14 @@ func (a *image) ListWithUser(ctx context.Context, userId string, opts ...Options
 	return audits, nil
 }
 
-func (a *image) Count(ctx context.Context) (int64, error) {
+func (a *image) Count(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
 	var total int64
-	if err := a.db.WithContext(ctx).Model(&model.Image{}).Count(&total).Error; err != nil {
+	if err := tx.Model(&model.Image{}).Count(&total).Error; err != nil {
 		return 0, err
 	}
 

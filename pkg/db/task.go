@@ -28,7 +28,7 @@ type TaskInterface interface {
 	GetOneForSchedule(ctx context.Context, opts ...Options) (*model.Task, error)
 	GetRunningTask(ctx context.Context, opts ...Options) ([]model.Task, error)
 
-	Count(ctx context.Context) (int64, error)
+	Count(ctx context.Context, opts ...Options) (int64, error)
 
 	ListReview(ctx context.Context) ([]model.Review, error)
 	AddDailyReview(ctx context.Context, object *model.Daily) error
@@ -214,9 +214,14 @@ func (a *task) AssignToAgent(ctx context.Context, taskId int64, agentName string
 	return f.Error
 }
 
-func (a *task) Count(ctx context.Context) (int64, error) {
+func (a *task) Count(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
 	var total int64
-	if err := a.db.WithContext(ctx).Model(&model.Task{}).Count(&total).Error; err != nil {
+	if err := tx.Model(&model.Task{}).Count(&total).Error; err != nil {
 		return 0, err
 	}
 

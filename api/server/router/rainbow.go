@@ -74,6 +74,13 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		imageRoute.PUT("/status", cr.UpdateImageStatus)
 		imageRoute.POST("/batches", cr.createImages)
 		imageRoute.DELETE("/:Id/tags/:name", cr.deleteImageTag)
+
+	}
+
+	batchRoute := httpEngine.Group("/rainbow/batch")
+	{
+		batchRoute.POST("/list/images", cr.listImagesByIds)     // 根据ids批量获取镜像列表
+		batchRoute.POST("/delete/images", cr.deleteImagesByIds) // 根据ids批量删除镜像列表
 	}
 
 	searchRoute := httpEngine.Group("/rainbow/search")

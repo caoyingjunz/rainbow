@@ -591,6 +591,46 @@ func (cr *rainbowRouter) createImages(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+func (cr *rainbowRouter) listImagesByIds(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		ids struct {
+			Ids []int64 `json:"ids"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &ids, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListImagesByIds(c, ids.Ids); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) deleteImagesByIds(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		ids struct {
+			Ids []int64 `json:"ids"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &ids, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().DeleteImagesByIds(c, ids.Ids); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) updateImage(c *gin.Context) {
 	resp := httputils.NewResponse()
 

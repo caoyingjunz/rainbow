@@ -282,7 +282,42 @@ func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTask
 }
 
 func (s *ServerController) ListTasks(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Task().List(ctx, db.WithUser(listOption.UserId), db.WithNameLike(listOption.NameSelector), db.WithOrderByDesc())
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+	opts := []db.Options{
+		db.WithUser(listOption.UserId),
+		db.WithNameLike(listOption.NameSelector),
+		db.WithNamespace(listOption.Namespace),
+		db.WithAgent(listOption.Agent),
+	}
+
+	var err error
+	pageResult.Total, err = s.factory.Task().Count(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取任务总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+	pageResult.Items, err = s.factory.Task().List(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取推送任务列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {

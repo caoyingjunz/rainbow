@@ -153,16 +153,56 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 }
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Image().ListImagesWithTag(ctx,
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+
+	opts := []db.Options{ // 先写条件，再写排序，再偏移，再设置每页数量
 		db.WithUser(listOption.UserId),
 		db.WithNameLike(listOption.NameSelector),
 		db.WithNamespace(listOption.Namespace),
+	}
+	var err error
+
+	// 先获取总数
+	pageResult.Total, err = s.factory.Image().Count(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取镜像总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
 		db.WithLimit(listOption.Limit),
-		db.WithModifyOrderByDesc())
+	}...)
+	pageResult.Items, err = s.factory.Image().ListImagesWithTag(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取镜像列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
 
 func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	return s.factory.Image().List(ctx, db.WithPublic(), db.WithNameLike(listOption.NameSelector), db.WithLimit(listOption.Limit))
+}
+
+func (s *ServerController) ListImagesByIds(ctx context.Context, ids []int64) (interface{}, error) {
+	return s.factory.Image().List(ctx, db.WithIDIn(ids...))
+}
+
+func (s *ServerController) DeleteImagesByIds(ctx context.Context, ids []int64) error {
+	return s.factory.Image().DeleteInBatch(ctx, ids)
 }
 
 func (s *ServerController) isDefaultRepo(regId int64) bool {

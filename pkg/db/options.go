@@ -154,6 +154,15 @@ func WithNamespace(ns string) Options {
 	}
 }
 
+func WithAgent(agent string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(agent) == 0 {
+			return tx
+		}
+		return tx.Where("agent_name = ?", agent)
+	}
+}
+
 func WithStatus(status string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(status) == 0 {
