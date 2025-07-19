@@ -118,6 +118,9 @@ type ServerInterface interface {
 	CreateNotify(ctx context.Context, req *types.CreateNotificationRequest) error
 	SendNotify(ctx context.Context, req *types.SendNotificationRequest) error
 
+	ListKubernetesVersions(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	SyncKubernetesVersions(ctx context.Context) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 }
 

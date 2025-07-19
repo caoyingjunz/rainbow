@@ -44,6 +44,9 @@ type TaskInterface interface {
 	GetUser(ctx context.Context, userId string) (*model.User, error)
 	DeleteUser(ctx context.Context, userId string) error
 	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
+
+	ListKubernetesVersions(tx context.Context, opts ...Options) ([]model.KubernetesVersion, error)
+	GetKubernetesVersionCount(tx context.Context, opts ...Options) (int64, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -336,4 +339,32 @@ func (a *task) ListUsers(ctx context.Context, opts ...Options) ([]model.User, er
 
 func (a *task) DeleteUser(ctx context.Context, userId string) error {
 	return a.db.WithContext(ctx).Where("user_id = ?", userId).Delete(&model.User{}).Error
+}
+
+func (a *task) ListKubernetesVersions(ctx context.Context, opts ...Options) ([]model.KubernetesVersion, error) {
+	var audits []model.KubernetesVersion
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *task) GetKubernetesVersionCount(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.KubernetesVersion{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }

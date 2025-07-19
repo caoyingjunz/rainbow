@@ -1335,3 +1335,35 @@ func (cr *rainbowRouter) sendNotification(c *gin.Context) {
 
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) listKubernetesVersions(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err        error
+		listOption types.ListOptions
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListKubernetesVersions(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) syncRemoteKubernetesVersions(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err error
+	)
+	if resp.Result, err = cr.c.Server().SyncKubernetesVersions(c); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	httputils.SetSuccess(c, resp)
+}
