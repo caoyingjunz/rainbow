@@ -78,6 +78,8 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 		result, err = s.SearchTags(ctx, reqMeta.TagSearchRequest)
 	case 3:
 		result, err = s.SearchImageInfo(ctx, reqMeta.TagInfoSearchRequest)
+	case 4:
+		result, err = s.SyncKubernetesTags(ctx, reqMeta.KubernetesTagRequest)
 	default:
 		return fmt.Errorf("unsupported req type %d", reqMeta.Type)
 	}
@@ -134,6 +136,11 @@ func (s *AgentController) SearchImageInfo(ctx context.Context, req types.RemoteT
 		return DoHttpRequest(url)
 	}
 	return nil, nil
+}
+
+func (s *AgentController) SyncKubernetesTags(ctx context.Context, req types.KubernetesTagRequest) ([]byte, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/kubernetes/kubernetes/tags?per_page=100")
+	return DoHttpRequest(url)
 }
 
 func (s *AgentController) Run(ctx context.Context, workers int) error {

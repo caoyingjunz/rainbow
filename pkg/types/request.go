@@ -243,12 +243,18 @@ type (
 		PageSize string `json:"page_size" form:"page_size"`
 	}
 
+	KubernetesTagRequest struct {
+		ClientId string `json:"client_id" form:"client_id"`
+		SyncAll  bool   `json:"sync_all"`
+	}
+
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
 		RepositorySearchRequest RemoteSearchRequest
 		TagSearchRequest        RemoteTagSearchRequest
 		TagInfoSearchRequest    RemoteTagInfoSearchRequest
+		KubernetesTagRequest    KubernetesTagRequest
 	}
 
 	CreateTaskMessageRequest struct {

@@ -9,7 +9,7 @@ func init() {
 type KubernetesVersion struct {
 	rainbow.Model
 
-	Tag string `json:"tag" gorm:"index:idx"`
+	Tag string `gorm:"index:idx_tag,unique" json:"tag"` // k8s, db, ai等标识
 }
 
 func (t *KubernetesVersion) TableName() string {

@@ -2,7 +2,9 @@ package rainbow
 
 import (
 	"context"
-
+	"encoding/json"
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
+	"github.com/google/uuid"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
@@ -43,6 +45,57 @@ func (s *ServerController) ListKubernetesVersions(ctx context.Context, listOptio
 	return pageResult, nil
 }
 
-func (s *ServerController) SyncKubernetesVersions(ctx context.Context) (interface{}, error) {
-	return nil, nil
+func (s *ServerController) SyncKubernetesVersions(ctx context.Context, req *types.KubernetesTagRequest) (interface{}, error) {
+	key := uuid.NewString()
+
+	data, err := json.Marshal(types.RemoteMetaRequest{
+		Type:                 4,
+		Uid:                  key,
+		KubernetesTagRequest: *req,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	if err != nil {
+		return nil, err
+	}
+	var Tags []Tag
+	if err = json.Unmarshal(val, &Tags); err != nil {
+		klog.Errorf("序列号 k8s tag 失败 %v", err)
+		return nil, err
+	}
+
+	oldTags, err := s.factory.Task().ListKubernetesVersions(ctx)
+	if err != nil {
+		klog.Errorf("获取历史版本失败 %v", err)
+		return nil, err
+	}
+	oldMap := make(map[string]bool)
+	for _, oldTag := range oldTags {
+		oldMap[oldTag.Tag] = true
+	}
+
+	addVersions := make([]string, 0)
+	for _, tag := range Tags {
+		if oldMap[tag.Name] {
+			continue
+		}
+		err = s.factory.Task().CreateKubernetesVersion(ctx, &model.KubernetesVersion{
+			Tag: tag.Name,
+		})
+		// 新增成功
+		if err == nil {
+			addVersions = append(addVersions, tag.Name)
+		} else {
+			klog.Errorf("同步k8s 版本(%s) 失败 %v", tag.Name, err)
+		}
+	}
+
+	return addVersions, nil
+}
+
+type Tag struct {
+	Name string `json:"name"`
 }

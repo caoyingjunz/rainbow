@@ -45,8 +45,10 @@ type TaskInterface interface {
 	DeleteUser(ctx context.Context, userId string) error
 	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
 
-	ListKubernetesVersions(tx context.Context, opts ...Options) ([]model.KubernetesVersion, error)
-	GetKubernetesVersionCount(tx context.Context, opts ...Options) (int64, error)
+	ListKubernetesVersions(ctx context.Context, opts ...Options) ([]model.KubernetesVersion, error)
+	GetKubernetesVersionCount(ctx context.Context, opts ...Options) (int64, error)
+	GetKubernetesVersion(ctx context.Context, name string) (*model.KubernetesVersion, error)
+	CreateKubernetesVersion(ctx context.Context, object *model.KubernetesVersion) error
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -367,4 +369,23 @@ func (a *task) GetKubernetesVersionCount(ctx context.Context, opts ...Options) (
 	}
 
 	return total, nil
+}
+
+func (a *task) GetKubernetesVersion(ctx context.Context, name string) (*model.KubernetesVersion, error) {
+	var audit model.KubernetesVersion
+	if err := a.db.WithContext(ctx).Where("name = ?", name).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
+func (a *task) CreateKubernetesVersion(ctx context.Context, object *model.KubernetesVersion) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
+		return err
+	}
+	return nil
 }

@@ -1360,8 +1360,14 @@ func (cr *rainbowRouter) syncRemoteKubernetesVersions(c *gin.Context) {
 
 	var (
 		err error
+		req types.KubernetesTagRequest
 	)
-	if resp.Result, err = cr.c.Server().SyncKubernetesVersions(c); err != nil {
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().SyncKubernetesVersions(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
