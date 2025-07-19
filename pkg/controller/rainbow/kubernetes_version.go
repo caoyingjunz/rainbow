@@ -3,11 +3,12 @@ package rainbow
 import (
 	"context"
 	"encoding/json"
-	"github.com/caoyingjunz/rainbow/pkg/db/model"
+
 	"github.com/google/uuid"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
@@ -93,6 +94,7 @@ func (s *ServerController) SyncKubernetesVersions(ctx context.Context, req *type
 		}
 	}
 
+	klog.Infof("新增同步版本(%v)", addVersions)
 	return addVersions, nil
 }
 
