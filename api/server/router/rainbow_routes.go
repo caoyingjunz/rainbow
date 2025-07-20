@@ -578,8 +578,16 @@ func (cr *rainbowRouter) updateAgentStatus(c *gin.Context) {
 func (cr *rainbowRouter) listAgents(c *gin.Context) {
 	resp := httputils.NewResponse()
 
-	var err error
-	if resp.Result, err = cr.c.Server().ListAgents(c); err != nil {
+	var (
+		listOption types.ListOptions
+		err        error
+	)
+	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	if resp.Result, err = cr.c.Server().ListAgents(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

@@ -61,7 +61,7 @@ type ServerInterface interface {
 
 	UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
-	ListAgents(ctx context.Context) (interface{}, error)
+	ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
 
 	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
@@ -194,8 +194,8 @@ func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAge
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, updates)
 }
 
-func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) {
-	return s.factory.Agent().List(ctx)
+func (s *ServerController) ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Agent().List(ctx, db.WithNameLike(listOption.NameSelector))
 }
 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
