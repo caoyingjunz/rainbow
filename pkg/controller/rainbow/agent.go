@@ -105,7 +105,7 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 		return err
 	}
 
-	klog.Infof("搜索(%s)结果已暂存 key(%s)", reqMeta.RepositorySearchRequest.Query, reqMeta.Uid)
+	klog.Infof("搜索结果已暂存, key(%s)", reqMeta.RepositorySearchRequest.Query, reqMeta.Uid)
 	return nil
 }
 

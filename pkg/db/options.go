@@ -145,6 +145,15 @@ func WithNameLike(name string) Options {
 	}
 }
 
+func WithTagLike(tag string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(tag) == 0 {
+			return tx
+		}
+		return tx.Where("tag like ?", "%"+tag+"%")
+	}
+}
+
 func WithNamespace(ns string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(ns) == 0 {

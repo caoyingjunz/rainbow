@@ -199,8 +199,22 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.startSyncDailyPulls(ctx)
 	go s.startRpcServer(ctx)
 	go s.startAgentHeartbeat(ctx)
+	go s.startSyncKubernetesVersion(ctx)
 
 	return nil
+}
+
+func (s *ServerController) startSyncKubernetesVersion(ctx context.Context) {
+	klog.Infof("starting kubernetes version syncer")
+	ticker := time.NewTicker(3600 * time.Second)
+	defer ticker.Stop()
+
+	opt := types.KubernetesTagRequest{SyncAll: false}
+	for range ticker.C {
+		if _, err := s.SyncKubernetesVersions(ctx, &opt); err != nil {
+			klog.Error("failed kubernetes version syncer %v", err)
+		}
+	}
 }
 
 func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
