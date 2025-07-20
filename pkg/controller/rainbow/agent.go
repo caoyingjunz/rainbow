@@ -236,7 +236,7 @@ func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 			klog.Errorf("agent(%s) 同步 usage 失败 %v", agent.Name, err)
 			continue
 		}
-		klog.Infof("完成同步 agent(%s) 的 usage", agent.Name)
+		//klog.Infof("完成同步 agent(%s) 的 usage", agent.Name)
 	}
 }
 
