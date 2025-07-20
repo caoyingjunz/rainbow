@@ -182,9 +182,14 @@ func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.Upd
 }
 
 func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
+	repo := req.GithubRepository
+	if len(repo) == 0 {
+		repo = fmt.Sprintf("https://github.com/%s/plugin.git", req.AgentName)
+	}
+
 	updates := make(map[string]interface{})
 	updates["github_user"] = req.GithubUser
-	updates["github_repository"] = req.GithubRepository
+	updates["github_repository"] = repo
 	updates["github_token"] = req.GithubToken
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, updates)
 }
