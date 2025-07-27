@@ -2,10 +2,11 @@ package model
 
 import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
+	"time"
 )
 
 func init() {
-	register(&Task{}, &TaskMessage{})
+	register(&Task{}, &TaskMessage{}, &Subscribe{}, &SubscribeMessage{})
 }
 
 type Task struct {
@@ -42,4 +43,34 @@ type TaskMessage struct {
 
 func (t *TaskMessage) TableName() string {
 	return "task_messages"
+}
+
+type Subscribe struct { // 同步远端镜像更新状态
+	rainbow.Model
+	rainbow.UserModel
+
+	Path           string        `json:"path"` // 默认会自动填充命名空间，比如 nginx 表示 library/nginx， jenkins/jenkins 则直接使用
+	RawPath        string        `json:"raw_path"`
+	Enable         bool          `json:"enable"` // 启动或者关闭
+	Status         string        `json:"status"`
+	Limit          int           `json:"limit"` // 同步最新多少个版本
+	RegisterId     int64         `json:"register_id"`
+	LastNotifyTime time.Time     `json:"last_notify_time" gorm:"column:last_notify_time;type:datetime;default:current_timestamp;not null"` // 上次触发时间
+	Interval       time.Duration `json:"interval"`                                                                                         // 间隔多久同步一次
+	FailTimes      int           `json:"fail_times"`                                                                                       // 失败次数
+}
+
+func (t *Subscribe) TableName() string {
+	return "subscribes"
+}
+
+type SubscribeMessage struct {
+	rainbow.Model
+
+	SubscribeId int64  `json:"subscribe_id" gorm:"index:idx"`
+	Message     string `json:"message"`
+}
+
+func (t *SubscribeMessage) TableName() string {
+	return "subscribe_messages"
 }

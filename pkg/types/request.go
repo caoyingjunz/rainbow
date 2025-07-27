@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 type (
 	UserMetaRequest struct {
 		UserId   string `json:"user_id"`
@@ -260,6 +262,16 @@ type (
 	CreateTaskMessageRequest struct {
 		Id      int64  `json:"id"`
 		Message string `json:"message"`
+	}
+
+	CreateSubscribeRequest struct {
+		UserMetaRequest `json:",inline"`
+
+		Path       string        `json:"path"`   // 默认会自动填充命名空间，比如 nginx 表示 library/nginx， jenkins/jenkins 则直接使用
+		Enable     bool          `json:"enable"` // 启动或者关闭
+		Limit      int           `json:"limit"`  // 同步最新多少个版本
+		RegisterId int64         `json:"register_id"`
+		Interval   time.Duration `json:"interval"` // 间隔多久同步一次
 	}
 )
 

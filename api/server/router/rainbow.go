@@ -45,6 +45,11 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		taskRoute.GET(":Id/messages", cr.listTaskMessages)
 	}
 
+	subscribeRoute := httpEngine.Group("/rainbow/subscribe")
+	{
+		subscribeRoute.POST("", cr.createSubscribe)
+	}
+
 	kubernetesVersionRoute := httpEngine.Group("/rainbow/kubernetes/versions")
 	{
 		kubernetesVersionRoute.GET("", cr.listKubernetesVersions)

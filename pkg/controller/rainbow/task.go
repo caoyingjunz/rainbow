@@ -3,11 +3,11 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"strings"
-
+	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
+	"strings"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -402,4 +402,31 @@ func (s *ServerController) ListTasksByIds(ctx context.Context, ids []int64) (int
 
 func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) error {
 	return s.factory.Task().DeleteInBatch(ctx, ids)
+}
+
+func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
+	if req.Limit > 100 {
+		return fmt.Errorf("订阅镜像版本数超过阈值 100")
+	}
+
+	rawPath := req.Path
+	parts := strings.Split(rawPath, "/")
+	if len(parts) != 1 && len(parts) != 2 {
+		return fmt.Errorf("订阅镜像名称路径不符合要求")
+	}
+
+	if len(parts) == 1 {
+		rawPath = "library" + "/" + rawPath
+	}
+	return s.factory.Task().CreateSubscribe(ctx, &model.Subscribe{
+		UserModel: rainbow.UserModel{
+			UserId:   req.UserId,
+			UserName: req.UserName,
+		},
+		Path:     req.Path,
+		RawPath:  rawPath,
+		Enable:   req.Enable,   // 是否启动订阅
+		Limit:    req.Limit,    // 最多同步多少个版本
+		Interval: req.Interval, // 多久执行一次
+	})
 }

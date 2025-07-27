@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	register(&Agent{})
+	register(&Agent{}, &Account{})
 }
 
 const (
@@ -36,4 +36,19 @@ type Agent struct {
 
 func (a *Agent) TableName() string {
 	return "agents"
+}
+
+type Account struct {
+	rainbow.Model
+
+	Type            string    `json:"type"` // dockerhub
+	UserName        string    `json:"user_name"`
+	Password        string    `json:"password"`
+	Token           string    `json:"token"`
+	TokenExpireTime time.Time `json:"token_expire_time"` // Token 过期时间
+	RetainTimes     int       `json:"retain_times"`      // 剩余可查询次数
+}
+
+func (a *Account) TableName() string {
+	return "accounts"
 }

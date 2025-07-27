@@ -49,6 +49,9 @@ type TaskInterface interface {
 	GetKubernetesVersionCount(ctx context.Context, opts ...Options) (int64, error)
 	GetKubernetesVersion(ctx context.Context, name string) (*model.KubernetesVersion, error)
 	CreateKubernetesVersion(ctx context.Context, object *model.KubernetesVersion) error
+
+	CreateSubscribe(ctx context.Context, object *model.Subscribe) error
+	ListSubscribes(ctx context.Context, opts ...Options) ([]model.Subscribe, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -388,4 +391,28 @@ func (a *task) CreateKubernetesVersion(ctx context.Context, object *model.Kubern
 		return err
 	}
 	return nil
+}
+
+func (a *task) CreateSubscribe(ctx context.Context, object *model.Subscribe) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (a *task) ListSubscribes(ctx context.Context, opts ...Options) ([]model.Subscribe, error) {
+	var audits []model.Subscribe
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
 }

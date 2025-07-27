@@ -53,6 +53,8 @@ type ServerInterface interface {
 	GetTask(ctx context.Context, taskId int64) (interface{}, error)
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
+	CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error
+
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
@@ -205,6 +207,48 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.startRpcServer(ctx)
 	go s.startAgentHeartbeat(ctx)
 	go s.startSyncKubernetesVersion(ctx)
+	go s.startSubscribeController(ctx)
+
+	return nil
+}
+
+func (s *ServerController) startSubscribeController(ctx context.Context) {
+	klog.Infof("starting subscribe controller")
+
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		subscribes, err := s.factory.Task().ListSubscribes(ctx, db.WithEnable(1))
+		if err != nil {
+			klog.Errorf("获取全部订阅失败 %v", err)
+			continue
+		}
+
+		for _, sub := range subscribes {
+			if sub.FailTimes >= 5 {
+				klog.Warningf("订阅 (%s) 失败超过限制，已终止订阅", sub.Path)
+				continue
+			}
+			now := time.Now()
+			if now.Sub(sub.LastNotifyTime) < sub.Interval*time.Second {
+				klog.Infof("订阅 (%s) 时间间隔 %s 暂时无需执行", sub.Path, sub.Interval)
+				continue
+			}
+
+			if err = s.subscribe(ctx, sub); err != nil {
+				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
+			}
+		}
+	}
+}
+
+// 1. 获取远端镜像版本列表
+// 2. 获取本地已存在的镜像版本
+// 3. 同步差异镜像版本
+func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) error {
+
+	klog.Infof("sub", sub.Path)
 
 	return nil
 }

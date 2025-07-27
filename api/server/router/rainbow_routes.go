@@ -1138,6 +1138,24 @@ func (cr *rainbowRouter) searchRepositoryTagInfo(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) createSubscribe(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		req types.CreateSubscribeRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateSubscribe(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createTaskMessage(c *gin.Context) {
 	resp := httputils.NewResponse()
 	var (
