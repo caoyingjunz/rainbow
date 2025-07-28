@@ -58,7 +58,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 
 	// 填充任务名称
 	if len(strings.TrimSpace(req.Name)) == 0 {
-		req.Name = uuid.NewRandName(8)
+		req.Name = uuid.NewRandName("", 8)
 	}
 	// 初始化仓库
 	if req.RegisterId == 0 {

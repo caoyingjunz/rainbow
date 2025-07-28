@@ -26,6 +26,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
+	"github.com/caoyingjunz/rainbow/pkg/util/uuid"
 )
 
 type ServerGetter interface {
@@ -279,7 +280,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		Namespace:  ns,
 		Repository: repo,
 		Page:       "1",
-		PageSize:   "10", // 同步最新
+		PageSize:   fmt.Sprintf("%d", sub.Limit), // 同步最新
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
@@ -292,7 +293,19 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		images = append(images, sub.Path+":"+tag.Name)
 	}
 
-	return nil
+	err = s.CreateTask(ctx, &types.CreateTaskRequest{
+		Name:        uuid.NewRandName(fmt.Sprintf("subscribe-%s-", sub.Path), 8),
+		UserId:      sub.UserId,
+		UserName:    sub.UserName,
+		RegisterId:  sub.RegisterId,
+		Namespace:   sub.Namespace,
+		Images:      images,
+		PublicImage: true,
+	})
+	if err != nil {
+		klog.Errorf("创建订阅任务失败 %v", err)
+	}
+	return err
 }
 
 func (s *ServerController) startSyncKubernetesVersion(ctx context.Context) {

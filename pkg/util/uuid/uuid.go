@@ -30,7 +30,7 @@ func NewUUID() string {
 	return uuid.New().String()
 }
 
-func NewRandName(length int) string {
+func NewRandName(prefix string, length int) string {
 	chars := []rune("abcdefghijklmnopqrstuvwxyz")
 
 	rs := make([]rune, length)
@@ -38,5 +38,8 @@ func NewRandName(length int) string {
 		rs[i] = chars[rand.Intn(len(chars))]
 	}
 
-	return namePrefix + string(rs)
+	if len(prefix) == 0 {
+		return namePrefix + string(rs)
+	}
+	return prefix + string(rs)
 }

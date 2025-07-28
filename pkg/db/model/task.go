@@ -55,6 +55,7 @@ type Subscribe struct { // 同步远端镜像更新状态
 	Status         string        `json:"status"`
 	Limit          int           `json:"limit"` // 同步最新多少个版本
 	RegisterId     int64         `json:"register_id"`
+	Namespace      string        `json:"namespace"`
 	LastNotifyTime time.Time     `json:"last_notify_time" gorm:"column:last_notify_time;type:datetime;default:current_timestamp;not null"` // 上次触发时间
 	Interval       time.Duration `json:"interval"`                                                                                         // 间隔多久同步一次
 	FailTimes      int           `json:"fail_times"`                                                                                       // 失败次数
