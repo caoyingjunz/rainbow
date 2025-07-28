@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -243,12 +244,53 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 	}
 }
 
-// 1. 获取远端镜像版本列表
-// 2. 获取本地已存在的镜像版本
+// 1. 获取本地已存在的镜像版本
+// 2. 获取远端镜像版本列表
 // 3. 同步差异镜像版本
 func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) error {
+	exists, err := s.factory.Image().ListImagesWithTag(ctx, db.WithUser(sub.UserId), db.WithImagePath(sub.Path))
+	if err != nil {
+		return err
+	}
+	// 常规情况下 exists 只含有一个镜像
+	if len(exists) > 1 {
+		klog.Warningf("查询到镜像(%s)存在多个记录，不太正常，取第一个订阅", sub.Path)
+	}
+	tagMap := make(map[string]bool)
+	for _, v := range exists {
+		for _, tag := range v.Tags {
+			if tag.Status == types.SyncImageError {
+				klog.Infof("镜像(%s)版本(%s)状态异常，重新镜像同步", sub.Path, tag.Name)
+				continue
+			}
+			tagMap[tag.Name] = true
+		}
+		break
+	}
+	klog.Infof("检索到镜像(%s)已同步或正在同步版本有 %v", sub.Path, tagMap)
 
-	klog.Infof("sub", sub.Path)
+	var ns, repo string
+	parts := strings.Split(sub.RawPath, "/")
+	if len(parts) == 2 {
+		ns, repo = parts[0], parts[1]
+	}
+	remotes, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
+		Hub:        "dockerhub",
+		Namespace:  ns,
+		Repository: repo,
+		Page:       "1",
+		PageSize:   "10", // 同步最新
+	})
+	if err != nil {
+		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
+		return err
+	}
+
+	tagResp := remotes.(HubTagResponse)
+	var images []string
+	for _, tag := range tagResp.Results {
+		images = append(images, sub.Path+":"+tag.Name)
+	}
 
 	return nil
 }

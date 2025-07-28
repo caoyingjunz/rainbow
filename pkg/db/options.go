@@ -186,3 +186,12 @@ func WithStatus(status string) Options {
 		return tx.Where("status = ?", status)
 	}
 }
+
+func WithImagePath(path string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(path) == 0 {
+			return tx
+		}
+		return tx.Where("path = ?", path)
+	}
+}
