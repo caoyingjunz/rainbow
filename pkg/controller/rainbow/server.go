@@ -56,6 +56,7 @@ type ServerInterface interface {
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
 	CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error
+	ListSubscribes(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
@@ -290,6 +291,9 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	tagResp := remotes.(HubTagResponse)
 	var images []string
 	for _, tag := range tagResp.Results {
+		if tagMap[tag.Name] {
+			continue
+		}
 		images = append(images, sub.Path+":"+tag.Name)
 	}
 

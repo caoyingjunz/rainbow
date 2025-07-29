@@ -30,6 +30,7 @@ type TaskInterface interface {
 	GetRunningTask(ctx context.Context, opts ...Options) ([]model.Task, error)
 
 	Count(ctx context.Context, opts ...Options) (int64, error)
+	CountSubscribe(ctx context.Context, opts ...Options) (int64, error)
 
 	ListReview(ctx context.Context) ([]model.Review, error)
 	AddDailyReview(ctx context.Context, object *model.Daily) error
@@ -235,6 +236,20 @@ func (a *task) Count(ctx context.Context, opts ...Options) (int64, error) {
 
 	var total int64
 	if err := tx.Model(&model.Task{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (a *task) CountSubscribe(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.Subscribe{}).Count(&total).Error; err != nil {
 		return 0, err
 	}
 
