@@ -45,7 +45,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		taskRoute.GET(":Id/messages", cr.listTaskMessages)
 	}
 
-	subscribeRoute := httpEngine.Group("/rainbow/subscribe")
+	subscribeRoute := httpEngine.Group("/rainbow/subscribes")
 	{
 		subscribeRoute.POST("", cr.createSubscribe)
 		subscribeRoute.GET("", cr.listSubscribes)
