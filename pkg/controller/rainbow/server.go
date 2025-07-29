@@ -220,7 +220,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 func (s *ServerController) startSubscribeController(ctx context.Context) {
 	klog.Infof("starting subscribe controller")
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -235,14 +235,27 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 				klog.Warningf("订阅 (%s) 失败超过限制，已终止订阅", sub.Path)
 				continue
 			}
-			now := time.Now()
-			if now.Sub(sub.LastNotifyTime) < sub.Interval*time.Second {
-				klog.Infof("订阅 (%s) 时间间隔 %s 暂时无需执行", sub.Path, sub.Interval)
-				continue
-			}
 
+			if sub.WaitFirstRun {
+				klog.Infof("订阅 （%s）第一次执行，无需等待，直接执行")
+			} else {
+				now := time.Now()
+				if now.Sub(sub.LastNotifyTime) < sub.Interval*time.Second {
+					klog.Infof("订阅 (%s) 时间间隔 %s 暂时无需执行", sub.Path, sub.Interval)
+					continue
+				}
+			}
 			if err = s.subscribe(ctx, sub); err != nil {
 				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
+			}
+
+			updates := make(map[string]interface{})
+			updates["last_notify_time"] = time.Now()
+			if sub.WaitFirstRun {
+				updates["wait_first_run"] = false
+			}
+			if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, updates); err != nil {
+				klog.Infof("订阅 (%s) 更新失败 %v", sub.Path, err)
 			}
 		}
 	}

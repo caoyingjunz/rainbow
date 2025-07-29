@@ -60,6 +60,7 @@ type Subscribe struct { // 同步远端镜像更新状态
 	LastNotifyTime time.Time     `json:"last_notify_time" gorm:"column:last_notify_time;type:datetime;default:current_timestamp;not null"` // 上次触发时间
 	Interval       time.Duration `json:"interval"`                                                                                         // 间隔多久同步一次
 	FailTimes      int           `json:"fail_times"`                                                                                       // 失败次数
+	WaitFirstRun   bool          `json:"wait_first_run"`                                                                                   // 是否为首次执行
 }
 
 func (t *Subscribe) TableName() string {
