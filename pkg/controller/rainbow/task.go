@@ -441,9 +441,42 @@ func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) er
 	return s.factory.Task().DeleteInBatch(ctx, ids)
 }
 
-func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
-	if req.Limit > 100 {
+func (s *ServerController) preCreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
+	if req.Size > 100 {
 		return fmt.Errorf("订阅镜像版本数超过阈值 100")
+	}
+
+	old, err := s.factory.Task().ListSubscribes(ctx, db.WithPath(req.Path), db.WithUser(req.UserId))
+	if err != nil {
+		return fmt.Errorf("创建前置检查时，获取订阅列表失败 %v", err)
+	}
+	if len(old) != 0 {
+		return fmt.Errorf("用户(%s)已存在订阅镜像(%s)，无法重复创建", req.UserName, req.Path)
+	}
+
+	return nil
+}
+
+func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
+	if err := s.preCreateSubscribe(ctx, req); err != nil {
+		return err
+	}
+
+	parts2 := strings.Split(req.Path, "/")
+	srcPath := parts2[len(parts2)-1]
+	if len(srcPath) == 0 {
+		return fmt.Errorf("不合规镜像名称 %s", req.Path)
+	}
+
+	ns := req.Namespace
+	if len(ns) == 0 {
+		ns = strings.ToLower(req.UserName)
+	}
+	if ns == defaultNamespace {
+		ns = ""
+	}
+	if len(ns) != 0 {
+		srcPath = ns + "/" + srcPath
 	}
 
 	rawPath := req.Path
@@ -460,10 +493,27 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 			UserId:   req.UserId,
 			UserName: req.UserName,
 		},
-		Path:     req.Path,
-		RawPath:  rawPath,
-		Enable:   req.Enable,   // 是否启动订阅
-		Limit:    req.Limit,    // 最多同步多少个版本
-		Interval: req.Interval, // 多久执行一次
+		Namespace: req.Namespace,
+		Path:      req.Path,
+		RawPath:   rawPath,
+		SrcPath:   srcPath,
+		Enable:    req.Enable,   // 是否启动订阅
+		Size:      req.Size,     // 最多同步多少个版本
+		Interval:  req.Interval, // 多久执行一次
 	})
+}
+
+func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error {
+	if err := s.factory.Task().UpdateSubscribe(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+		"enable":   req.Enable,
+		"size":     req.Size,
+		"interval": req.Interval,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ServerController) DeleteSubscribe(ctx context.Context, subId int64) error {
+	return s.factory.Task().DeleteSubscribe(ctx, subId)
 }

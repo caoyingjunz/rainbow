@@ -48,6 +48,8 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	subscribeRoute := httpEngine.Group("/rainbow/subscribes")
 	{
 		subscribeRoute.POST("", cr.createSubscribe)
+		subscribeRoute.PUT("/:Id", cr.updateSubscribe)
+		subscribeRoute.DELETE("/:Id", cr.deleteSubscribe)
 		subscribeRoute.GET("", cr.listSubscribes)
 	}
 

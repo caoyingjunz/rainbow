@@ -49,11 +49,12 @@ type Subscribe struct { // 同步远端镜像更新状态
 	rainbow.Model
 	rainbow.UserModel
 
-	Path           string        `json:"path"` // 默认会自动填充命名空间，比如 nginx 表示 library/nginx， jenkins/jenkins 则直接使用
-	RawPath        string        `json:"raw_path"`
-	Enable         bool          `json:"enable"` // 启动或者关闭
+	Path           string        `json:"path"`     // 订阅名称，对应仓库显示镜像名
+	RawPath        string        `json:"raw_path"` // 自动填充命名空间，比如 nginx 表示 library/nginx， jenkins/jenkins 则直接使用
+	SrcPath        string        `json:"src_path"` // pixiu 对应的镜像名称，追加自定义仓库前置
+	Enable         bool          `json:"enable"`   // 启动或者关闭
 	Status         string        `json:"status"`
-	Limit          int           `json:"limit"` // 同步最新多少个版本
+	Size           int           `json:"size"` // 同步最新多少个版本
 	RegisterId     int64         `json:"register_id"`
 	Namespace      string        `json:"namespace"`
 	LastNotifyTime time.Time     `json:"last_notify_time" gorm:"column:last_notify_time;type:datetime;default:current_timestamp;not null"` // 上次触发时间

@@ -57,6 +57,8 @@ type ServerInterface interface {
 
 	CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error
 	ListSubscribes(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error
+	DeleteSubscribe(ctx context.Context, subId int64) error
 
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
@@ -250,7 +252,7 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 // 2. 获取远端镜像版本列表
 // 3. 同步差异镜像版本
 func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) error {
-	exists, err := s.factory.Image().ListImagesWithTag(ctx, db.WithUser(sub.UserId), db.WithImagePath(sub.Path))
+	exists, err := s.factory.Image().ListImagesWithTag(ctx, db.WithUser(sub.UserId), db.WithName(sub.SrcPath))
 	if err != nil {
 		return err
 	}
@@ -269,7 +271,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		}
 		break
 	}
-	klog.Infof("检索到镜像(%s)已同步或正在同步版本有 %v", sub.Path, tagMap)
+	//klog.Infof("检索到镜像(%s)已同步或正在同步版本有 %v", sub.Path, tagMap)
 
 	var ns, repo string
 	parts := strings.Split(sub.RawPath, "/")
@@ -281,7 +283,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		Namespace:  ns,
 		Repository: repo,
 		Page:       "1",
-		PageSize:   fmt.Sprintf("%d", sub.Limit), // 同步最新
+		PageSize:   fmt.Sprintf("%d", sub.Size), // 同步最新
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
@@ -289,21 +291,28 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	}
 
 	tagResp := remotes.(HubTagResponse)
-	var images []string
+	var addImages []string
 	for _, tag := range tagResp.Results {
 		if tagMap[tag.Name] {
 			continue
 		}
-		images = append(images, sub.Path+":"+tag.Name)
+		addImages = append(addImages, sub.Path+":"+tag.Name)
+	}
+	if len(addImages) == 0 {
+		// 未发现新增镜像，则等待下次监控
+		klog.Infof("未发现镜像(%s)有新增版本，忽略", sub.Path)
+		return nil
 	}
 
+	klog.Infof("发现镜像(%s)有新增版本 %v", sub.Path, addImages)
 	err = s.CreateTask(ctx, &types.CreateTaskRequest{
 		Name:        uuid.NewRandName(fmt.Sprintf("subscribe-%s-", sub.Path), 8),
 		UserId:      sub.UserId,
 		UserName:    sub.UserName,
 		RegisterId:  sub.RegisterId,
 		Namespace:   sub.Namespace,
-		Images:      images,
+		Images:      addImages,
+		Driver:      "skopeo",
 		PublicImage: true,
 	})
 	if err != nil {

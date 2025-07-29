@@ -86,6 +86,24 @@ func WithIDIn(ids ...int64) Options {
 	}
 }
 
+func WithName(name string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(name) == 0 {
+			return tx
+		}
+		return tx.Where("name = ?", name)
+	}
+}
+
+func WithPath(path string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(path) == 0 {
+			return tx
+		}
+		return tx.Where("path = ?", path)
+	}
+}
+
 func WithNameIn(names ...string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(names) == 0 {
@@ -184,14 +202,5 @@ func WithStatus(status string) Options {
 			return tx
 		}
 		return tx.Where("status = ?", status)
-	}
-}
-
-func WithImagePath(path string) Options {
-	return func(tx *gorm.DB) *gorm.DB {
-		if len(path) == 0 {
-			return tx
-		}
-		return tx.Where("path = ?", path)
 	}
 }
