@@ -17,7 +17,6 @@ import (
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"github.com/robfig/cron/v3"
 	"google.golang.org/grpc"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
@@ -487,6 +486,14 @@ func (s *ServerController) sync(ctx context.Context) {
 }
 
 func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
+	const (
+		maxAmount     = 16.0 // 节点总金额
+		minBalance    = 1.0  // 最低可调度余额
+		maxConcurrent = 10   // 最大并发任务数
+		loadWeight    = 0.4  // 负载分数权重
+		balanceWeight = 0.6  // 余额分数权重
+	)
+
 	agents, err := s.factory.Agent().ListForSchedule(ctx)
 	if err != nil {
 		return "", err
@@ -496,59 +503,67 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 		return "", nil
 	}
 
-	var agentNames []string
-	agentMap := make(map[string]int)
-	for _, agent := range agents {
-		agentNames = append(agentNames, agent.Name)
-		agentMap[agent.Name] = 0
-	}
-	agentSet := sets.NewString(agentNames...)
-
+	// 获取运行中任务数量
 	runningTasks, err := s.factory.Task().GetRunningTask(ctx)
 	if err != nil {
 		return "", err
 	}
-
-	if len(runningTasks) == 0 {
-		rand.Seed(time.Now().UnixNano())
-		x := rand.Intn(len(agentNames))
-		agent := agentNames[x]
-		klog.Infof("当前节点均空闲，工作节点 %s 被随机选中", agent)
-		return agent, nil
-	} else {
-		for _, t := range runningTasks {
-			if !agentSet.Has(t.AgentName) {
-				continue
-			}
-			old, ok := agentMap[t.AgentName]
-			if ok {
-				agentMap[t.AgentName] = old + 1
-			} else {
-				continue
-			}
-		}
-
-		min := len(runningTasks)
-		agent := ""
-		for k, v := range agentMap {
-			if min >= v {
-				min = v
-				agent = k
-			}
-		}
-		// 一个 agent 最大并发为 10
-		if min > 10 {
-			klog.Warningf("工作节点已满负载，等待下一次调度")
-			return "", nil
-		}
-		if agent == "" {
-			klog.Warningf("未选中工作节点，等待下一次调度")
-			return "", nil
-		}
-
-		klog.Infof("工作节点 %s 已选中", agent)
-		return agent, nil
+	taskCountMap := make(map[string]int)
+	for _, t := range runningTasks {
+		taskCountMap[t.AgentName]++
 	}
+
+	type candidate struct {
+		agent *model.Agent
+		score float64
+	}
+
+	var candidates []candidate
+	for i := range agents {
+		agent := &agents[i]
+		remaining := maxAmount - agent.GrossAmount
+		count := taskCountMap[agent.Name]
+
+		if remaining < minBalance {
+			klog.Infof("节点 %s 余额不足 ($%.2f < $1.00)", agent.Name, remaining)
+			continue
+		}
+		if count >= maxConcurrent {
+			klog.Infof("节点 %s 已达最大负载 (%d/%d)", agent.Name, count, maxConcurrent)
+			continue
+		}
+
+		loadScore := float64(maxConcurrent-count) / float64(maxConcurrent)
+		balanceScore := remaining / maxAmount
+		score := loadScore*loadWeight + balanceScore*balanceWeight
+
+		candidates = append(candidates, candidate{agent, score})
+	}
+
+	if len(candidates) == 0 {
+		klog.Warningf("没有满足条件的工作节点，等待下一次调度")
+		return "", nil
+	}
+
+	maxScore := -1.0
+	var best []*model.Agent
+	for _, c := range candidates {
+		if c.score > maxScore {
+			maxScore = c.score
+			best = []*model.Agent{c.agent}
+		} else if c.score == maxScore {
+			best = append(best, c.agent)
+		}
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	selected := best[rand.Intn(len(best))]
+
+	klog.Infof("工作节点 %s 已选中 (任务数: %d/%d, 余额: $%.2f, 分数: %.2f)",
+		selected.Name, taskCountMap[selected.Name], maxConcurrent,
+		maxAmount-selected.GrossAmount, maxScore)
+
+	return selected.Name, nil
 }
 
 func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
