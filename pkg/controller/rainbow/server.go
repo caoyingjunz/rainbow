@@ -191,7 +191,7 @@ func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.Upd
 func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
 	repo := req.GithubRepository
 	if len(repo) == 0 {
-		repo = fmt.Sprintf("https://github.com/%s/plugin.git", req.AgentName)
+		repo = fmt.Sprintf("https://github.com/%s/plugin.git", req.GithubUser)
 	}
 
 	updates := make(map[string]interface{})
