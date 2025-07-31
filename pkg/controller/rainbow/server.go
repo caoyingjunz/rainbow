@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 	"os/signal"
@@ -494,6 +493,7 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 		balanceWeight = 0.6  // 余额分数权重
 	)
 
+	// 第一步：获取所有可用节点
 	agents, err := s.factory.Agent().ListForSchedule(ctx)
 	if err != nil {
 		return "", err
@@ -503,7 +503,7 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 		return "", nil
 	}
 
-	// 获取运行中任务数量
+	// 第二步：获取运行中任务数量
 	runningTasks, err := s.factory.Task().GetRunningTask(ctx)
 	if err != nil {
 		return "", err
@@ -513,38 +513,72 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 		taskCountMap[t.AgentName]++
 	}
 
-	type candidate struct {
-		agent *model.Agent
-		score float64
-	}
-
-	var candidates []candidate
+	// 第三步：预选阶段 - 筛选满足基本条件的节点
+	var preSelected []*model.Agent
 	for i := range agents {
 		agent := &agents[i]
 		remaining := maxAmount - agent.GrossAmount
 		count := taskCountMap[agent.Name]
 
+		// 预选条件1：余额检查
 		if remaining < minBalance {
-			klog.Infof("节点 %s 余额不足 ($%.2f < $1.00)", agent.Name, remaining)
+			klog.Infof("节点 %s 余额不足 ($%.2f < $%.2f)，预选阶段被淘汰", agent.Name, remaining, minBalance)
 			continue
 		}
+
+		// 预选条件2：并发任务数检查
 		if count >= maxConcurrent {
-			klog.Infof("节点 %s 已达最大负载 (%d/%d)", agent.Name, count, maxConcurrent)
+			klog.Infof("节点 %s 已达最大负载 (%d/%d)，预选阶段被淘汰", agent.Name, count, maxConcurrent)
 			continue
 		}
 
-		loadScore := float64(maxConcurrent-count) / float64(maxConcurrent)
-		balanceScore := remaining / maxAmount
-		score := loadScore*loadWeight + balanceScore*balanceWeight
-
-		candidates = append(candidates, candidate{agent, score})
+		// 通过预选的节点
+		preSelected = append(preSelected, agent)
+		klog.Infof("节点 %s 通过预选 (余额: $%.2f, 任务数: %d/%d)",
+			agent.Name, remaining, count, maxConcurrent)
 	}
 
-	if len(candidates) == 0 {
-		klog.Warningf("没有满足条件的工作节点，等待下一次调度")
+	if len(preSelected) == 0 {
+		klog.Warningf("预选阶段：没有满足基本条件的工作节点，等待下一次调度")
 		return "", nil
 	}
 
+	klog.Infof("预选阶段完成，共 %d 个节点通过预选", len(preSelected))
+
+	// 第四步：优选阶段 - 对预选节点进行打分排序
+	type candidate struct {
+		agent   *model.Agent
+		score   float64
+		details map[string]float64
+	}
+
+	var candidates []candidate
+	for _, agent := range preSelected {
+		remaining := maxAmount - agent.GrossAmount
+		count := taskCountMap[agent.Name]
+
+		// 计算各项分数
+		loadScore := float64(maxConcurrent-count) / float64(maxConcurrent)
+		balanceScore := remaining / maxAmount
+
+		// 综合分数计算
+		score := loadScore*loadWeight + balanceScore*balanceWeight
+
+		details := map[string]float64{
+			"loadScore":    loadScore,
+			"balanceScore": balanceScore,
+			"remaining":    remaining,
+			"taskCount":    float64(count),
+		}
+
+		candidates = append(candidates, candidate{
+			agent:   agent,
+			score:   score,
+			details: details,
+		})
+	}
+
+	// 第五步：选择最优节点
 	maxScore := -1.0
 	var best []*model.Agent
 	for _, c := range candidates {
@@ -556,12 +590,14 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 		}
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	selected := best[rand.Intn(len(best))]
+	// 如果有多个相同分数的节点，选择第一个
+	selected := best[0]
 
-	klog.Infof("工作节点 %s 已选中 (任务数: %d/%d, 余额: $%.2f, 分数: %.2f)",
-		selected.Name, taskCountMap[selected.Name], maxConcurrent,
-		maxAmount-selected.GrossAmount, maxScore)
+	// 输出优选结果
+	selectedCount := taskCountMap[selected.Name]
+	selectedRemaining := maxAmount - selected.GrossAmount
+	klog.Infof("优选阶段：工作节点 %s 被选中 (任务数: %d/%d, 余额: $%.2f, 综合分数: %.3f)",
+		selected.Name, selectedCount, maxConcurrent, selectedRemaining, maxScore)
 
 	return selected.Name, nil
 }
