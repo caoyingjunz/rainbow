@@ -241,7 +241,7 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 			} else {
 				now := time.Now()
 				if now.Sub(sub.LastNotifyTime) < sub.Interval*time.Second {
-					klog.Infof("订阅 (%s) 时间间隔 %s 暂时无需执行", sub.Path, sub.Interval)
+					klog.Infof("订阅 (%s) 时间间隔 %v 暂时无需执行", sub.Path, sub.Interval*time.Second)
 					continue
 				}
 			}
@@ -291,12 +291,17 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	if len(parts) == 2 {
 		ns, repo = parts[0], parts[1]
 	}
+
+	pageSize := "5"
+	if sub.WaitFirstRun {
+		pageSize = fmt.Sprintf("%d", sub.Size)
+	}
 	remotes, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
 		Hub:        "dockerhub",
 		Namespace:  ns,
 		Repository: repo,
 		Page:       "1",
-		PageSize:   fmt.Sprintf("%d", sub.Size), // 同步最新
+		PageSize:   pageSize, // 同步最新
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
