@@ -248,15 +248,6 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 			if err = s.subscribe(ctx, sub); err != nil {
 				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
 			}
-
-			updates := make(map[string]interface{})
-			updates["last_notify_time"] = time.Now()
-			if sub.WaitFirstRun {
-				updates["wait_first_run"] = false
-			}
-			if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, updates); err != nil {
-				klog.Infof("订阅 (%s) 更新失败 %v", sub.Path, err)
-			}
 		}
 	}
 }
@@ -323,7 +314,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	}
 
 	klog.Infof("发现镜像(%s)有新增版本 %v", sub.Path, addImages)
-	err = s.CreateTask(ctx, &types.CreateTaskRequest{
+	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
 		Name:        uuid.NewRandName(fmt.Sprintf("subscribe-%s-", sub.Path), 8),
 		UserId:      sub.UserId,
 		UserName:    sub.UserName,
@@ -332,11 +323,20 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		Images:      addImages,
 		Driver:      "skopeo",
 		PublicImage: true,
-	})
-	if err != nil {
+	}); err != nil {
 		klog.Errorf("创建订阅任务失败 %v", err)
+		return err
 	}
-	return err
+
+	updates := make(map[string]interface{})
+	updates["last_notify_time"] = time.Now()
+	if sub.WaitFirstRun {
+		updates["wait_first_run"] = false
+	}
+	if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, updates); err != nil {
+		klog.Infof("订阅 (%s) 更新失败 %v", sub.Path, err)
+	}
+	return nil
 }
 
 func (s *ServerController) startSyncKubernetesVersion(ctx context.Context) {
