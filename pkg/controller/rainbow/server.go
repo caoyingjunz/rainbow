@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 	"os/signal"
@@ -17,7 +16,6 @@ import (
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"github.com/robfig/cron/v3"
 	"google.golang.org/grpc"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
@@ -140,17 +138,27 @@ type ServerController struct {
 	factory     db.ShareDaoFactory
 	cfg         rainbowconfig.Config
 	redisClient *redis.Client
-
+	// scheduler
+	scheduler *Scheduler
 	// rpcServer
 	pb.UnimplementedTunnelServer
 	lock sync.RWMutex
 }
 
 func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *ServerController {
+	// 创建调度器并添加打分插件
+	scheduler := NewScheduler(
+		&AvailabilityScore{},
+		NewLoadBalanceScore(f),
+		NewResourceScore(f),
+		&TaskTypeScore{},
+	)
+
 	sc := &ServerController{
 		factory:     f,
 		cfg:         cfg,
 		redisClient: redisClient,
+		scheduler:   scheduler,
 	}
 
 	if SwrClient == nil || RegistryId == nil {
@@ -501,59 +509,35 @@ func (s *ServerController) assignAgent(ctx context.Context) (string, error) {
 		return "", nil
 	}
 
-	var agentNames []string
-	agentMap := make(map[string]int)
-	for _, agent := range agents {
-		agentNames = append(agentNames, agent.Name)
-		agentMap[agent.Name] = 0
-	}
-	agentSet := sets.NewString(agentNames...)
-
-	runningTasks, err := s.factory.Task().GetRunningTask(ctx)
+	// 获取待调度的任务
+	item, err := s.factory.Task().GetOneForSchedule(ctx)
 	if err != nil {
 		return "", err
 	}
-
-	if len(runningTasks) == 0 {
-		rand.Seed(time.Now().UnixNano())
-		x := rand.Intn(len(agentNames))
-		agent := agentNames[x]
-		klog.Infof("当前节点均空闲，工作节点 %s 被随机选中", agent)
-		return agent, nil
-	} else {
-		for _, t := range runningTasks {
-			if !agentSet.Has(t.AgentName) {
-				continue
-			}
-			old, ok := agentMap[t.AgentName]
-			if ok {
-				agentMap[t.AgentName] = old + 1
-			} else {
-				continue
-			}
-		}
-
-		min := len(runningTasks)
-		agent := ""
-		for k, v := range agentMap {
-			if min >= v {
-				min = v
-				agent = k
-			}
-		}
-		// 一个 agent 最大并发为 10
-		if min > 10 {
-			klog.Warningf("工作节点已满负载，等待下一次调度")
-			return "", nil
-		}
-		if agent == "" {
-			klog.Warningf("未选中工作节点，等待下一次调度")
-			return "", nil
-		}
-
-		klog.Infof("工作节点 %s 已选中", agent)
-		return agent, nil
+	if item == nil {
+		return "", nil
 	}
+
+	// 将 []model.Agent 转换为 []*model.Agent
+	var agentPtrs []*model.Agent
+	for i := range agents {
+		agentPtrs = append(agentPtrs, &agents[i])
+	}
+
+	// 使用调度器选择最优的 agent
+	bestAgent, err := s.scheduler.SelectBestAgent(ctx, agentPtrs, item)
+	if err != nil {
+		klog.Errorf("调度器选择 agent 失败: %v", err)
+		return "", err
+	}
+
+	if bestAgent == nil {
+		klog.Warningf("调度器未找到合适的 agent")
+		return "", nil
+	}
+
+	klog.Infof("调度器选择了 agent: %s", bestAgent.Name)
+	return bestAgent.Name, nil
 }
 
 func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
