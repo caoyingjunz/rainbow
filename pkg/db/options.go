@@ -169,6 +169,15 @@ func WithNameLike(name string) Options {
 	}
 }
 
+func WithPathLike(path string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(path) == 0 {
+			return tx
+		}
+		return tx.Where("path like ?", "%"+path+"%")
+	}
+}
+
 func WithTagLike(tag string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(tag) == 0 {

@@ -318,7 +318,7 @@ func (s *ServerController) ListSubscribes(ctx context.Context, listOption types.
 	}
 	opts := []db.Options{
 		db.WithUser(listOption.UserId),
-		db.WithNameLike(listOption.NameSelector),
+		db.WithPathLike(listOption.NameSelector),
 		db.WithNamespace(listOption.Namespace),
 	}
 	var err error
