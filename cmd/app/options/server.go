@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/caoyingjunz/pixiulib/config"
 	"github.com/gin-gonic/gin"
@@ -102,9 +103,10 @@ func (o *ServerOptions) register() error {
 func (o *ServerOptions) registerRedis() error {
 	redisConfig := o.ComponentConfig.Redis
 	o.RedisClient = redis.NewClient(&redis.Options{
-		Addr:     redisConfig.Addr,
-		Password: redisConfig.Password,
-		DB:       redisConfig.Db,
+		Addr:        redisConfig.Addr,
+		Password:    redisConfig.Password,
+		DB:          redisConfig.Db,
+		ReadTimeout: 10 * time.Second,
 	})
 
 	return nil

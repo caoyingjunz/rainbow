@@ -96,7 +96,7 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 		return fmt.Errorf("序列化查询结果失败 %v", err)
 	}
 
-	// 保存 60s
+	// 保存 30s
 	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 		pipe.Set(ctx, reqMeta.Uid, data, 30*time.Second)
 		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", reqMeta.Uid), "set")
