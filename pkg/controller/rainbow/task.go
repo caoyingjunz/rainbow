@@ -505,6 +505,7 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 }
 
 func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error {
+	// 如果 size 发生变化，则重新同步
 	if err := s.factory.Task().UpdateSubscribe(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
 		"enable":   req.Enable,
 		"size":     req.Size,
