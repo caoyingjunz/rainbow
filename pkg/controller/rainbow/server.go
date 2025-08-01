@@ -296,6 +296,18 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
+
+		// 如果返回报错是 404 Not Found 则说明远端进行不存在，终止订阅
+		if strings.Contains(err.Error(), "404 Not Found") {
+			klog.Infof("订阅镜像(%s)不存在，关闭订阅", sub.Path)
+			if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, map[string]interface{}{
+				"status": "镜像不存在",
+				"enable": false,
+			}); err != nil {
+				klog.Infof("镜像不存在关闭订阅失败", sub.Path, err)
+			}
+		}
+
 		return err
 	}
 
