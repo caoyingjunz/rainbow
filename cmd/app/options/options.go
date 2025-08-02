@@ -83,7 +83,6 @@ func (o *Options) Complete() error {
 	if o.ComponentConfig.Default.Listen == 0 {
 		o.ComponentConfig.Default.Listen = defaultListen
 	}
-
 	// 注册依赖组件
 	if err := o.register(); err != nil {
 		return err
