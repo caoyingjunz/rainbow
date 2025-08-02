@@ -7,6 +7,8 @@ const (
 	DefaultUserRateLimitCap            = 1000
 	DefaultUserRateLimitQuantum        = 10
 	DefaultUserRateLimitCapacity       = 100
+
+	defaultRainbowdTemplateDir = "/data/template"
 )
 
 // SetDefaults 设置配置的默认值
@@ -40,7 +42,8 @@ type Config struct {
 	Kubernetes KubernetesOption `yaml:"kubernetes"`
 	Images     []Image          `yaml:"images"`
 
-	Server ServerOption `yaml:"server"`
+	Server   ServerOption   `yaml:"server"`
+	Rainbowd RainbowdOption `yaml:"rainbowd"`
 
 	Plugin   PluginOption `yaml:"plugin"`
 	Registry Registry     `yaml:"registry"`
@@ -62,6 +65,16 @@ type DefaultOption struct {
 
 type ServerOption struct {
 	Auth Auth `yaml:"auth"`
+}
+
+type RainbowdOption struct {
+	TemplateDir string `yaml:"template_dir"`
+}
+
+func (r *RainbowdOption) SetDefault() {
+	if len(r.TemplateDir) == 0 {
+		r.TemplateDir = defaultRainbowdTemplateDir
+	}
 }
 
 type Auth struct {
@@ -103,10 +116,11 @@ type RedisOption struct {
 }
 
 type AgentOption struct {
-	Name       string `yaml:"name"`
-	DataDir    string `yaml:"data_dir"`
-	RpcServer  string `yaml:"rpc_server"`
-	RetainDays int    `yaml:"retain_days"`
+	Name        string `yaml:"name"`
+	DataDir     string `yaml:"data_dir"`
+	RpcServer   string `yaml:"rpc_server"`
+	RetainDays  int    `yaml:"retain_days"`
+	HealthzPort int    `yaml:"healthz_port"`
 }
 
 type RateLimitOption struct {

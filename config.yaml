@@ -14,6 +14,7 @@ agent:
   name: agent-dev
   data_dir: /tmp
   retain_days: 5
+#  healthz_port: 10086
 
 plugin:
   callback: http://127.0.0.1:8090

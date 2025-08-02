@@ -2,6 +2,7 @@ package options
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -73,10 +74,15 @@ func (o *Options) Complete() error {
 	if o.ComponentConfig.Agent.RetainDays == 0 {
 		o.ComponentConfig.Agent.RetainDays = defaultRetainDays
 	}
+	if o.ComponentConfig.Agent.HealthzPort == 0 {
+		// 临时处理
+		rand.Seed(time.Now().UnixNano())
+		min, max := 1000, 5000
+		o.ComponentConfig.Agent.HealthzPort = rand.Intn(max-min+1) + min
+	}
 	if o.ComponentConfig.Default.Listen == 0 {
 		o.ComponentConfig.Default.Listen = defaultListen
 	}
-
 	// 注册依赖组件
 	if err := o.register(); err != nil {
 		return err

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	builderFile = flag.String("configFile", "./config.yaml", "config file")
+	rainbowdFile = flag.String("configFile", "./config.yaml", "config file")
 )
 
 func main() {
@@ -18,12 +18,12 @@ func main() {
 	flag.Parse()
 
 	c := config.New()
-	c.SetConfigFile(*builderFile)
+	c.SetConfigFile(*rainbowdFile)
 	c.SetConfigType("yaml")
 
 	var cfg rainbowconfig.Config
 	if err := c.Binding(&cfg); err != nil {
 		klog.Fatal(err)
 	}
-
+	cfg.Rainbowd.SetDefault()
 }

@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/klog/v2"
@@ -69,18 +73,18 @@ func main() {
 		klog.Fatal("client(%s) 向 rpc 服务注册失败", err)
 	}
 
-	select {}
 	// 启动 RPC 探活 API
-	//r := gin.Default()
-	//healthz := r.Group("/healthz")
-	//{
-	//	healthz.POST("", func(c *gin.Context) {
-	//		if err = stream.Send(&pb.Request{ClientId: agentConfig.Name, Payload: []byte("pong")}); err != nil {
-	//			c.JSON(http.StatusBadRequest, err.Error())
-	//		} else {
-	//			c.JSON(http.StatusOK, "ok")
-	//		}
-	//	})
-	//}
-	//r.Run(":10086")
+	r := gin.Default()
+	healthz := r.Group("/healthz")
+	{
+		healthz.POST("", func(c *gin.Context) {
+			if err = stream.Send(&pb.Request{ClientId: agentConfig.Name, Payload: []byte("pong")}); err != nil {
+				c.JSON(http.StatusBadRequest, err.Error())
+			} else {
+				c.JSON(http.StatusOK, "ok")
+			}
+		})
+	}
+
+	r.Run(fmt.Sprintf(":%d", agentConfig.HealthzPort))
 }
