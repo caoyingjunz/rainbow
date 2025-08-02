@@ -54,6 +54,7 @@ type TaskInterface interface {
 	CreateSubscribe(ctx context.Context, object *model.Subscribe) error
 	UpdateSubscribe(ctx context.Context, subId int64, resourceVersion int64, updates map[string]interface{}) error
 	DeleteSubscribe(ctx context.Context, subId int64) error
+	GetSubscribe(ctx context.Context, subId int64) (*model.Subscribe, error)
 	ListSubscribes(ctx context.Context, opts ...Options) ([]model.Subscribe, error)
 }
 
@@ -298,6 +299,14 @@ func (a *task) CreateTaskMessage(ctx context.Context, object *model.TaskMessage)
 
 func (a *task) DeleteTaskMessages(ctx context.Context, taskId int64) error {
 	return a.db.WithContext(ctx).Where("task_id = ?", taskId).Delete(&model.TaskMessage{}).Error
+}
+
+func (a *task) GetSubscribe(ctx context.Context, subId int64) (*model.Subscribe, error) {
+	var audit model.Subscribe
+	if err := a.db.WithContext(ctx).Where("id = ?", subId).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
 }
 
 func (a *task) ListTaskMessages(ctx context.Context, opts ...Options) ([]model.TaskMessage, error) {

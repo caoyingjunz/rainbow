@@ -505,12 +505,24 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 }
 
 func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error {
-	// 如果 size 发生变化，则重新同步
-	if err := s.factory.Task().UpdateSubscribe(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+	update := map[string]interface{}{
 		"enable":   req.Enable,
 		"size":     req.Size,
 		"interval": req.Interval,
-	}); err != nil {
+	}
+
+	old, err := s.factory.Task().GetSubscribe(ctx, req.Id)
+	if err == nil {
+		// 如果 size 发生变化，则重新同步
+		if req.Size > old.Size {
+			klog.Infof("订阅数量变大，重新触发同步")
+			update["wait_first_run"] = true
+		}
+	} else {
+		klog.Errorf("查询旧 size 失败，保持现状 %v", err)
+	}
+
+	if err = s.factory.Task().UpdateSubscribe(ctx, req.Id, req.ResourceVersion, update); err != nil {
 		return err
 	}
 	return nil
