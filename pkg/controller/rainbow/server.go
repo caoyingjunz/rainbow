@@ -251,6 +251,16 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 		}
 	}
 }
+func (s *ServerController) reRunSubscribeTags(ctx context.Context, errTags []model.Tag) error {
+	for _, errTag := range errTags {
+		parts := strings.Split(errTag.TaskIds, ",")
+		for _, p := range parts {
+
+		}
+	}
+
+	return nil
+}
 
 // 1. 获取本地已存在的镜像版本
 // 2. 获取远端镜像版本列表
@@ -265,16 +275,24 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		klog.Warningf("查询到镜像(%s)存在多个记录，不太正常，取第一个订阅", sub.Path)
 	}
 	tagMap := make(map[string]bool)
+	errTags := make([]model.Tag, 0)
 	for _, v := range exists {
 		for _, tag := range v.Tags {
 			if tag.Status == types.SyncImageError {
 				klog.Infof("镜像(%s)版本(%s)状态异常，重新镜像同步", sub.Path, tag.Name)
+				errTags = append(errTags, tag)
 				continue
 			}
 			tagMap[tag.Name] = true
 		}
 		break
 	}
+
+	// 重新触发推送失败的tag
+	if err = s.reRunSubscribeTags(ctx, errTags); err != nil {
+		klog.Errorf("重新触发异常tag失败: %v", err)
+	}
+
 	//klog.Infof("检索到镜像(%s)已同步或正在同步版本有 %v", sub.Path, tagMap)
 
 	var ns, repo string
