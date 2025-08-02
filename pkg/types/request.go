@@ -72,6 +72,7 @@ type (
 		Images            []string `json:"images"`
 		Mode              int64    `json:"mode"`
 		PublicImage       bool     `json:"public_image"`
+		OnlyPushError     bool     `json:"only_push_error"` // 仅同步推送异常
 	}
 
 	UpdateTaskStatusRequest struct {

@@ -28,6 +28,7 @@ type Task struct {
 	IsPublic          bool   `json:"is_public"`
 	IsOfficial        bool   `json:"is_official"`
 	Logo              string `json:"logo"`
+	OnlyPushError     bool   `json:"only_push_error"` // 仅同步推送异常
 }
 
 func (t *Task) TableName() string {

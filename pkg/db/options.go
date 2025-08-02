@@ -86,6 +86,15 @@ func WithIDIn(ids ...int64) Options {
 	}
 }
 
+func WithErrorTask(onlyErr bool) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if !onlyErr {
+			return tx
+		}
+		return tx.Where("status = ?", "Error")
+	}
+}
+
 func WithName(name string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(name) == 0 {

@@ -400,21 +400,26 @@ func (s *ServerController) GetTask(ctx context.Context, taskId int64) (interface
 }
 
 func (s *ServerController) ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error {
-	if err := s.factory.Task().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+	updates := map[string]interface{}{
 		"agent_name": "",
 		"status":     TaskWaitStatus,
 		"process":    0,
 		"message":    "触发重新执行",
-	}); err != nil {
+	}
+	if req.OnlyPushError {
+		updates["only_push_error"] = true
+	}
+	if err := s.factory.Task().Update(ctx, req.Id, req.ResourceVersion, updates); err != nil {
 		klog.Errorf("重新执行任务 %d 失败 %v", req.Id, err)
 		return err
 	}
 
-	// 重置任务过程信息
-	if err := s.factory.Task().DeleteTaskMessages(ctx, req.Id); err != nil {
-		klog.Errorf("清理任务(%d)过程信息失败 %v", req.Id, err)
+	// 全量重新推送时，重置任务过程信息
+	if !req.OnlyPushError {
+		if err := s.factory.Task().DeleteTaskMessages(ctx, req.Id); err != nil {
+			klog.Errorf("清理任务(%d)过程信息失败 %v", req.Id, err)
+		}
 	}
-
 	return nil
 }
 
