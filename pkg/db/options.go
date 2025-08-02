@@ -86,6 +86,13 @@ func WithIDIn(ids ...int64) Options {
 	}
 }
 
+func WithIDStrIn(ids ...string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		// e.g. `WHERE id IN (1, 2, 3)`
+		return tx.Where("id IN ?", ids)
+	}
+}
+
 func WithErrorTask(onlyErr bool) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if !onlyErr {

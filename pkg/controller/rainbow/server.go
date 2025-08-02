@@ -252,10 +252,26 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 	}
 }
 func (s *ServerController) reRunSubscribeTags(ctx context.Context, errTags []model.Tag) error {
+	taskIds := make([]string, 0)
 	for _, errTag := range errTags {
 		parts := strings.Split(errTag.TaskIds, ",")
 		for _, p := range parts {
+			taskIds = append(taskIds, p)
+		}
+	}
 
+	tasks, err := s.factory.Task().List(ctx, db.WithIDStrIn(taskIds...))
+	if err != nil {
+		return err
+	}
+	for _, t := range tasks {
+		klog.Infof("任务(%s)即将触发异常重新推送", t.Name)
+		if err = s.ReRunTask(ctx, &types.UpdateTaskRequest{
+			Id:              t.Id,
+			ResourceVersion: t.ResourceVersion,
+			OnlyPushError:   true,
+		}); err != nil {
+			return err
 		}
 	}
 
