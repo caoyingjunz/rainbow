@@ -14,6 +14,7 @@ const (
 	RunAgentType     string = "在线"
 	UnRunAgentType   string = "离线"
 	UnknownAgentType string = "未知"
+	UnStartType      string = "未启动"
 
 	PublicAgentType  string = "public"
 	PrivateAgentType string = "private"

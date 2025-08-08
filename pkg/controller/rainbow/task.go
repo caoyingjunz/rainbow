@@ -572,6 +572,8 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 		GithubUser:       req.GithubUser,
 		GithubToken:      req.GithubToken,
 		GithubRepository: req.GithubRepository,
+		Type:             req.Type,
+		Status:           model.UnStartType,
 	}
 	if _, err := s.factory.Agent().Create(ctx, agent); err != nil {
 		return fmt.Errorf("创建agent失败: %v", err)
