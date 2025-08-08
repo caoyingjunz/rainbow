@@ -549,11 +549,8 @@ func (s *ServerController) preCreateAgent(ctx context.Context, req *types.Create
 	}
 
 	// 检查agent是否存在
-	agent, err := s.factory.Agent().GetByName(ctx, req.AgentName)
-	if err != nil {
-		return fmt.Errorf("查询agent失败: %v", err)
-	}
-	if agent != nil {
+	_, err := s.factory.Agent().GetByName(ctx, req.AgentName)
+	if err == nil {
 		return fmt.Errorf("agent名称 %s 已存在", req.AgentName)
 	}
 
