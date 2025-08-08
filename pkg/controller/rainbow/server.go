@@ -66,7 +66,9 @@ type ServerInterface interface {
 	ListTasksByIds(ctx context.Context, ids []int64) (interface{}, error)
 	DeleteTasksByIds(ctx context.Context, ids []int64) error
 
+	CreateAgent(ctx context.Context, req *types.CreateAgentRequest) error
 	UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error
+	DeleteAgent(ctx context.Context, agentId int64) error
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
 	ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
