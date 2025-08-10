@@ -9,6 +9,11 @@ server:
     access_key: access_key
     secret_key: secret_key
 
+# 守护进程
+rainbowd:
+  template_dir: /tmp/plugin
+  agent_image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/rainbow-agent:v1.1
+
 agent:
   rpc_server: 127.0.0.1:8091
   name: agent-dev
