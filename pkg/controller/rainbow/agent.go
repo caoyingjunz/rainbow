@@ -409,8 +409,8 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	}
 	defer s.queue.Done(key)
 
-	taskId, resourceVersion, err := KeyFunc(key)
 	klog.Infof("任务(%v)被调度到本节点，即将开始处理", key)
+	taskId, resourceVersion, err := KeyFunc(key)
 	if err != nil {
 		s.handleErr(ctx, err, key)
 	} else {

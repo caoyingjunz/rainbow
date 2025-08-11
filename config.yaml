@@ -11,7 +11,9 @@ server:
 
 # 守护进程
 rainbowd:
+  name: test-name
   template_dir: /tmp/plugin
+  data_dir: /tmp
   agent_image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/rainbow-agent:v1.1
 
 agent:

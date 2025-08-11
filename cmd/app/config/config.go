@@ -68,7 +68,10 @@ type ServerOption struct {
 }
 
 type RainbowdOption struct {
+	Name        string `yaml:"name"`
 	TemplateDir string `yaml:"template_dir"`
+	DataDir     string `yaml:"data_dir"`
+	AgentImage  string `yaml:"agent_image"`
 }
 
 func (r *RainbowdOption) SetDefault() {

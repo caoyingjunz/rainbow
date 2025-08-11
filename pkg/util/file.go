@@ -50,3 +50,7 @@ func WriteIntoFile(content string, fileName string) error {
 	_, err = f.WriteString(content)
 	return err
 }
+
+func ReadFromFile(fileName string) ([]byte, error) {
+	return os.ReadFile(fileName)
+}

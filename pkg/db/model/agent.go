@@ -28,6 +28,7 @@ type Agent struct {
 	Type               string    `json:"type"`
 	Status             string    `gorm:"column:status;" json:"status"`
 	Message            string    `json:"message"`
+	RainbowdName       string    `json:"rainbowd_name"`
 
 	GithubUser       string  `json:"github_user"`       // github 后端用户名
 	GithubRepository string  `json:"github_repository"` // github 仓库地址

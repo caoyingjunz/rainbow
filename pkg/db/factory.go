@@ -28,6 +28,7 @@ type ShareDaoFactory interface {
 	Label() LabelInterface
 	Dockerfile() DockerfileInterface
 	Notify() NotifyInterface
+	Rainbowd() RainbowdInterface
 }
 
 type shareDaoFactory struct {
@@ -41,6 +42,7 @@ func (f *shareDaoFactory) Image() ImageInterface           { return newImage(f.d
 func (f *shareDaoFactory) Label() LabelInterface           { return newLabel(f.db) }
 func (f *shareDaoFactory) Dockerfile() DockerfileInterface { return newDockerfile(f.db) }
 func (f *shareDaoFactory) Notify() NotifyInterface         { return newNotify(f.db) }
+func (f *shareDaoFactory) Rainbowd() RainbowdInterface     { return newRainbowd(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {

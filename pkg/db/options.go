@@ -111,6 +111,15 @@ func WithName(name string) Options {
 	}
 }
 
+func WithRainbowdName(name string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(name) == 0 {
+			return tx
+		}
+		return tx.Where("rainbowd_name = ?", name)
+	}
+}
+
 func WithPath(path string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(path) == 0 {

@@ -1,6 +1,11 @@
 package util
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/caoyingjunz/pixiulib/strutil"
+)
 
 func InSlice(s string, ss []string) bool {
 	for _, sl := range ss {
@@ -28,4 +33,26 @@ func TrimAndFilter(input []string) []string {
 	}
 
 	return result
+}
+
+func KeyFunc(key interface{}) (int64, int64, error) {
+	str, ok := key.(string)
+	if !ok {
+		return 0, 0, fmt.Errorf("failed to convert %v to string", key)
+	}
+	parts := strings.Split(str, "/")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("parts length not 2")
+	}
+
+	objectId, err := strutil.ParseInt64(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to Parse taskId to Int64 %v", err)
+	}
+	resourceVersion, err := strutil.ParseInt64(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to Parse resourceVersion to Int64 %v", err)
+	}
+
+	return objectId, resourceVersion, nil
 }

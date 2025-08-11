@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 
-	"github.com/caoyingjunz/pixiulib/config"
 	"k8s.io/klog/v2"
 
-	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
+	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )
 
 var (
@@ -17,13 +17,20 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	c := config.New()
-	c.SetConfigFile(*rainbowdFile)
-	c.SetConfigType("yaml")
-
-	var cfg rainbowconfig.Config
-	if err := c.Binding(&cfg); err != nil {
+	opts, err := options.NewOptions(*rainbowdFile)
+	if err != nil {
 		klog.Fatal(err)
 	}
-	cfg.Rainbowd.SetDefault()
+	if err = opts.Complete(); err != nil {
+		klog.Fatal(err)
+	}
+
+	for _, runner := range []func(context.Context, int) error{opts.Controller.Rainbowd().Run} {
+		if err = runner(context.TODO(), 5); err != nil {
+			klog.Fatal("failed to rainbowd: ", err)
+		}
+	}
+
+	klog.Infof("rainbowd 已启动")
+	select {}
 }
