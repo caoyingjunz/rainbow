@@ -151,7 +151,21 @@ func (s *rainbowdController) runAgentContainer(agent *model.Agent) error {
 		"-v", fmt.Sprintf("%s:/data", s.cfg.Rainbowd.DataDir+"/"+agent.Name),
 		"-v", "/etc/localtime:/etc/localtime:ro",
 		"--network", "host", s.cfg.Rainbowd.AgentImage, "/data/agent", "--configFile", "/data/config.yaml"}
-	return s.runCmd(cmd)
+	if err := s.runCmd(cmd); err != nil {
+		return err
+	}
+
+	// 输入 github 的配置
+	cmd1 := []string{"docker", "exec", agent.Name, "git", "config", "--global", " user.name", agent.GithubUser}
+	if err := s.runCmd(cmd1); err != nil {
+		return err
+	}
+	cmd2 := []string{"docker", "exec", agent.Name, "git", "config", "--global", " user.email", agent.GithubEmail}
+	if err := s.runCmd(cmd2); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *rainbowdController) restartAgentContainer(agent *model.Agent) error {
@@ -188,7 +202,7 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 	}
 
 	switch agent.Status {
-	case model.RunAgentType:
+	case model.RunAgentType, model.UnRunAgentType, model.UnknownAgentType:
 		// 当数据库状态为运行，但是底层 agent 未启动的时候，直接启动
 		if runContainer == nil {
 			if err = s.prepareConfig(agent); err != nil {
@@ -241,6 +255,8 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 			}
 			return nil
 		}
+	default:
+		klog.Infof("未命中 agent(%s) 状态(%s) 等待下次协同", agent.Name, agent.Status)
 	}
 
 	return nil
@@ -303,7 +319,7 @@ func (s *rainbowdController) prepareConfig(agent *model.Agent) error {
 	}
 
 	// 渲染 .git/config
-	gc := struct{ URL string }{URL: fmt.Sprintf("https://github.com/%s/plugin.git", agent.GithubUser)}
+	gc := struct{ URL string }{URL: fmt.Sprintf("https://%s:%s@github.com/%s/plugin.git", agent.GithubUser, agent.GithubUser, agent.GithubToken)}
 	tpl := template.New(agentName)
 	t := template.Must(tpl.Parse(GitConfig))
 
