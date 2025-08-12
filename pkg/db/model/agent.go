@@ -16,6 +16,10 @@ const (
 	UnknownAgentType string = "未知"
 	UnStartType      string = "未启动"
 
+	DeletingAgentType   string = "删除中"
+	StartingAgentType   string = "启动中"
+	RestartingAgentType string = "重启中"
+
 	PublicAgentType  string = "public"
 	PrivateAgentType string = "private"
 )

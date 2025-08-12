@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/docker/docker/client"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"path/filepath"
 	"text/template"
 	"time"
 
+	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
-
 	"k8s.io/klog/v2"
 
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
@@ -35,8 +35,8 @@ type rainbowdController struct {
 	name    string
 	factory db.ShareDaoFactory
 	cfg     rainbowconfig.Config
-
-	queue workqueue.RateLimitingInterface
+	exec    exec.Interface
+	queue   workqueue.RateLimitingInterface
 }
 
 func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
@@ -44,6 +44,7 @@ func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
 		factory: f,
 		cfg:     cfg,
 		name:    cfg.Rainbowd.Name,
+		exec:    exec.New(),
 		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbowd"),
 	}
 }
@@ -145,34 +146,101 @@ func (s *rainbowdController) sync(ctx context.Context, agentId int64, resourceVe
 	return s.reconcileAgent(old)
 }
 
-func (s *rainbowdController) startAgentContainer(agent *model.Agent) error {
+func (s *rainbowdController) runAgentContainer(agent *model.Agent) error {
+	cmd := []string{"docker", "run", "-d", "--name", agent.Name,
+		"-v", fmt.Sprintf("%s:/data", s.cfg.Rainbowd.DataDir+"/"+agent.Name),
+		"-v", "/etc/localtime:/etc/localtime:ro",
+		"--network", "host", s.cfg.Rainbowd.AgentImage, "/data/agent", "--configFile", "/data/config.yaml"}
+	return s.runCmd(cmd)
+}
+
+func (s *rainbowdController) restartAgentContainer(agent *model.Agent) error {
+	cmd := []string{"docker", "restart", agent.Name}
+	return s.runCmd(cmd)
+}
+
+func (s *rainbowdController) removeAgentContainer(agent *model.Agent) error {
+	cmd := []string{"docker", "rm", agent.Name, "-f"}
+	return s.runCmd(cmd)
+}
+
+func (s *rainbowdController) runCmd(cmd []string) error {
+	if len(cmd) < 2 {
+		return fmt.Errorf("invaild cmd %v", cmd)
+	}
+
+	out, err := s.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to restart %s container %v", string(out), err)
+	}
 	return nil
 }
 
+// reconcile agent
 func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
+	if agent.Status == model.UnStartType {
+		return nil
+	}
+
 	runContainer, err := s.getAgentContainer(agent)
 	if err != nil {
 		return err
 	}
 
-	// 容器不存在，需要创建
-	if runContainer == nil {
-		if err = s.prepareConfig(agent); err != nil {
-			klog.Errorf("prepare agent Config 失败 %v", err)
-			return err
+	switch agent.Status {
+	case model.RunAgentType:
+		// 当数据库状态为运行，但是底层 agent 未启动的时候，直接启动
+		if runContainer == nil {
+			if err = s.prepareConfig(agent); err != nil {
+				return err
+			}
+			if err = s.runAgentContainer(agent); err != nil {
+				return err
+			}
+		} else {
+			// 检查期望状态和实际状态是否一致
+			// 目前仅检查镜像是否有变动
+			image := runContainer.Image
+			desireImage := s.cfg.Rainbowd.AgentImage
+			if image != desireImage {
+				klog.Infof("已运行agent(%s)的镜像发生改动(%s)——>(%s),容器即将重建", agent.Name, image, desireImage)
+				if err = s.removeAgentContainer(agent); err != nil {
+					return err
+				}
+				if err = s.runAgentContainer(agent); err != nil {
+					klog.Errorf("start agent Config 失败 %v", err)
+					return err
+				}
+			}
 		}
-		if err = s.startAgentContainer(agent); err != nil {
-			klog.Errorf("start agent Config 失败 %v", err)
-			return err
+	case model.DeletingAgentType:
+		// agent 状态是删除，容器存在则删除容器
+		if runContainer != nil {
+			klog.Infof("agent(%s)删除中", agent.Name)
+			if err = s.removeAgentContainer(agent); err != nil {
+				return err
+			}
+			if err = s.factory.Agent().Delete(context.TODO(), agent.Id); err != nil {
+				return err
+			}
 		}
-
-		return nil
-	}
-
-	// 存在，则重构
-	// TODO: 检查是否需要重构
-	if agent.Status == model.RunAgentType && runContainer.Status == "Running" {
-		return nil
+	case model.StartingAgentType:
+		// 容器不存在，需要创建
+		if runContainer == nil {
+			klog.Infof("agent(%s)启动中", agent.Name)
+			if err = s.prepareConfig(agent); err != nil {
+				klog.Errorf("prepare agent Config 失败 %v", err)
+				return err
+			}
+			if err = s.runAgentContainer(agent); err != nil {
+				klog.Errorf("start agent Config 失败 %v", err)
+				return err
+			}
+			if err = s.factory.Agent().Update(context.TODO(), agent.Id, agent.ResourceVersion, map[string]interface{}{"status": model.RunAgentType}); err != nil {
+				return err
+			}
+			return nil
+		}
 	}
 
 	return nil
