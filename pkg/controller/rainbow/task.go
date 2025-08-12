@@ -585,7 +585,13 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 func (s *ServerController) DeleteAgent(ctx context.Context, agentId int64) error {
 	// TODO 检查是否有正在运行的任务关联该agent
 	// 执行删除操作
-	if err := s.factory.Agent().Delete(ctx, agentId); err != nil {
+	old, err := s.factory.Agent().Get(ctx, agentId)
+	if err != nil {
+		return err
+	}
+	if err = s.factory.Agent().Update(ctx, agentId, old.ResourceVersion, map[string]interface{}{
+		"status": model.DeletingAgentType,
+	}); err != nil {
 		return fmt.Errorf("删除agent失败: %v", err)
 	}
 	return nil

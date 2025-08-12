@@ -202,7 +202,7 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 	}
 
 	switch agent.Status {
-	case model.RunAgentType, model.UnRunAgentType, model.UnknownAgentType:
+	case model.RunAgentType:
 		// 当数据库状态为运行，但是底层 agent 未启动的时候，直接启动
 		if runContainer == nil {
 			if err = s.prepareConfig(agent); err != nil {
@@ -310,6 +310,7 @@ func (s *rainbowdController) prepareConfig(agent *model.Agent) error {
 		return err
 	}
 	cfg.Agent.Name = agentName
+	cfg.Agent.HealthzPort = agent.HealthzPort
 	cfgData, err := yaml.Marshal(cfg)
 	if err != nil {
 		return err
