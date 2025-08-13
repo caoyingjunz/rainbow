@@ -29,6 +29,11 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		DockerfileRoute.GET("/:Id", cr.getDockerfile)
 	}
 
+	rainbowdRoute := httpEngine.Group("/rainbow/rainbowd")
+	{
+		rainbowdRoute.GET("", cr.listRainbowds)
+	}
+
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
