@@ -130,6 +130,8 @@ type ServerInterface interface {
 	ListKubernetesVersions(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	SyncKubernetesVersions(ctx context.Context, req *types.KubernetesTagRequest) (interface{}, error)
 
+	ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 }
 

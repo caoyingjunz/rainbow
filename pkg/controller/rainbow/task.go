@@ -605,3 +605,7 @@ func (s *ServerController) DeleteAgent(ctx context.Context, agentId int64) error
 	}
 	return nil
 }
+
+func (s *ServerController) ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Rainbowd().List(ctx)
+}

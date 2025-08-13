@@ -29,7 +29,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		DockerfileRoute.GET("/:Id", cr.getDockerfile)
 	}
 
-	rainbowdRoute := httpEngine.Group("/rainbow/rainbowd")
+	rainbowdRoute := httpEngine.Group("/rainbow/rainbowds")
 	{
 		rainbowdRoute.GET("", cr.listRainbowds)
 	}

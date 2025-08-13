@@ -202,7 +202,7 @@ func (cr *rainbowRouter) listRainbowds(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	if resp.Result, err = cr.c.Server().ListLabels(c, listOption); err != nil {
+	if resp.Result, err = cr.c.Server().ListRainbowds(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
