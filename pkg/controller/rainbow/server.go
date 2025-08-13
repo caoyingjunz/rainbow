@@ -200,6 +200,9 @@ func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAge
 	updates["github_user"] = req.GithubUser
 	updates["github_repository"] = repo
 	updates["github_token"] = req.GithubToken
+	updates["github_email"] = req.GithubEmail
+	updates["healthz_port"] = req.HealthzPort
+	updates["rainbowd_name"] = req.RainbowdName
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, updates)
 }
 

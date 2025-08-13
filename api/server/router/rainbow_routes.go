@@ -584,7 +584,6 @@ func (cr *rainbowRouter) getAgent(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if resp.Result, err = cr.c.Server().GetAgent(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -604,7 +603,6 @@ func (cr *rainbowRouter) updateAgentStatus(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if err = cr.c.Server().UpdateAgentStatus(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return

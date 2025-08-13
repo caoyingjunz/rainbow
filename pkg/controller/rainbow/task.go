@@ -3,11 +3,10 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
+	"strings"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -547,6 +546,9 @@ func (s *ServerController) preCreateAgent(ctx context.Context, req *types.Create
 	if len(req.GithubToken) == 0 {
 		return fmt.Errorf("github token不能为空")
 	}
+	if len(req.GithubEmail) == 0 {
+		return fmt.Errorf("github email不能为空")
+	}
 
 	// 检查agent是否存在
 	_, err := s.factory.Agent().GetByName(ctx, req.AgentName)
@@ -563,6 +565,10 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 		return err
 	}
 
+	if req.HealthzPort == 0 {
+		// 未做去重，暂时人工确认
+		req.HealthzPort = util.GenRandInt(10086, 10186)
+	}
 	if len(req.GithubRepository) == 0 {
 		req.GithubRepository = fmt.Sprintf("https://github.com/%s/plugin.git", req.GithubUser)
 	}
@@ -572,7 +578,10 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 		GithubUser:       req.GithubUser,
 		GithubToken:      req.GithubToken,
 		GithubRepository: req.GithubRepository,
+		GithubEmail:      req.GithubEmail,
+		HealthzPort:      req.HealthzPort,
 		Type:             req.Type,
+		RainbowdName:     req.RainbowdName,
 		Status:           model.UnStartType,
 	}
 	if _, err := s.factory.Agent().Create(ctx, agent); err != nil {

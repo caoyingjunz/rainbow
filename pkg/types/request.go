@@ -174,6 +174,9 @@ type (
 		GithubUser       string `json:"github_user"`       // github 后端用户名
 		GithubRepository string `json:"github_repository"` // github 仓库地址
 		GithubToken      string `json:"github_token"`      // github token
+		GithubEmail      string `json:"github_email"`
+		HealthzPort      int    `json:"healthz_port"`
+		RainbowdName     string `json:"rainbowd_name"`
 	}
 
 	UpdateAgentRequest struct {
@@ -182,6 +185,9 @@ type (
 		GithubUser       string `json:"github_user"`       // github 后端用户名
 		GithubRepository string `json:"github_repository"` // github 仓库地址
 		GithubToken      string `json:"github_token"`      // github token
+		GithubEmail      string `json:"github_email"`
+		HealthzPort      int    `json:"healthz_port"`
+		RainbowdName     string `json:"rainbowd_name"`
 	}
 
 	UpdateAgentStatusRequest struct {

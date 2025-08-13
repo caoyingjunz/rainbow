@@ -14,11 +14,14 @@ const (
 	RunAgentType     string = "在线"
 	UnRunAgentType   string = "离线"
 	UnknownAgentType string = "未知"
-	UnStartType      string = "未启动"
+	ErrorAgentType   string = "异常"
 
+	// Agent 的中间处理状态
+	UnStartType         string = "未启动"
 	DeletingAgentType   string = "删除中"
 	StartingAgentType   string = "启动中"
 	RestartingAgentType string = "重启中"
+	UpgradeAgentType    string = "升级中"
 
 	PublicAgentType  string = "public"
 	PrivateAgentType string = "private"

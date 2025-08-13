@@ -59,7 +59,7 @@ func main() {
 				klog.Errorf("Receive error: %v", err)
 				return
 			}
-			klog.Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
+			klog.V(1).Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
 
 			// 启动搜索
 			if err = opts.Controller.Agent().Search(context.TODO(), msg.Result); err != nil {

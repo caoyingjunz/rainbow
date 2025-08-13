@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/caoyingjunz/pixiulib/strutil"
@@ -55,4 +56,8 @@ func KeyFunc(key interface{}) (int64, int64, error) {
 	}
 
 	return objectId, resourceVersion, nil
+}
+
+func GenRandInt(min, max int) int {
+	return rand.Intn(max-min+1) + min
 }
