@@ -227,7 +227,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 func (s *ServerController) startSubscribeController(ctx context.Context) {
 	klog.Infof("starting subscribe controller")
 
-	ticker := time.NewTicker(15 * time.Second)
+	ticker := time.NewTicker(15 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -362,7 +362,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	}
 	if len(addImages) == 0 {
 		// 未发现新增镜像，则等待下次监控
-		klog.Infof("未发现镜像(%s)有新增版本，忽略", sub.Path)
+		klog.V(1).Infof("未发现镜像(%s)有新增版本，忽略", sub.Path)
 		return nil
 	}
 
