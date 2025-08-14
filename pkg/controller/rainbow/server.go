@@ -531,7 +531,7 @@ func (s *ServerController) sync(ctx context.Context) {
 		for _, targetImage := range targetImages {
 			pull := imageMap[targetImage.Name]
 			if targetImage.Pull == pull {
-				klog.Infof("镜像(%s)下载量未发生变量，无需更新", targetImage.Name)
+				klog.V(1).Infof("镜像(%s)下载量未发生变量，无需更新", targetImage.Name)
 				continue
 			}
 
@@ -623,8 +623,8 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 		}
 
 		for _, agent := range agents {
-			if agent.Status == model.UnRunAgentType {
-				klog.Infof("agent(%s)被设置为离线", agent.Name)
+			if agent.Status != model.RunAgentType {
+				klog.Infof("agent(%s)非在线状态，忽略", agent.Name)
 				continue
 			}
 

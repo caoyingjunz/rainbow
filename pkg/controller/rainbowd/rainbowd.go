@@ -262,7 +262,6 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 	var (
 		needUpdated bool
 	)
-
 	switch agent.Status {
 	case model.RestartingAgentType:
 		klog.Infof("agent(%s)重启中", agent.Name)
@@ -316,11 +315,11 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 		klog.Infof("agent(%s)删除中", agent.Name)
 		if runContainer != nil {
 			if err = s.removeAgentContainer(agent); err != nil {
-				return err
+				klog.Warningf("删除agent(%s)失败，继续删除", agent.Name) // 及时删除失败也不终止主流程
 			}
-			if err = s.factory.Agent().Delete(context.TODO(), agent.Id); err != nil {
-				return err
-			}
+		}
+		if err = s.factory.Agent().Delete(context.TODO(), agent.Id); err != nil {
+			return err
 		}
 	case model.StartingAgentType:
 		// 容器不存在，需要创建
