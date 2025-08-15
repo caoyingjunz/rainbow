@@ -47,6 +47,7 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 
 const (
 	defaultNamespace = "emptyNamespace"
+	defaultArch      = "amd64"
 )
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
@@ -70,33 +71,8 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if req.Namespace == defaultNamespace {
 		req.Namespace = ""
 	}
-	if req.Architecture == "" {
-		req.Architecture = "amd64"
-	}
-
-	object, err := s.factory.Task().Create(ctx, &model.Task{
-		Name:              req.Name,
-		UserId:            req.UserId,
-		UserName:          req.UserName,
-		RegisterId:        req.RegisterId,
-		AgentName:         req.AgentName,
-		Mode:              req.Mode,
-		Status:            TaskWaitStatus,
-		Type:              req.Type,
-		KubernetesVersion: req.KubernetesVersion,
-		Driver:            req.Driver,
-		Namespace:         req.Namespace,
-		IsPublic:          req.PublicImage,
-		Logo:              req.Logo,
-		IsOfficial:        req.IsOfficial,
-		Architecture:      req.Architecture,
-	})
-	if err != nil {
-		return err
-	}
-	if req.Type == 1 {
-		klog.Infof("创建任务(%s)成功，状态为延迟执行", req.Name)
-		return nil
+	if req.Arch == "" {
+		req.Arch = defaultArch
 	}
 
 	// 如果是k8s类型的镜像，则由 plugin 回调创建
@@ -124,7 +100,6 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 		}
 		taskId := object.Id
 		s.CreateTaskMessages(ctx, taskId, "同步已启动", "数据校验中，预计等待 1 分钟")
-
 
 		if err = s.CreateImageWithTag(ctx, taskId, req); err != nil {
 			s.CreateTaskMessages(ctx, taskId, fmt.Sprintf("创建镜像和版本失败 %v", err))
@@ -216,18 +191,18 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
 				newImage, err := s.factory.Image().Create(ctx, &model.Image{
-					UserId:       req.UserId,
-					UserName:     req.UserName,
-					RegisterId:   req.RegisterId,
-					Namespace:    namespace,
-					Logo:         req.Logo,
-					Name:         name,
-					Path:         path,
-					Mirror:       mirror,
-					IsPublic:     req.PublicImage,
-					IsOfficial:   req.IsOfficial,
-					Architecture: req.Architecture,
-					IsLocked:     true,
+					UserId:     req.UserId,
+					UserName:   req.UserName,
+					RegisterId: req.RegisterId,
+					Namespace:  namespace,
+					Logo:       req.Logo,
+					Name:       name,
+					Path:       path,
+					Mirror:     mirror,
+					IsPublic:   req.PublicImage,
+					IsOfficial: req.IsOfficial,
+					Arch:       req.Arch,
+					IsLocked:   true,
 				})
 				if err != nil {
 					return err

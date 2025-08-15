@@ -29,13 +29,13 @@ type Image struct {
 	Pull      int64  `json:"pull"`
 	Tags      []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
 
-	IsPublic      bool   `json:"is_public"`
-	IsOfficial    bool   `json:"is_official"`
-	PublicUpdated bool   `json:"public_updated"` // 是否已经同步过远端仓库状态
-	Architecture  string `json:"architecture"`
+	IsPublic      bool `json:"is_public"`
+	IsOfficial    bool `json:"is_official"`
+	PublicUpdated bool `json:"public_updated"` // 是否已经同步过远端仓库状态
 
 	IsLocked bool `json:"is_locked"` // 锁字段，默认false表示未锁定
 
+	Arch        string `json:"arch"` // 架构
 	Description string `json:"description"`
 }
 
