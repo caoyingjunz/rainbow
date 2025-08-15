@@ -322,7 +322,7 @@ func (p *PluginController) sync(imageToPush string, targetImage string, img conf
 	switch p.Cfg.Plugin.Driver {
 	case SkopeoDriver:
 		klog.Infof("use skopeo to copying image: %s", targetImage)
-		archList := strings.Split(p.Cfg.Plugin.Architecture, ",")
+		archList := strings.Split(p.Cfg.Plugin.Arch, ",")
 		copyCmd := fmt.Sprintf("skopeo copy docker://%s docker://%s", imageToPush, targetImage)
 		for _, arch := range archList {
 			copyCmd += fmt.Sprintf(" --override-arch=%s", arch)
