@@ -9,6 +9,12 @@ import (
 
 type Options func(*gorm.DB) *gorm.DB
 
+func WithTagOrderByDESC() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("tag DESC")
+	}
+}
+
 func WithOrderByASC() Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Order("id ASC")
@@ -51,6 +57,18 @@ func WithPublic() Options {
 	}
 }
 
+func WithEnable(enable int) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("enable = ?", enable)
+	}
+}
+
+func WithRole(role int) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("role = ?", role)
+	}
+}
+
 func WithLimit(limit int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if limit == 0 {
@@ -65,6 +83,49 @@ func WithIDIn(ids ...int64) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		// e.g. `WHERE id IN (1, 2, 3)`
 		return tx.Where("id IN ?", ids)
+	}
+}
+
+func WithIDStrIn(ids ...string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		// e.g. `WHERE id IN (1, 2, 3)`
+		return tx.Where("id IN ?", ids)
+	}
+}
+
+func WithErrorTask(onlyErr bool) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if !onlyErr {
+			return tx
+		}
+		return tx.Where("status = ?", "Error")
+	}
+}
+
+func WithName(name string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(name) == 0 {
+			return tx
+		}
+		return tx.Where("name = ?", name)
+	}
+}
+
+func WithRainbowdName(name string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(name) == 0 {
+			return tx
+		}
+		return tx.Where("rainbowd_name = ?", name)
+	}
+}
+
+func WithPath(path string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(path) == 0 {
+			return tx
+		}
+		return tx.Where("path = ?", path)
 	}
 }
 
@@ -130,6 +191,42 @@ func WithNameLike(name string) Options {
 			return tx
 		}
 		return tx.Where("name like ?", "%"+name+"%")
+	}
+}
+
+func WithPathLike(path string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(path) == 0 {
+			return tx
+		}
+		return tx.Where("path like ?", "%"+path+"%")
+	}
+}
+
+func WithTagLike(tag string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(tag) == 0 {
+			return tx
+		}
+		return tx.Where("tag like ?", "%"+tag+"%")
+	}
+}
+
+func WithNamespace(ns string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(ns) == 0 {
+			return tx
+		}
+		return tx.Where("namespace = ?", ns)
+	}
+}
+
+func WithAgent(agent string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(agent) == 0 {
+			return tx
+		}
+		return tx.Where("agent_name = ?", agent)
 	}
 }
 

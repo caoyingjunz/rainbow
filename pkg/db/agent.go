@@ -14,7 +14,6 @@ type AgentInterface interface {
 	Create(ctx context.Context, object *model.Agent) (*model.Agent, error)
 	Update(ctx context.Context, agentId int64, resourceVersion int64, updates map[string]interface{}) error
 	Delete(ctx context.Context, agentId int64) error
-
 	Get(ctx context.Context, agentId int64) (*model.Agent, error)
 	GetByName(ctx context.Context, agentName string) (*model.Agent, error)
 	UpdateByName(ctx context.Context, agentName string, updates map[string]interface{}) error
@@ -69,6 +68,9 @@ func (a *agent) UpdateByName(ctx context.Context, agentName string, updates map[
 }
 
 func (a *agent) Delete(ctx context.Context, agentId int64) error {
+	if err := a.db.WithContext(ctx).Where("id = ?", agentId).Delete(&model.Agent{}).Error; err != nil {
+		return err
+	}
 	return nil
 }
 

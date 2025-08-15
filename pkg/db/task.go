@@ -18,6 +18,7 @@ type TaskInterface interface {
 	Get(ctx context.Context, taskId int64) (*model.Task, error)
 	List(ctx context.Context, opts ...Options) ([]model.Task, error)
 
+	DeleteInBatch(ctx context.Context, taskIds []int64) error
 	UpdateDirectly(ctx context.Context, taskId int64, updates map[string]interface{}) error
 
 	GetOne(ctx context.Context, taskId int64, resourceVersion int64) (*model.Task, error)
@@ -28,7 +29,8 @@ type TaskInterface interface {
 	GetOneForSchedule(ctx context.Context, opts ...Options) (*model.Task, error)
 	GetRunningTask(ctx context.Context, opts ...Options) ([]model.Task, error)
 
-	Count(ctx context.Context) (int64, error)
+	Count(ctx context.Context, opts ...Options) (int64, error)
+	CountSubscribe(ctx context.Context, opts ...Options) (int64, error)
 
 	ListReview(ctx context.Context) ([]model.Review, error)
 	AddDailyReview(ctx context.Context, object *model.Daily) error
@@ -40,6 +42,20 @@ type TaskInterface interface {
 
 	CreateUser(ctx context.Context, object *model.User) error
 	ListUsers(ctx context.Context, opts ...Options) ([]model.User, error)
+	GetUser(ctx context.Context, userId string) (*model.User, error)
+	DeleteUser(ctx context.Context, userId string) error
+	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
+
+	ListKubernetesVersions(ctx context.Context, opts ...Options) ([]model.KubernetesVersion, error)
+	GetKubernetesVersionCount(ctx context.Context, opts ...Options) (int64, error)
+	GetKubernetesVersion(ctx context.Context, name string) (*model.KubernetesVersion, error)
+	CreateKubernetesVersion(ctx context.Context, object *model.KubernetesVersion) error
+
+	CreateSubscribe(ctx context.Context, object *model.Subscribe) error
+	UpdateSubscribe(ctx context.Context, subId int64, resourceVersion int64, updates map[string]interface{}) error
+	DeleteSubscribe(ctx context.Context, subId int64) error
+	GetSubscribe(ctx context.Context, subId int64) (*model.Subscribe, error)
+	ListSubscribes(ctx context.Context, opts ...Options) ([]model.Subscribe, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -91,6 +107,10 @@ func (a *task) UpdateDirectly(ctx context.Context, taskId int64, updates map[str
 
 func (a *task) Delete(ctx context.Context, taskId int64) error {
 	return a.db.WithContext(ctx).Where("id = ?", taskId).Delete(&model.Task{}).Error
+}
+
+func (a *task) DeleteInBatch(ctx context.Context, taskIds []int64) error {
+	return a.db.WithContext(ctx).Where("id in ?", taskIds).Delete(&model.Task{}).Error
 }
 
 func (a *task) Get(ctx context.Context, agentId int64) (*model.Task, error) {
@@ -211,9 +231,28 @@ func (a *task) AssignToAgent(ctx context.Context, taskId int64, agentName string
 	return f.Error
 }
 
-func (a *task) Count(ctx context.Context) (int64, error) {
+func (a *task) Count(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
 	var total int64
-	if err := a.db.WithContext(ctx).Model(&model.Task{}).Count(&total).Error; err != nil {
+	if err := tx.Model(&model.Task{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (a *task) CountSubscribe(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.Subscribe{}).Count(&total).Error; err != nil {
 		return 0, err
 	}
 
@@ -262,6 +301,14 @@ func (a *task) DeleteTaskMessages(ctx context.Context, taskId int64) error {
 	return a.db.WithContext(ctx).Where("task_id = ?", taskId).Delete(&model.TaskMessage{}).Error
 }
 
+func (a *task) GetSubscribe(ctx context.Context, subId int64) (*model.Subscribe, error) {
+	var audit model.Subscribe
+	if err := a.db.WithContext(ctx).Where("id = ?", subId).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
 func (a *task) ListTaskMessages(ctx context.Context, opts ...Options) ([]model.TaskMessage, error) {
 	var audits []model.TaskMessage
 	tx := a.db.WithContext(ctx)
@@ -276,9 +323,141 @@ func (a *task) ListTaskMessages(ctx context.Context, opts ...Options) ([]model.T
 }
 
 func (a *task) CreateUser(ctx context.Context, object *model.User) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	err := a.db.WithContext(ctx).Create(object).Error
+	return err
+}
+
+func (a *task) UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := a.db.WithContext(ctx).Model(&model.User{}).Where("user_id = ? and resource_version = ?", userId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
 	return nil
 }
 
+func (a *task) GetUser(ctx context.Context, userId string) (*model.User, error) {
+	var audit model.User
+	if err := a.db.WithContext(ctx).Where("user_id = ?", userId).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
 func (a *task) ListUsers(ctx context.Context, opts ...Options) ([]model.User, error) {
-	return nil, nil
+	var audits []model.User
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *task) DeleteUser(ctx context.Context, userId string) error {
+	return a.db.WithContext(ctx).Where("user_id = ?", userId).Delete(&model.User{}).Error
+}
+
+func (a *task) ListKubernetesVersions(ctx context.Context, opts ...Options) ([]model.KubernetesVersion, error) {
+	var audits []model.KubernetesVersion
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *task) GetKubernetesVersionCount(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.KubernetesVersion{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (a *task) GetKubernetesVersion(ctx context.Context, name string) (*model.KubernetesVersion, error) {
+	var audit model.KubernetesVersion
+	if err := a.db.WithContext(ctx).Where("name = ?", name).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
+func (a *task) CreateKubernetesVersion(ctx context.Context, object *model.KubernetesVersion) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *task) CreateSubscribe(ctx context.Context, object *model.Subscribe) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (a *task) ListSubscribes(ctx context.Context, opts ...Options) ([]model.Subscribe, error) {
+	var audits []model.Subscribe
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *task) UpdateSubscribe(ctx context.Context, subId int64, resourceVersion int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := a.db.WithContext(ctx).Model(&model.Subscribe{}).Where("id = ? and resource_version = ?", subId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
+}
+
+func (a *task) DeleteSubscribe(ctx context.Context, subId int64) error {
+	return a.db.WithContext(ctx).Where("id = ?", subId).Delete(&model.Subscribe{}).Error
 }

@@ -20,6 +20,20 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
+	DockerfileRoute := httpEngine.Group("/rainbow/dockerfiles")
+	{
+		DockerfileRoute.POST("", cr.createDockerfile)
+		DockerfileRoute.DELETE("/:Id", cr.deleteDockerfile)
+		DockerfileRoute.PUT("/:Id", cr.updateDockerfile)
+		DockerfileRoute.GET("", cr.listDockerfile)
+		DockerfileRoute.GET("/:Id", cr.getDockerfile)
+	}
+
+	rainbowdRoute := httpEngine.Group("/rainbow/rainbowds")
+	{
+		rainbowdRoute.GET("", cr.listRainbowds)
+	}
+
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
@@ -36,9 +50,24 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		taskRoute.GET(":Id/messages", cr.listTaskMessages)
 	}
 
+	subscribeRoute := httpEngine.Group("/rainbow/subscribes")
+	{
+		subscribeRoute.POST("", cr.createSubscribe)
+		subscribeRoute.PUT("/:Id", cr.updateSubscribe)
+		subscribeRoute.DELETE("/:Id", cr.deleteSubscribe)
+		subscribeRoute.GET("", cr.listSubscribes)
+	}
+
+	kubernetesVersionRoute := httpEngine.Group("/rainbow/kubernetes/versions")
+	{
+		kubernetesVersionRoute.GET("", cr.listKubernetesVersions)
+		kubernetesVersionRoute.POST("/sync", cr.syncRemoteKubernetesVersions)
+	}
+
 	registryRoute := httpEngine.Group("/rainbow/registries")
 	{
 		registryRoute.POST("", cr.createRegistry)
+		registryRoute.POST("/login", cr.loginRegistry)
 		registryRoute.PUT("/:Id", cr.updateRegistry)
 		registryRoute.DELETE("/:Id", cr.deleteRegistry)
 		registryRoute.GET("/:Id", cr.getRegistry)
@@ -47,6 +76,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 	agentRoute := httpEngine.Group("/rainbow/agents")
 	{
+		agentRoute.POST("", cr.createAgent)
+		agentRoute.PUT("/:Name", cr.updateAgent)
+		agentRoute.DELETE("/:Id", cr.deleteAgent)
 		agentRoute.GET("/:Id", cr.getAgent)
 		agentRoute.GET("", cr.listAgents)
 		agentRoute.PUT("/status", cr.updateAgentStatus)
@@ -63,6 +95,15 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		imageRoute.PUT("/status", cr.UpdateImageStatus)
 		imageRoute.POST("/batches", cr.createImages)
 		imageRoute.DELETE("/:Id/tags/:name", cr.deleteImageTag)
+	}
+
+	batchRoute := httpEngine.Group("/rainbow/batch")
+	{
+		batchRoute.POST("/list/images", cr.listImagesByIds)     // 根据ids批量获取镜像列表
+		batchRoute.POST("/delete/images", cr.deleteImagesByIds) // 根据ids批量删除镜像列表
+
+		batchRoute.POST("/list/tasks", cr.listTasksByIds)
+		batchRoute.POST("/delete/tasks", cr.deleteTasksByIds)
 	}
 
 	searchRoute := httpEngine.Group("/rainbow/search")
@@ -123,5 +164,18 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		repoRoute.GET("/repositories", cr.searchRepositories)
 		repoRoute.GET("/repositories/:namespace/:name/tags", cr.searchRepositoryTags)
 		repoRoute.GET("/repositories/:namespace/:name/tags/:tag", cr.searchRepositoryTagInfo)
+	}
+
+	notifyRoute := httpEngine.Group("/rainbow/notifications")
+	{
+		notifyRoute.POST("", cr.createNotification)
+		notifyRoute.PUT("/:Id", cr.updateNotification)
+		notifyRoute.DELETE("/:Id", cr.deleteNotification)
+		notifyRoute.GET("/:Id", cr.getNotification)
+		notifyRoute.GET("", cr.listNotifications)
+	}
+	sendNotifyRoute := httpEngine.Group("/rainbow/send/notification")
+	{
+		sendNotifyRoute.POST("", cr.sendNotification)
 	}
 }

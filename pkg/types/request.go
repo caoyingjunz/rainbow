@@ -1,6 +1,24 @@
 package types
 
+import "time"
+
 type (
+	UserMetaRequest struct {
+		UserId   string `json:"user_id"`
+		UserName string `json:"user_name"`
+	}
+
+	CreateDockerfileRequest struct {
+		Name       string `json:"name"`
+		Dockerfile string `json:"dockerfile"`
+	}
+
+	UpdateDockerfileRequest struct {
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Dockerfile      string `json:"dockerfile"`
+	}
+
 	CreateLabelRequest struct {
 		Name string `json:"name" binding:"required"`
 	}
@@ -55,6 +73,7 @@ type (
 		Images            []string `json:"images"`
 		Mode              int64    `json:"mode"`
 		PublicImage       bool     `json:"public_image"`
+		OnlyPushError     bool     `json:"only_push_error"` // 仅同步推送异常
 	}
 
 	UpdateTaskStatusRequest struct {
@@ -138,7 +157,38 @@ type (
 	}
 
 	CreateUserRequest struct {
-		Name string `json:"name"`
+		Name       string `json:"name"`
+		UserId     string `json:"user_id"`
+		UserType   string `json:"user_type"` // 个人版，专有版
+		ExpireTime string `json:"expire_time"`
+	}
+
+	UpdateUserRequest struct {
+		ResourceVersion int64 `json:"resource_version"`
+
+		CreateUserRequest `json:",inline"`
+	}
+
+	CreateAgentRequest struct {
+		AgentName        string `json:"agent_name"`
+		Type             string `json:"type"`
+		GithubUser       string `json:"github_user"`       // github 后端用户名
+		GithubRepository string `json:"github_repository"` // github 仓库地址
+		GithubToken      string `json:"github_token"`      // github token
+		GithubEmail      string `json:"github_email"`
+		HealthzPort      int    `json:"healthz_port"`
+		RainbowdName     string `json:"rainbowd_name"`
+	}
+
+	UpdateAgentRequest struct {
+		AgentName string `json:"agent_name"`
+
+		GithubUser       string `json:"github_user"`       // github 后端用户名
+		GithubRepository string `json:"github_repository"` // github 仓库地址
+		GithubToken      string `json:"github_token"`      // github token
+		GithubEmail      string `json:"github_email"`
+		HealthzPort      int    `json:"healthz_port"`
+		RainbowdName     string `json:"rainbowd_name"`
 	}
 
 	UpdateAgentStatusRequest struct {
@@ -146,10 +196,27 @@ type (
 		Status    string `json:"status"`
 	}
 
+	CreateNotificationRequest struct {
+		UserMetaRequest `json:",inline"`
+
+		Name      string `json:"name"`
+		Role      int    `json:"role"` // 1 管理员 0 普通用户
+		Enable    bool   `json:"enable"`
+		Type      string `json:"type"` // 支持 webhook, dingtalk, wecom
+		Url       string `json:"url"`
+		Content   string `json:"content"`
+		ShortDesc string `json:"short_desc"`
+	}
+	SendNotificationRequest struct {
+		CreateNotificationRequest `json:",inline"`
+
+		Email string `json:"email"`
+	}
+
 	// PageRequest 分页配置
 	PageRequest struct {
 		Page  int `form:"page" json:"page"`   // 页数，表示第几页
-		Limit int `form:"limit" json:"limit"` // 每页数量
+		Limit int `form:"limit" json:"limit"` // 每页数量，表示每页几个对象
 	}
 	// QueryOption 搜索配置
 	QueryOption struct {
@@ -158,8 +225,9 @@ type (
 	}
 
 	CustomMeta struct {
-		Status int `form:"status"`
-		Limits int `form:"limits"`
+		Status    int    `form:"status"`
+		Namespace string `form:"namespace"`
+		Agent     string `form:"agent"`
 	}
 
 	RemoteSearchRequest struct {
@@ -193,17 +261,43 @@ type (
 		PageSize string `json:"page_size" form:"page_size"`
 	}
 
+	KubernetesTagRequest struct {
+		ClientId string `json:"client_id" form:"client_id"`
+		SyncAll  bool   `json:"sync_all"`
+	}
+
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
 		RepositorySearchRequest RemoteSearchRequest
 		TagSearchRequest        RemoteTagSearchRequest
 		TagInfoSearchRequest    RemoteTagInfoSearchRequest
+		KubernetesTagRequest    KubernetesTagRequest
 	}
 
 	CreateTaskMessageRequest struct {
 		Id      int64  `json:"id"`
 		Message string `json:"message"`
+	}
+
+	CreateSubscribeRequest struct {
+		UserMetaRequest `json:",inline"`
+
+		Path       string        `json:"path"`   // 默认会自动填充命名空间，比如 nginx 表示 library/nginx， jenkins/jenkins 则直接使用
+		Enable     bool          `json:"enable"` // 启动或者关闭
+		Size       int           `json:"size"`   // 同步最新多少个版本
+		RegisterId int64         `json:"register_id"`
+		Namespace  string        `json:"namespace"`
+		Interval   time.Duration `json:"interval"` // 间隔多久同步一次
+	}
+
+	UpdateSubscribeRequest struct {
+		Id              int64 `json:"id"`
+		ResourceVersion int64 `json:"resource_version"`
+
+		Enable   bool          `json:"enable"`   // 启动或者关闭
+		Size     int           `json:"size"`     // 同步最新多少个版本
+		Interval time.Duration `json:"interval"` // 间隔多久同步一次
 	}
 )
 
@@ -216,4 +310,22 @@ type ListOptions struct {
 
 	PageRequest `json:",inline"` // 分页请求属性
 	QueryOption `json:",inline"` // 搜索内容
+}
+
+func (o *ListOptions) SetDefaultPageOption() {
+	// 初始化分页属性
+	if o.Page <= 0 {
+		o.Page = 1
+	}
+	if o.Limit <= 0 || o.Limit > 100 {
+		o.Limit = 10
+	}
+}
+
+type PageResult struct {
+	PageRequest `json:",inline"`
+
+	Total   int64       `json:"total"`   // 总记录数
+	Items   interface{} `json:"items"`   // 数据列表
+	Message string      `json:"message"` // 正常或异常信息
 }

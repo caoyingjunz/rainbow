@@ -120,7 +120,7 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 	}
 	// 检查 Lock 字段，如果为 true 则不允许删除
 	if image.IsLocked {
-		return fmt.Errorf("镜像 %d 已被锁定，不允许删除", imageId)
+		return fmt.Errorf("镜像被锁定，不允许删除")
 	}
 
 	if err := s.factory.Image().Delete(ctx, imageId); err != nil {
@@ -153,15 +153,56 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 }
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Image().ListImagesWithTag(ctx,
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+
+	opts := []db.Options{ // 先写条件，再写排序，再偏移，再设置每页数量
 		db.WithUser(listOption.UserId),
 		db.WithNameLike(listOption.NameSelector),
+		db.WithNamespace(listOption.Namespace),
+	}
+	var err error
+
+	// 先获取总数
+	pageResult.Total, err = s.factory.Image().Count(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取镜像总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
 		db.WithLimit(listOption.Limit),
-		db.WithModifyOrderByDesc())
+	}...)
+	pageResult.Items, err = s.factory.Image().ListImagesWithTag(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取镜像列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
 
 func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	return s.factory.Image().List(ctx, db.WithPublic(), db.WithNameLike(listOption.NameSelector), db.WithLimit(listOption.Limit))
+}
+
+func (s *ServerController) ListImagesByIds(ctx context.Context, ids []int64) (interface{}, error) {
+	return s.factory.Image().List(ctx, db.WithIDIn(ids...))
+}
+
+func (s *ServerController) DeleteImagesByIds(ctx context.Context, ids []int64) error {
+	return s.factory.Image().DeleteInBatch(ctx, ids)
 }
 
 func (s *ServerController) isDefaultRepo(regId int64) bool {
@@ -230,12 +271,12 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 }
 
 func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error) {
+	klog.Infof("CreateImages, req %v", req)
 	task, err := s.factory.Task().Get(ctx, req.TaskId)
 	if err != nil {
 		klog.Errorf("未传任务名，通过任务ID获取任务详情失败 %v", err)
 		return nil, err
 	}
-
 	taskReq := &types.CreateTaskRequest{
 		RegisterId:  task.RegisterId,
 		Images:      req.Names,
@@ -251,22 +292,25 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 		return nil, fmt.Errorf("创建k8s镜像记录失败 :%v", err)
 	}
 
-	tags, err := s.factory.Image().ListTags(ctx, db.WithTask(req.TaskId))
+	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(req.TaskId))
 	if err != nil {
-		klog.Errorf("创建k8s镜像tags失败 :%v", err)
-		return nil, fmt.Errorf("创建k8s镜像tags失败 :%v", err)
+		klog.Errorf("获取k8s镜像tags失败 :%v", err)
+		return nil, fmt.Errorf("获取k8s镜像tags失败 :%v", err)
 	}
+	klog.Infof("已完成k8s镜像创建 %v", tags)
+
 	var imageIds []int64
 	for _, tag := range tags {
 		imageIds = append(imageIds, tag.ImageId)
 	}
+
 	images, err := s.factory.Image().List(ctx, db.WithIDIn(imageIds...))
 	if err != nil {
 		klog.Errorf("获取已创建的k8s镜像列表失败 :%v", err)
 		return nil, fmt.Errorf("获取已创建的k8s镜像列表失败 :%v", err)
 	}
+	klog.Infof("创建 k8s 镜像成功, 镜像列表为 %v", images)
 
-	klog.Infof("创建 k8s 镜像 %v 成功", images)
 	return images, nil
 }
 

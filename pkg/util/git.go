@@ -61,7 +61,7 @@ func (g *Git) Push() error {
 		return err
 	}
 
-	cmd := g.executor.Command("git", "push", "origin", "HEAD")
+	cmd := g.executor.Command("git", "push", "origin", "HEAD", "--force")
 	cmd.SetDir(g.RepoDir)
 
 	out, err := cmd.CombinedOutput()

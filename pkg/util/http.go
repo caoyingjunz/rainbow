@@ -10,7 +10,7 @@ import (
 )
 
 type HttpInterface interface {
-	Post(url string, val interface{}, data map[string]interface{}) error
+	Post(url string, val interface{}, data interface{}, header map[string]string) error
 	Put(url string, val interface{}, data map[string]interface{}) error
 	Get(url string, val interface{}) error
 }
@@ -52,7 +52,7 @@ func (c *httpClient) Get(url string, val interface{}) error {
 	return nil
 }
 
-func (c *httpClient) Post(url string, val interface{}, data map[string]interface{}) error {
+func (c *httpClient) Post(url string, val interface{}, data interface{}, header map[string]string) error {
 	client := &http.Client{Timeout: c.timeout}
 
 	jsonData, err := json.Marshal(data)
@@ -63,6 +63,14 @@ func (c *httpClient) Post(url string, val interface{}, data map[string]interface
 	if err != nil {
 		return err
 	}
+
+	// 设置请求头
+	if header != nil {
+		for key, value := range header {
+			req.Header.Set(key, value)
+		}
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,6 +24,7 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
+	rand.Seed(time.Now().UnixNano())
 
 	opts, err := options.NewServerOptions(*serverFilePath)
 	if err != nil {

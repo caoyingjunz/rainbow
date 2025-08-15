@@ -2,10 +2,12 @@ package rainbow
 
 import (
 	"context"
+	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/docker"
 )
 
 func (s *ServerController) CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
@@ -20,6 +22,18 @@ func (s *ServerController) CreateRegistry(ctx context.Context, req *types.Create
 	})
 
 	return err
+}
+
+func (s *ServerController) LoginRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
+	if err := docker.LoginDocker(req.Repository, req.Username, req.Password); err != nil {
+		klog.Error("登陆镜像仓库 (%s) 失败 %v", req.Repository, err)
+		return err
+	}
+
+	if err := docker.LogoutDocker(req.Repository); err != nil {
+		klog.Warningf("退出 %s 异常 %v", req.Repository, err)
+	}
+	return nil
 }
 
 func (s *ServerController) UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error {

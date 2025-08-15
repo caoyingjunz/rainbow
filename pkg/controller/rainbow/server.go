@@ -3,15 +3,16 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"math/rand"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"github.com/robfig/cron/v3"
@@ -25,6 +26,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
+	"github.com/caoyingjunz/rainbow/pkg/util/uuid"
 )
 
 type ServerGetter interface {
@@ -32,11 +34,19 @@ type ServerGetter interface {
 }
 
 type ServerInterface interface {
+	CreateDockerfile(ctx context.Context, req *types.CreateDockerfileRequest) error
+	DeleteDockerfile(ctx context.Context, dockerfileId int64) error
+	UpdateDockerfile(ctx context.Context, req *types.UpdateDockerfileRequest) error
+	ListDockerfile(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error)
+
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
 	GetRegistry(ctx context.Context, registryId int64) (interface{}, error)
 	ListRegistries(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	LoginRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 
 	CreateTask(ctx context.Context, req *types.CreateTaskRequest) error
 	UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error
@@ -45,11 +55,22 @@ type ServerInterface interface {
 	GetTask(ctx context.Context, taskId int64) (interface{}, error)
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
+	CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error
+	ListSubscribes(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error
+	DeleteSubscribe(ctx context.Context, subId int64) error
+
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
+	ListTasksByIds(ctx context.Context, ids []int64) (interface{}, error)
+	DeleteTasksByIds(ctx context.Context, ids []int64) error
+
+	CreateAgent(ctx context.Context, req *types.CreateAgentRequest) error
+	UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error
+	DeleteAgent(ctx context.Context, agentId int64) error
 	GetAgent(ctx context.Context, agentId int64) (interface{}, error)
-	ListAgents(ctx context.Context) (interface{}, error)
+	ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
 
 	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
@@ -57,6 +78,9 @@ type ServerInterface interface {
 	DeleteImage(ctx context.Context, imageId int64) error
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	ListImagesByIds(ctx context.Context, ids []int64) (interface{}, error)
+	DeleteImagesByIds(ctx context.Context, ids []int64) error
 
 	ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
@@ -95,6 +119,18 @@ type ServerInterface interface {
 	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
 
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
+	UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error
+	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
+	GetUser(ctx context.Context, userId string) (*model.User, error)
+	DeleteUser(ctx context.Context, userId string) error
+
+	CreateNotify(ctx context.Context, req *types.CreateNotificationRequest) error
+	SendNotify(ctx context.Context, req *types.SendNotificationRequest) error
+
+	ListKubernetesVersions(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	SyncKubernetesVersions(ctx context.Context, req *types.KubernetesTagRequest) (interface{}, error)
+
+	ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 }
@@ -156,8 +192,24 @@ func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.Upd
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
 }
 
-func (s *ServerController) ListAgents(ctx context.Context) (interface{}, error) {
-	return s.factory.Agent().List(ctx)
+func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
+	repo := req.GithubRepository
+	if len(repo) == 0 {
+		repo = fmt.Sprintf("https://github.com/%s/plugin.git", req.GithubUser)
+	}
+
+	updates := make(map[string]interface{})
+	updates["github_user"] = req.GithubUser
+	updates["github_repository"] = repo
+	updates["github_token"] = req.GithubToken
+	updates["github_email"] = req.GithubEmail
+	updates["healthz_port"] = req.HealthzPort
+	updates["rainbowd_name"] = req.RainbowdName
+	return s.factory.Agent().UpdateByName(ctx, req.AgentName, updates)
+}
+
+func (s *ServerController) ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Agent().List(ctx, db.WithNameLike(listOption.NameSelector))
 }
 
 func (s *ServerController) Run(ctx context.Context, workers int) error {
@@ -166,15 +218,197 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.startSyncDailyPulls(ctx)
 	go s.startRpcServer(ctx)
 	go s.startAgentHeartbeat(ctx)
+	go s.startSyncKubernetesVersion(ctx)
+	go s.startSubscribeController(ctx)
 
 	return nil
 }
 
+func (s *ServerController) startSubscribeController(ctx context.Context) {
+	klog.Infof("starting subscribe controller")
+
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		subscribes, err := s.factory.Task().ListSubscribes(ctx, db.WithEnable(1))
+		if err != nil {
+			klog.Errorf("获取全部订阅失败 %v", err)
+			continue
+		}
+
+		for _, sub := range subscribes {
+			if sub.FailTimes >= 5 {
+				klog.Warningf("订阅 (%s) 失败超过限制，已终止订阅", sub.Path)
+				continue
+			}
+
+			if sub.WaitFirstRun {
+				klog.Infof("订阅 （%s）第一次执行，无需等待，直接执行")
+			} else {
+				now := time.Now()
+				if now.Sub(sub.LastNotifyTime) < sub.Interval*time.Second {
+					klog.Infof("订阅 (%s) 时间间隔 %v 暂时无需执行", sub.Path, sub.Interval*time.Second)
+					continue
+				}
+			}
+			if err = s.subscribe(ctx, sub); err != nil {
+				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
+			}
+		}
+	}
+}
+func (s *ServerController) reRunSubscribeTags(ctx context.Context, errTags []model.Tag) error {
+	taskIds := make([]string, 0)
+	for _, errTag := range errTags {
+		parts := strings.Split(errTag.TaskIds, ",")
+		for _, p := range parts {
+			taskIds = append(taskIds, p)
+		}
+	}
+
+	tasks, err := s.factory.Task().List(ctx, db.WithIDStrIn(taskIds...))
+	if err != nil {
+		return err
+	}
+	for _, t := range tasks {
+		klog.Infof("任务(%s)即将触发异常重新推送", t.Name)
+		if err = s.ReRunTask(ctx, &types.UpdateTaskRequest{
+			Id:              t.Id,
+			ResourceVersion: t.ResourceVersion,
+			OnlyPushError:   true,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// 1. 获取本地已存在的镜像版本
+// 2. 获取远端镜像版本列表
+// 3. 同步差异镜像版本
+func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) error {
+	exists, err := s.factory.Image().ListImagesWithTag(ctx, db.WithUser(sub.UserId), db.WithName(sub.SrcPath))
+	if err != nil {
+		return err
+	}
+	// 常规情况下 exists 只含有一个镜像
+	if len(exists) > 1 {
+		klog.Warningf("查询到镜像(%s)存在多个记录，不太正常，取第一个订阅", sub.Path)
+	}
+	tagMap := make(map[string]bool)
+	errTags := make([]model.Tag, 0)
+	for _, v := range exists {
+		for _, tag := range v.Tags {
+			if tag.Status == types.SyncImageError {
+				klog.Infof("镜像(%s)版本(%s)状态异常，重新镜像同步", sub.Path, tag.Name)
+				errTags = append(errTags, tag)
+				continue
+			}
+			tagMap[tag.Name] = true
+		}
+		break
+	}
+
+	// 重新触发推送失败的tag
+	if err = s.reRunSubscribeTags(ctx, errTags); err != nil {
+		klog.Errorf("重新触发异常tag失败: %v", err)
+	}
+
+	//klog.Infof("检索到镜像(%s)已同步或正在同步版本有 %v", sub.Path, tagMap)
+
+	var ns, repo string
+	parts := strings.Split(sub.RawPath, "/")
+	if len(parts) == 2 {
+		ns, repo = parts[0], parts[1]
+	}
+
+	pageSize := "5"
+	if sub.WaitFirstRun {
+		pageSize = fmt.Sprintf("%d", sub.Size)
+	}
+	remotes, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
+		Hub:        "dockerhub",
+		Namespace:  ns,
+		Repository: repo,
+		Page:       "1",
+		PageSize:   pageSize, // 同步最新
+	})
+	if err != nil {
+		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
+
+		// 如果返回报错是 404 Not Found 则说明远端进行不存在，终止订阅
+		if strings.Contains(err.Error(), "404 Not Found") {
+			klog.Infof("订阅镜像(%s)不存在，关闭订阅", sub.Path)
+			if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, map[string]interface{}{
+				"status": "镜像不存在",
+				"enable": false,
+			}); err != nil {
+				klog.Infof("镜像不存在关闭订阅失败", sub.Path, err)
+			}
+		}
+
+		return err
+	}
+
+	tagResp := remotes.(HubTagResponse)
+	var addImages []string
+	for _, tag := range tagResp.Results {
+		if tagMap[tag.Name] {
+			continue
+		}
+		addImages = append(addImages, sub.Path+":"+tag.Name)
+	}
+	if len(addImages) == 0 {
+		// 未发现新增镜像，则等待下次监控
+		klog.V(1).Infof("未发现镜像(%s)有新增版本，忽略", sub.Path)
+		return nil
+	}
+
+	klog.Infof("发现镜像(%s)有新增版本 %v", sub.Path, addImages)
+	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
+		Name:        uuid.NewRandName(fmt.Sprintf("subscribe-%s-", sub.Path), 8),
+		UserId:      sub.UserId,
+		UserName:    sub.UserName,
+		RegisterId:  sub.RegisterId,
+		Namespace:   sub.Namespace,
+		Images:      addImages,
+		Driver:      "skopeo",
+		PublicImage: true,
+	}); err != nil {
+		klog.Errorf("创建订阅任务失败 %v", err)
+		return err
+	}
+
+	updates := make(map[string]interface{})
+	updates["last_notify_time"] = time.Now()
+	if sub.WaitFirstRun {
+		updates["wait_first_run"] = false
+	}
+	if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, updates); err != nil {
+		klog.Infof("订阅 (%s) 更新失败 %v", sub.Path, err)
+	}
+	return nil
+}
+
+func (s *ServerController) startSyncKubernetesVersion(ctx context.Context) {
+	klog.Infof("starting kubernetes version syncer")
+	ticker := time.NewTicker(3600 * time.Second)
+	defer ticker.Stop()
+
+	opt := types.KubernetesTagRequest{SyncAll: false}
+	for range ticker.C {
+		if _, err := s.SyncKubernetesVersions(ctx, &opt); err != nil {
+			klog.Error("failed kubernetes version syncer %v", err)
+		}
+	}
+}
+
 func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
-	location, _ := time.LoadLocation("Asia/Shanghai") // 设置时区
-	c := cron.New(cron.WithLocation(location))
-	_, err := c.AddFunc("* * * * *", func() {
-		klog.Infof("执行每日 0 点任务...")
+	c := cron.New()
+	_, err := c.AddFunc("0 1 * * *", func() {
+		klog.Infof("执行每天凌晨 1 点任务...")
 		s.syncPulls(ctx)
 	})
 	if err != nil {
@@ -231,8 +465,9 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 		return err
 	}
 	if item == nil {
-		return err
+		return nil
 	}
+	klog.Infof("获取待处理任务 %v", item)
 
 	targetAgent, err := s.assignAgent(ctx)
 	if err != nil {
@@ -246,6 +481,7 @@ func (s *ServerController) doSchedule(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
+	klog.Infof("任务 %s 已被分配给 agent %s，等待处理中", item.Name, targetAgent)
 
 	return nil
 }
@@ -295,7 +531,7 @@ func (s *ServerController) sync(ctx context.Context) {
 		for _, targetImage := range targetImages {
 			pull := imageMap[targetImage.Name]
 			if targetImage.Pull == pull {
-				klog.Infof("镜像(%s)下载量未发生变量，无需更新", targetImage.Name)
+				klog.V(1).Infof("镜像(%s)下载量未发生变量，无需更新", targetImage.Name)
 				continue
 			}
 
@@ -305,7 +541,6 @@ func (s *ServerController) sync(ctx context.Context) {
 				klog.Errorf("更新镜像(%s)的下载量失败 %v", targetImage.Name, err)
 			}
 		}
-
 	}
 }
 
@@ -383,11 +618,16 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 	for range ticker.C {
 		agents, err := s.factory.Agent().List(ctx)
 		if err != nil {
-			klog.Error("failed to get agents %v", err)
+			klog.Error("获取 agents 列表失败，等待下一次重试 %v", err)
 			continue
 		}
 
 		for _, agent := range agents {
+			if agent.Status != model.RunAgentType {
+				klog.Infof("agent(%s)非在线状态，忽略", agent.Name)
+				continue
+			}
+
 			diff := time.Now().Sub(agent.LastTransitionTime)
 			if diff > time.Minute*5 {
 				if agent.Status == model.UnknownAgentType {
@@ -396,6 +636,8 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 				err = s.factory.Agent().UpdateByName(ctx, agent.Name, map[string]interface{}{"status": model.UnknownAgentType, "message": "Agent stopped posting status"})
 				if err != nil {
 					klog.Error("failed to sync agent %s status %v", agent.Name, err)
+				} else {
+					klog.Infof("agent(%s)被设置成未知", agent.Name)
 				}
 			}
 		}

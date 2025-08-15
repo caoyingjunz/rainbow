@@ -9,10 +9,19 @@ server:
     access_key: access_key
     secret_key: secret_key
 
+# 守护进程
+rainbowd:
+  name: test-name
+  template_dir: /tmp/plugin
+  data_dir: /tmp
+  agent_image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/rainbow-agent:v1.1
+
 agent:
   rpc_server: 127.0.0.1:8091
-  name: test-agent
+  name: agent-dev
   data_dir: /tmp
+  retain_days: 5
+#  healthz_port: 10086
 
 plugin:
   callback: http://127.0.0.1:8090

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"time"
+	"fmt"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/klog/v2"
@@ -57,7 +59,7 @@ func main() {
 				klog.Errorf("Receive error: %v", err)
 				return
 			}
-			klog.Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
+			klog.V(1).Infof("node(%s) received from server: %s", agentConfig.Name, msg.Result)
 
 			// 启动搜索
 			if err = opts.Controller.Agent().Search(context.TODO(), msg.Result); err != nil {
@@ -71,16 +73,18 @@ func main() {
 		klog.Fatal("client(%s) 向 rpc 服务注册失败", err)
 	}
 
-	// 启动客户端探活API
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	for range ticker.C {
-		t := time.Now().Format("2006-01-02 15:04:05")
-		if err = stream.Send(&pb.Request{
-			ClientId: agentConfig.Name,
-			Payload:  []byte("pong at " + t),
-		}); err != nil {
-			klog.Errorf("client(%s) 探活 RPC 服务端失败 at %v %v", agentConfig.Name, t, err)
-		}
+	// 启动 RPC 探活 API
+	r := gin.Default()
+	healthz := r.Group("/healthz")
+	{
+		healthz.POST("", func(c *gin.Context) {
+			if err = stream.Send(&pb.Request{ClientId: agentConfig.Name, Payload: []byte("pong")}); err != nil {
+				c.JSON(http.StatusBadRequest, err.Error())
+			} else {
+				c.JSON(http.StatusOK, "ok")
+			}
+		})
 	}
+
+	r.Run(fmt.Sprintf(":%d", agentConfig.HealthzPort))
 }
