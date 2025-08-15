@@ -47,6 +47,7 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 
 const (
 	defaultNamespace = "emptyNamespace"
+	defaultArch      = "amd64"
 )
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
@@ -69,6 +70,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	}
 	if req.Namespace == defaultNamespace {
 		req.Namespace = ""
+	}
+	if req.Arch == "" {
+		req.Arch = defaultArch
 	}
 
 	// 如果是k8s类型的镜像，则由 plugin 回调创建
@@ -197,6 +201,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					Mirror:     mirror,
 					IsPublic:   req.PublicImage,
 					IsOfficial: req.IsOfficial,
+					Arch:       req.Arch,
 					IsLocked:   true,
 				})
 				if err != nil {

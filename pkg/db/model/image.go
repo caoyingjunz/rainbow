@@ -35,6 +35,7 @@ type Image struct {
 
 	IsLocked bool `json:"is_locked"` // 锁字段，默认false表示未锁定
 
+	Arch        string `json:"arch"` // 架构
 	Description string `json:"description"`
 }
 
