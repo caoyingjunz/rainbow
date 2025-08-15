@@ -27,9 +27,9 @@ type Task struct {
 	Namespace         string `json:"namespace"`
 	IsPublic          bool   `json:"is_public"`
 	IsOfficial        bool   `json:"is_official"`
-	Architecture      string `json:"architecture"`
 	Logo              string `json:"logo"`
 	OnlyPushError     bool   `json:"only_push_error"` // 仅同步推送异常
+	Arch              string `json:"arch"`
 }
 
 func (t *Task) TableName() string {
