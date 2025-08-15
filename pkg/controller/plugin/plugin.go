@@ -322,8 +322,11 @@ func (p *PluginController) sync(imageToPush string, targetImage string, img conf
 	switch p.Cfg.Plugin.Driver {
 	case SkopeoDriver:
 		klog.Infof("use skopeo to copying image: %s", targetImage)
-		cmd1 := []string{"skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, ">", "/dev/null", "2>&1", "&&",
-			"skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage, "--override-arch", p.Cfg.Plugin.Arch}
+		cmd1 := []string{"skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, ">", "/dev/null", "2>&1", "&&", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
+		if p.Cfg.Plugin.Arch != "amd64" {
+			cmd1 = append(cmd1, []string{"--override-arch", p.Cfg.Plugin.Arch}...)
+		}
+
 		cmd = []string{"docker", "run", "--network", "host", "pixiuio/skopeo:1.17.0", "sh", "-c", strings.Join(cmd1, " ")}
 		klog.Infof("同步命令 %s", cmd)
 	case DockerDriver:
