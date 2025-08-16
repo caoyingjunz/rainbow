@@ -50,7 +50,6 @@ type (
 		Type              int      `json:"type"` // 0：直接指定镜像列表 1: 指定 kubernetes 版本
 		KubernetesVersion string   `json:"kubernetes_version"`
 		Images            []string `json:"images"` // 镜像列表中含镜像和架构，格式类似 nginx:1.0.1/amd64 默认为 amd64
-		Status            string   `json:"status"`
 		AgentName         string   `json:"agent_name"`
 		Mode              int64    `json:"mode"`
 		PublicImage       bool     `json:"public_image"`
