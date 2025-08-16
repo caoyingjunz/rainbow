@@ -93,7 +93,6 @@ type HubTagInfoResponse struct {
 }
 
 type ImageInfo struct {
-	Architecture string    `json:"architecture"`
 	Features     string    `json:"features"`
 	Variant      *string   `json:"variant"` // 可能是 null
 	Digest       string    `json:"digest"`
@@ -104,6 +103,7 @@ type ImageInfo struct {
 	Status       string    `json:"status"`
 	LastPulled   time.Time `json:"last_pulled"`
 	LastPushed   time.Time `json:"last_pushed"`
+	Architecture string    `json:"architecture"`
 }
 
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {

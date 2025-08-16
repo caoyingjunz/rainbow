@@ -189,6 +189,12 @@ func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interfa
 }
 
 func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
+	s.lock.Lock()
+	if RpcClients != nil {
+		delete(RpcClients, req.AgentName)
+	}
+	s.lock.Unlock()
+
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
 }
 
@@ -415,7 +421,7 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 		klog.Fatal("定时任务配置错误:", err)
 	}
 	c.Start()
-	klog.Infof("定时任务已启动")
+	klog.Infof("starting cronjob controller")
 
 	// 优雅关闭（可选）
 	sig := make(chan os.Signal, 1)

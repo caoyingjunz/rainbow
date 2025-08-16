@@ -48,6 +48,7 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 
 const (
 	defaultNamespace = "emptyNamespace"
+	defaultArch      = "amd64"
 )
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
@@ -70,6 +71,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	}
 	if req.Namespace == defaultNamespace {
 		req.Namespace = ""
+	}
+	if req.Arch == "" {
+		req.Arch = defaultArch
 	}
 
 	// 如果是k8s类型的镜像，则由 plugin 回调创建
@@ -198,6 +202,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					Mirror:     mirror,
 					IsPublic:   req.PublicImage,
 					IsOfficial: req.IsOfficial,
+					Arch:       req.Arch,
 					IsLocked:   true,
 				})
 				if err != nil {
@@ -592,6 +597,7 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 	return nil
 }
 
+// DeleteAgent 删除已注册的agent信息
 func (s *ServerController) DeleteAgent(ctx context.Context, agentId int64) error {
 	// TODO 检查是否有正在运行的任务关联该agent
 	// 执行删除操作
@@ -604,6 +610,15 @@ func (s *ServerController) DeleteAgent(ctx context.Context, agentId int64) error
 	}); err != nil {
 		return fmt.Errorf("删除agent失败: %v", err)
 	}
+
+	// 清理缓存
+	klog.V(0).Infof("清理 agent(%s) 缓存", old.Name)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if RpcClients != nil {
+		delete(RpcClients, old.Name)
+	}
+
 	return nil
 }
 

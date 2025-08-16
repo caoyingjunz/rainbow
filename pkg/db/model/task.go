@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 	"time"
+
+	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
 
 func init() {
@@ -29,6 +30,7 @@ type Task struct {
 	IsOfficial        bool   `json:"is_official"`
 	Logo              string `json:"logo"`
 	OnlyPushError     bool   `json:"only_push_error"` // 仅同步推送异常
+	Arch              string `json:"arch"`
 }
 
 func (t *Task) TableName() string {
