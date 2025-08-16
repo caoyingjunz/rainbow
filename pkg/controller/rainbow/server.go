@@ -415,7 +415,7 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 		klog.Fatal("定时任务配置错误:", err)
 	}
 	c.Start()
-	klog.Infof("定时任务已启动")
+	klog.Infof("starting cronjob controller")
 
 	// 优雅关闭（可选）
 	sig := make(chan os.Signal, 1)
