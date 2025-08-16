@@ -369,13 +369,12 @@ func (s *rainbowdController) getAgentContainer(agent *model.Agent) (*types.Conta
 	if err != nil {
 		return nil, err
 	}
-	cs, err := cli.ContainerList(context.TODO(), types.ContainerListOptions{})
+	cs, err := cli.ContainerList(context.TODO(), types.ContainerListOptions{All: true})
 	if err != nil {
 		return nil, err
 	}
 
 	for _, c := range cs {
-		fmt.Println("cc", c)
 		for _, name := range c.Names {
 			if name == "/"+agent.Name {
 				return &c, nil
