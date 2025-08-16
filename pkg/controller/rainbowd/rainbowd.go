@@ -113,7 +113,7 @@ func (s *rainbowdController) startHealthChecker(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		agents, err := s.factory.Agent().List(ctx, db.WithRainbowdName(s.name))
+		agents, err := s.factory.Agent().List(ctx, db.WithRainbowdName(s.name), db.WithStatus(model.RunAgentType))
 		if err != nil {
 			klog.Error("failed to list my agents %v", err)
 			continue
@@ -122,6 +122,7 @@ func (s *rainbowdController) startHealthChecker(ctx context.Context) {
 			continue
 		}
 		for _, agent := range agents {
+			klog.V(1).Infof("agent(%s)即将被检测", agent.Name)
 			if err = s.doCheck(agent); err != nil {
 				klog.Warningf("健康检查失败，尝试重启恢复 %v", err)
 				if err = s.restartAgentContainer(&agent); err != nil {
@@ -160,6 +161,7 @@ func (s *rainbowdController) getNextWorkItems(ctx context.Context) {
 			continue
 		}
 		if len(agents) == 0 {
+			klog.V(1).Infof("未发现 agent，等待下次同步")
 			continue
 		}
 		for _, agent := range agents {
@@ -255,10 +257,6 @@ func (s *rainbowdController) runCmd(cmd []string) error {
 
 // reconcile agent
 func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
-	if agent.Status == model.UnStartType {
-		return nil
-	}
-
 	runContainer, err := s.getAgentContainer(agent)
 	if err != nil {
 		return err
@@ -344,7 +342,7 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 			}
 		}
 		needUpdated = true
-	case model.StoppingAgentType:
+	case model.UnStartType, model.UnRunAgentType, model.StoppingAgentType:
 		klog.Infof("agent(%s)停止中", agent.Name)
 		if runContainer != nil {
 			if err = s.stopAgentContainer(agent); err != nil {
@@ -371,7 +369,7 @@ func (s *rainbowdController) getAgentContainer(agent *model.Agent) (*types.Conta
 	if err != nil {
 		return nil, err
 	}
-	cs, err := cli.ContainerList(context.TODO(), types.ContainerListOptions{})
+	cs, err := cli.ContainerList(context.TODO(), types.ContainerListOptions{All: true})
 	if err != nil {
 		return nil, err
 	}
