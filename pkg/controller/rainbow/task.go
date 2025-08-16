@@ -596,6 +596,7 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 	return nil
 }
 
+// 删除已注册的agent信息
 func (s *ServerController) DeleteAgent(ctx context.Context, agentId int64) error {
 	// TODO 检查是否有正在运行的任务关联该agent
 	// 执行删除操作
