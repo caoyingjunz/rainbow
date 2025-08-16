@@ -611,11 +611,6 @@ func (s *ServerController) DeleteAgent(ctx context.Context, agentId int64) error
 		return fmt.Errorf("删除agent失败: %v", err)
 	}
 
-	// TODO 即将删除
-	for name := range RpcClients {
-		fmt.Println(name)
-	}
-
 	// 清理缓存
 	klog.V(0).Infof("清理 agent(%s) 缓存", old.Name)
 	s.lock.Lock()
@@ -624,10 +619,6 @@ func (s *ServerController) DeleteAgent(ctx context.Context, agentId int64) error
 		delete(RpcClients, old.Name)
 	}
 
-	// TODO 即将删除
-	for name := range RpcClients {
-		fmt.Println(name)
-	}
 	return nil
 }
 
