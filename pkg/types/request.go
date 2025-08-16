@@ -57,6 +57,7 @@ type (
 		Logo              string   `json:"logo"`
 		Namespace         string   `json:"namespace"`
 		IsOfficial        bool     `json:"is_official"`
+		Arch              string   `json:"arch"`
 	}
 
 	UpdateTaskRequest struct {

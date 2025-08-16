@@ -220,6 +220,11 @@ func (s *rainbowdController) restartAgentContainer(agent *model.Agent) error {
 	return s.runCmd(cmd)
 }
 
+func (s *rainbowdController) startAgentContainer(agent *model.Agent) error {
+	cmd := []string{"docker", "start", agent.Name}
+	return s.runCmd(cmd)
+}
+
 func (s *rainbowdController) stopAgentContainer(agent *model.Agent) error {
 	cmd := []string{"docker", "stop", agent.Name}
 	return s.runCmd(cmd)
@@ -321,7 +326,6 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 		}
 	case model.StartingAgentType:
 		klog.Infof("agent(%s)启动中", agent.Name)
-		// 容器不存在，需要创建
 		if runContainer == nil {
 			if err = s.prepareConfig(agent); err != nil {
 				klog.Errorf("prepare agent Config 失败 %v", err)
@@ -332,18 +336,21 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 				return err
 			}
 		} else {
-			if err = s.restartAgentContainer(agent); err != nil {
+			if err = s.startAgentContainer(agent); err != nil {
 				klog.Errorf("start agent container 失败 %v", err)
 				return err
 			}
 		}
 		needUpdated = true
-	case model.UnStartType, model.UnRunAgentType:
+	case model.UnStartType, model.UnRunAgentType, model.StoppingAgentType:
 		klog.Infof("agent(%s)停止中", agent.Name)
 		if runContainer != nil {
 			if err = s.stopAgentContainer(agent); err != nil {
 				return err
 			}
+		}
+		if err = s.factory.Agent().Update(context.TODO(), agent.Id, agent.ResourceVersion, map[string]interface{}{"status": model.UnRunAgentType}); err != nil {
+			return err
 		}
 	default:
 		klog.V(1).Infof("未命中 agent(%s) 状态(%s) 等待下次协同", agent.Name, agent.Status)
