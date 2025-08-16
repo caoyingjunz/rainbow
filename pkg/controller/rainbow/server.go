@@ -189,6 +189,12 @@ func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interfa
 }
 
 func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
+	s.lock.Lock()
+	if RpcClients != nil {
+		delete(RpcClients, req.AgentName)
+	}
+	s.lock.Unlock()
+
 	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
 }
 
