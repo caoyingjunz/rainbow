@@ -474,7 +474,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 			RegistryId: registry.Id,
 			Synced:     true,
 			Driver:     task.Driver,
-			Arch:       task.Arch,
+			Arch:       task.Architecture,
 		},
 		Registry: rainbowconfig.Registry{
 			Repository: registry.Repository,
