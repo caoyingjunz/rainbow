@@ -167,6 +167,15 @@ func WithUser(userId string) Options {
 	}
 }
 
+func WithArch(arch string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(arch) == 0 {
+			return tx
+		}
+		return tx.Where("arch = ?", arch)
+	}
+}
+
 func WithTask(taskId int64) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if taskId == 0 {

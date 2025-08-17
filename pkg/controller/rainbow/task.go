@@ -72,8 +72,8 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if req.Namespace == defaultNamespace {
 		req.Namespace = ""
 	}
-	if req.Arch == "" {
-		req.Arch = defaultArch
+	if len(req.Architecture) == 0 {
+		req.Architecture = defaultArch
 	}
 
 	// 如果是k8s类型的镜像，则由 plugin 回调创建
@@ -95,6 +95,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 			IsPublic:          req.PublicImage,
 			Logo:              req.Logo,
 			IsOfficial:        req.IsOfficial,
+			Architecture:      req.Architecture, // 通用镜像架构，会被镜像自身的架构覆盖
 		})
 		if err != nil {
 			return err
@@ -126,6 +127,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 				IsPublic:          req.PublicImage,
 				Logo:              req.Logo,
 				IsOfficial:        req.IsOfficial,
+				Architecture:      req.Architecture,
 			})
 			if err != nil {
 				return err
@@ -159,6 +161,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 	for _, i := range util.TrimAndFilter(req.Images) {
 		path, tag, err := ParseImageItem(i)
 		if err != nil {
+			klog.Errorf("无法解析镜像 %s %v", i, err)
 			return fmt.Errorf("failed to parse image %v", err)
 		}
 
@@ -202,10 +205,10 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					Mirror:     mirror,
 					IsPublic:   req.PublicImage,
 					IsOfficial: req.IsOfficial,
-					Arch:       req.Arch,
 					IsLocked:   true,
 				})
 				if err != nil {
+					klog.Errorf("创建镜像(%s)失败: %v", path, err)
 					return err
 				}
 				imageId = newImage.Id
@@ -213,6 +216,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 				return err
 			}
 		} else {
+			klog.Infof("镜像(%s)已存在，复用", path)
 			imageId = oldImage.Id
 		}
 
@@ -227,12 +231,13 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 
 				// tag 不存在则创建
 				if _, err = s.factory.Image().CreateTag(ctx, &model.Tag{
-					Path:    path,
-					Mirror:  mirror,
-					ImageId: imageId,
-					TaskIds: fmt.Sprintf("%d", taskId),
-					Name:    tag,
-					Status:  types.SyncImageInitializing,
+					Path:         path,
+					Mirror:       mirror,
+					ImageId:      imageId,
+					TaskIds:      fmt.Sprintf("%d", taskId),
+					Name:         tag,
+					Status:       types.SyncImageInitializing,
+					Architecture: req.Architecture,
 				}); err != nil {
 					klog.Errorf("创建镜像(%s)的版本(%s)失败 %v", path, tag, err)
 					return err

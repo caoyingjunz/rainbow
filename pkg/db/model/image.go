@@ -35,7 +35,6 @@ type Image struct {
 
 	IsLocked bool `json:"is_locked"` // 锁字段，默认false表示未锁定
 
-	Arch        string `json:"arch"` // 架构
 	Description string `json:"description"`
 }
 
@@ -48,16 +47,17 @@ type Tag struct {
 
 	GmtDeleted gorm.DeletedAt
 
-	ImageId  int64  `gorm:"index:idx_image" json:"image_id"`
-	TaskIds  string `json:"task_ids"` // 关联的任务IDs 多个id以逗号隔开
-	Path     string `json:"path"`
-	Mirror   string `json:"mirror"`
-	Name     string `json:"name"`
-	Size     int64  `json:"size"`
-	Status   string `json:"status"`
-	Message  string `json:"message"` // 错误信息
-	Manifest string `json:"manifest"`
-	Digest   string `json:"digest"`
+	ImageId      int64  `gorm:"index:idx_image" json:"image_id"`
+	TaskIds      string `json:"task_ids"` // 关联的任务IDs 多个id以逗号隔开
+	Path         string `json:"path"`
+	Mirror       string `json:"mirror"`
+	Name         string `json:"name"`
+	Size         int64  `json:"size"`
+	Status       string `json:"status"`
+	Message      string `json:"message"` // 错误信息
+	Manifest     string `json:"manifest"`
+	Digest       string `json:"digest"`
+	Architecture string `json:"architecture"` // 版本对应的架构，默认是 arm64，也可以是 amd64
 }
 
 func (t *Tag) TableName() string {
