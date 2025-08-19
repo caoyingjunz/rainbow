@@ -514,7 +514,7 @@ func (s *ServerController) sync(ctx context.Context) {
 		// TODO: 后续分页查询
 		resp, err := SwrClient.ListReposDetails(&swrmodel.ListReposDetailsRequest{Namespace: &defaultNamespace})
 		if err != nil {
-			klog.Errorf("获取远程镜像列表失败", err)
+			klog.Errorf("获取远程镜像列表失败 %v", err)
 			continue
 		}
 		if resp.Body == nil || len(*resp.Body) == 0 {
@@ -531,7 +531,7 @@ func (s *ServerController) sync(ctx context.Context) {
 
 		targetImages, err := s.factory.Image().List(ctx, db.WithNameIn(imageNames...))
 		if err != nil {
-			klog.Errorf("查询本地镜像列表失败", err)
+			klog.Errorf("查询本地镜像列表失败 %v", err)
 			continue
 		}
 		for _, targetImage := range targetImages {
@@ -630,7 +630,7 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 
 		for _, agent := range agents {
 			if agent.Status != model.RunAgentType {
-				klog.Infof("agent(%s)非在线状态，忽略", agent.Name)
+				klog.V(1).Infof("agent(%s)非在线状态，忽略", agent.Name)
 				continue
 			}
 

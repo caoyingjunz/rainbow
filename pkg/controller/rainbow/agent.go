@@ -514,7 +514,7 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		for _, i := range images {
 			ts, ok := imageMap[i.Id]
 			if !ok {
-				klog.Warningf("未能找到镜像(%d)的tags", i.Name)
+				klog.Warningf("未能找到镜像(%s)的tags", i.Name)
 				continue
 			}
 			var tagStr []string
