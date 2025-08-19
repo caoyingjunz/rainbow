@@ -328,7 +328,7 @@ func (p *PluginController) sync(imageToPush string, targetImage string, img conf
 		}
 
 		cmd = []string{"docker", "run", "--network", "host", "pixiuio/skopeo:1.17.0", "sh", "-c", strings.Join(cmd1, " ")}
-		klog.Infof("同步命令 %s", cmd)
+		klog.Infof("即将执行命令(%s)进行同步", cmd)
 	case DockerDriver:
 		klog.Infof("Pulling image: %s", imageToPush)
 		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})

@@ -266,7 +266,7 @@ func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 			klog.Infof("agent(%s) 的 github 属性存在空值，忽略", agent.Name)
 			continue
 		}
-		if agent.Status == model.UnRunAgentType || agent.Status == model.UnknownAgentType {
+		if agent.Status != model.RunAgentType {
 			klog.Warningf("agent 处于未运行状态，忽略")
 			continue
 		}

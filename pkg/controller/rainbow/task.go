@@ -75,6 +75,9 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if len(req.Architecture) == 0 {
 		req.Architecture = defaultArch
 	}
+	if len(req.Driver) == 0 {
+		req.Driver = "skopeo"
+	}
 
 	// 如果是k8s类型的镜像，则由 plugin 回调创建
 	// 0：直接指定镜像列表 1: 指定 kubernetes 版本
