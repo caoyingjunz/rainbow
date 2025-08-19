@@ -33,9 +33,11 @@ type ImageInterface interface {
 
 	CreateTag(ctx context.Context, object *model.Tag) (*model.Tag, error)
 	UpdateTag(ctx context.Context, imageId int64, tag string, updates map[string]interface{}) error
-	DeleteTag(ctx context.Context, imageId int64, name string, arch string) error
-	GetTag(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error)
+	DeleteTag(ctx context.Context, tagId int64) error
+	GetTag(ctx context.Context, tagId int64, del bool) (*model.Tag, error)
 	ListTags(ctx context.Context, opts ...Options) ([]model.Tag, error)
+
+	GetTagWithArch(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error)
 
 	CreateNamespace(ctx context.Context, object *model.Namespace) (*model.Namespace, error)
 	UpdateNamespace(ctx context.Context, namespaceId int64, resourceVersion int64, updates map[string]interface{}) error
@@ -226,9 +228,9 @@ func (a *image) CreateTagsInBatch(ctx context.Context, objects []model.Tag) erro
 	return nil
 }
 
-func (a *image) DeleteTag(ctx context.Context, imageId int64, name string, arch string) error {
+func (a *image) DeleteTag(ctx context.Context, tagId int64) error {
 	var audit model.Tag
-	if err := a.db.Clauses(clause.Returning{}).Where("image_id = ? and name = ? and architecture = ?", imageId, name, arch).Delete(&audit).Error; err != nil {
+	if err := a.db.Clauses(clause.Returning{}).Where("id = ?", tagId).Delete(&audit).Error; err != nil {
 		return err
 	}
 	return nil
@@ -247,7 +249,19 @@ func (a *image) ListTags(ctx context.Context, opts ...Options) ([]model.Tag, err
 	return audits, nil
 }
 
-func (a *image) GetTag(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error) {
+func (a *image) GetTag(ctx context.Context, tagId int64, del bool) (*model.Tag, error) {
+	tx := a.db.WithContext(ctx)
+	if del {
+		tx = tx.Unscoped()
+	}
+	var audit model.Tag
+	if err := tx.Where("id = ?", tagId).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
+func (a *image) GetTagWithArch(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error) {
 	tx := a.db.WithContext(ctx)
 	if del {
 		tx = tx.Unscoped()
@@ -256,6 +270,7 @@ func (a *image) GetTag(ctx context.Context, imageId int64, name string, arch str
 	if err := tx.Where("image_id = ? and name = ? and architecture = ?", imageId, name, arch).First(&audit).Error; err != nil {
 		return nil, err
 	}
+
 	return &audit, nil
 }
 

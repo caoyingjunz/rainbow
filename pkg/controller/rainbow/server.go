@@ -86,7 +86,7 @@ type ServerInterface interface {
 
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error)
-	DeleteImageTag(ctx context.Context, imageId int64, name string) error
+	DeleteImageTag(ctx context.Context, imageId int64, TagId int64) error
 
 	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	AddDailyReview(ctx context.Context, page string) error

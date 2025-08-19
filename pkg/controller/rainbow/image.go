@@ -314,16 +314,15 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 	return images, nil
 }
 
-func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, name string) error {
-	err := s.factory.Image().DeleteTag(ctx, imageId, name, "amd64")
+func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, tagId int64) error {
+	err := s.factory.Image().DeleteTag(ctx, tagId)
 	if err != nil {
-		klog.Errorf("删除镜像(%d) tag %s 失败:%v", imageId, name, err)
-		return fmt.Errorf("删除镜像(%d) tag %s 失败:%v", imageId, name, err)
+		return fmt.Errorf("删除镜像(%d) tag %s 失败:%v", imageId, tagId, err)
 	}
 
-	delTag, err := s.factory.Image().GetTag(ctx, imageId, name, "amd64", true)
+	delTag, err := s.factory.Image().GetTag(ctx, tagId, true)
 	if err != nil {
-		klog.Errorf("获取已删除镜像(%d)的tag(%s) 失败: %v", imageId, name, err)
+		klog.Errorf("获取已删除镜像(%d)的tag(%s) 失败: %v", imageId, tagId, err)
 		return nil
 	}
 	image, err := s.factory.Image().Get(ctx, imageId, false)

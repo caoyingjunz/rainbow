@@ -225,7 +225,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 
 		// 版本需要和任务关联
 		for _, tag := range tags {
-			oldTag, tagErr := s.factory.Image().GetTag(ctx, imageId, tag, req.Architecture, false)
+			oldTag, tagErr := s.factory.Image().GetTagWithArch(ctx, imageId, tag, req.Architecture, false)
 			if tagErr != nil {
 				// 非不存在报错，则直接返回异常
 				if !errors.IsNotFound(tagErr) {
