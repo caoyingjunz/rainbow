@@ -109,7 +109,7 @@ func (s *rainbowdController) processNextWorkItem(ctx context.Context) bool {
 }
 
 func (s *rainbowdController) startHealthChecker(ctx context.Context) {
-	ticker := time.NewTicker(20 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -150,7 +150,7 @@ func (s *rainbowdController) doCheck(agent model.Agent) error {
 }
 
 func (s *rainbowdController) getNextWorkItems(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
