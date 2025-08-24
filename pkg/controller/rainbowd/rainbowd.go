@@ -150,7 +150,7 @@ func (s *rainbowdController) doCheck(agent model.Agent) error {
 }
 
 func (s *rainbowdController) getNextWorkItems(ctx context.Context) {
-	ticker := time.NewTicker(20 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
