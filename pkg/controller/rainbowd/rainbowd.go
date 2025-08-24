@@ -347,7 +347,7 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 		if runContainer != nil {
 			klog.Infof("已存在的agent将被清理")
 			if err = s.stopAgentContainer(agent); err != nil {
-				return err
+				klog.Errorf("停止 agent 容器 %s 失败 %v", agent.Name, err)
 			}
 		}
 		if agent.Status == model.StoppingAgentType {
