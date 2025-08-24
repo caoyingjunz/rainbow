@@ -345,10 +345,27 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 	case model.UnStartType, model.UnRunAgentType, model.StoppingAgentType:
 		klog.Infof("agent(%s)停止中", agent.Name)
 		if runContainer != nil {
+			klog.Infof("已存在的agent将被清理")
 			if err = s.stopAgentContainer(agent); err != nil {
 				return err
 			}
 		}
+		if agent.Status == model.StoppingAgentType {
+			if err = s.factory.Agent().Update(context.TODO(), agent.Id, agent.ResourceVersion, map[string]interface{}{"status": model.UnRunAgentType}); err != nil {
+				return err
+			}
+		}
+	case model.OfflineAgentType:
+		klog.Infof("agent(%s)下线中", agent.Name)
+		if runContainer != nil {
+			if err = s.removeAgentContainer(agent); err != nil {
+				klog.Warningf("删除agent(%s)失败，继续删除", agent.Name) // 及时删除失败也不终止主流程
+			}
+		}
+		// 清理本地文件
+		destDir := filepath.Join(s.cfg.Rainbowd.DataDir, agent.Name)
+		klog.V(1).Infof("agent 工作目录(%s) 正在被回收", destDir)
+		util.RemoveFile(destDir)
 		if err = s.factory.Agent().Update(context.TODO(), agent.Id, agent.ResourceVersion, map[string]interface{}{"status": model.UnRunAgentType}); err != nil {
 			return err
 		}

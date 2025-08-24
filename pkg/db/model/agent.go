@@ -23,6 +23,7 @@ const (
 	StoppingAgentType   string = "停止中"
 	RestartingAgentType string = "重启中"
 	UpgradeAgentType    string = "升级中"
+	OfflineAgentType    string = "下线中"
 
 	PublicAgentType  string = "public"
 	PrivateAgentType string = "private"
