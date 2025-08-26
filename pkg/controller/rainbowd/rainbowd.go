@@ -215,6 +215,67 @@ func (s *rainbowdController) runAgentContainer(agent *model.Agent) error {
 	return nil
 }
 
+func (s *rainbowdController) runUpgradeAgent(agent *model.Agent) error {
+	containerName := "upgrade-" + agent.Name
+	cmd := []string{"docker", "run", "-d", "--name", containerName,
+		"-v", fmt.Sprintf("%s:/data", s.cfg.Rainbowd.DataDir+"/"+agent.Name),
+		"-v", "/etc/localtime:/etc/localtime:ro",
+		"--network", "host", s.cfg.Rainbowd.AgentImage, "sleep", "infinity"}
+	if err := s.runCmd(cmd); err != nil {
+		return err
+	}
+
+	pluginDir := "/data/plugin/"
+
+	cmd1 := []string{"docker", "exec", containerName, "git", "init", pluginDir}
+	if err := s.runCmd(cmd1); err != nil {
+		return err
+	}
+
+	// 输入 github 的配置
+	cmd3 := []string{"docker", "exec", containerName, "git", "config", "--global", "user.name", agent.GithubUser}
+	if err := s.runCmd(cmd3); err != nil {
+		klog.Errorf("执行 git user.name 设置失败 %v", err)
+		return err
+	}
+	cmd2 := []string{"docker", "exec", containerName, "git", "config", "--global", "user.email", agent.GithubEmail}
+	if err := s.runCmd(cmd2); err != nil {
+		klog.Errorf("执行 git user.email 设置失败 %v", err)
+		return err
+	}
+
+	// 渲染 .git/config
+	gc := struct{ URL string }{URL: fmt.Sprintf("https://%s:%s@github.com/%s/plugin.git", agent.GithubUser, agent.GithubToken, agent.GithubUser)}
+	tpl := template.New(agent.Name)
+	t := template.Must(tpl.Parse(GitConfig))
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, gc); err != nil {
+		return err
+	}
+
+	destDir := filepath.Join(s.cfg.Rainbowd.DataDir, agent.Name)
+	if err := ioutil.WriteFile(destDir+"/plugin/.git/config", buf.Bytes(), 0644); err != nil {
+		return err
+	}
+	cmd5 := []string{"docker", "exec", "-w", pluginDir, containerName, "git", "add", "."}
+	if err := s.runCmd(cmd5); err != nil {
+		klog.Errorf("执行 git add . 失败 %v", err)
+		return err
+	}
+	cmd6 := []string{"docker", "exec", "-w", pluginDir, containerName, "git", "commit", "-m", "init"}
+	if err := s.runCmd(cmd6); err != nil {
+		klog.Errorf("执行 git commit -m init 失败 %v", err)
+		return err
+	}
+	cmd4 := []string{"docker", "exec", "-w", pluginDir, containerName, "git", "push", "--set-upstream", "origin", "master", "--force"}
+	if err := s.runCmd(cmd4); err != nil {
+		klog.Errorf("执行 git push --set-upstream origin master --force %v", err)
+		return err
+	}
+
+	return nil
+}
+
 func (s *rainbowdController) restartAgentContainer(agent *model.Agent) error {
 	cmd := []string{"docker", "restart", agent.Name}
 	return s.runCmd(cmd)
@@ -279,7 +340,8 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 				return err
 			}
 		}
-		if err = s.prepareConfig(agent); err != nil {
+
+		if err = s.resetGithubAction(agent); err != nil {
 			return err
 		}
 		if err = s.runAgentContainer(agent); err != nil {
@@ -399,6 +461,34 @@ func (s *rainbowdController) getAgentContainer(agent *model.Agent) (*types.Conta
 		}
 	}
 	return nil, nil
+}
+
+// 1. 删除 github 的 .github 文件夹
+// 2. 执行 git init 重新初始化 git 配置
+// 3. 输入账号信息
+// 4. 重新推送至 github 完成初始化
+func (s *rainbowdController) resetGithubAction(agent *model.Agent) error {
+	if err := s.prepareConfig(agent); err != nil {
+		return err
+	}
+
+	// 工作文件夹在 prepareConfig 中已经初始化
+	destDir := filepath.Join(s.cfg.Rainbowd.DataDir, agent.Name)
+	pluginDir := filepath.Join(destDir, "plugin")
+
+	// 1. 删除 github 的 .github 文件夹
+	util.RemoveFile(pluginDir + "/.git")
+
+	// 2. 启动升级 agent 容器，初始化 git
+	if err := s.runUpgradeAgent(agent); err != nil {
+		return err
+	}
+
+	cmd := []string{"docker", "rm", "upgrade-" + agent.Name, "-f"}
+	if err := s.runCmd(cmd); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *rainbowdController) prepareConfig(agent *model.Agent) error {
