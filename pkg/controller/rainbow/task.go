@@ -415,13 +415,11 @@ func (s *ServerController) GetTask(ctx context.Context, taskId int64) (interface
 
 func (s *ServerController) ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error {
 	updates := map[string]interface{}{
-		"agent_name": "",
-		"status":     TaskWaitStatus,
-		"process":    0,
-		"message":    "触发重新执行",
-	}
-	if req.OnlyPushError {
-		updates["only_push_error"] = true
+		"agent_name":      "",
+		"status":          TaskWaitStatus,
+		"process":         0,
+		"message":         "触发重新执行",
+		"only_push_error": req.OnlyPushError,
 	}
 	if err := s.factory.Task().Update(ctx, req.Id, req.ResourceVersion, updates); err != nil {
 		klog.Errorf("重新执行任务 %d 失败 %v", req.Id, err)
