@@ -1,6 +1,6 @@
 module github.com/caoyingjunz/rainbow
 
-go 1.17
+go 1.21
 
 require (
 	github.com/caoyingjunz/pixiulib v1.0.1-0.20250202143815-b9478878b1b2
