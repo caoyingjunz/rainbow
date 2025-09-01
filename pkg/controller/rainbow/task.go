@@ -249,9 +249,13 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			} else {
 				// 已经存在则写入新关联的 taskId
 				newTaskIds := strings.Join([]string{oldTag.TaskIds, fmt.Sprintf("%d", taskId)}, ",")
-				if err = s.factory.Image().UpdateTag(ctx, imageId, tag, map[string]interface{}{
-					"task_ids": newTaskIds,
-				}); err != nil {
+				update := map[string]interface{}{"task_ids": newTaskIds}
+				// 必要时更新 mirror
+				// 早期创建的 tag 不存在 mirror 字段，会在其他人任务推送时展示 null
+				if mirror != oldTag.Mirror {
+					update["mirror"] = mirror
+				}
+				if err = s.factory.Image().UpdateTag(ctx, imageId, tag, update); err != nil {
 					klog.Errorf("更新镜像(%s)的版本(%s)任务Id失败 %v", path, tag, err)
 					return err
 				}

@@ -339,13 +339,11 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, ta
 	if strings.Contains(imageName, "/") {
 		imageName = strings.ReplaceAll(imageName, "/", "$")
 	}
-
 	request := &swrmodel.DeleteRepoTagRequest{
 		Namespace:  HuaweiNamespace,
 		Repository: imageName,
 		Tag:        delTag.Name,
 	}
-
 	_, err = SwrClient.DeleteRepoTag(request)
 	if err != nil {
 		klog.Errorf("删除远程镜像 %s tag(%s) 失败 %v", image.Name, delTag.Name, err)

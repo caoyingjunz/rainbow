@@ -828,7 +828,6 @@ func (cr *rainbowRouter) getImage(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if resp.Result, err = cr.c.Server().GetImage(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
