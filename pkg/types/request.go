@@ -58,6 +58,7 @@ type (
 		Namespace         string   `json:"namespace"`
 		IsOfficial        bool     `json:"is_official"`
 		Architecture      string   `json:"architecture"`
+		OwnerRef          int      `json:"owner_ref"` // 任务所属，直接创建 0，订阅创建 1
 	}
 
 	UpdateTaskRequest struct {
@@ -229,6 +230,7 @@ type (
 		Status    int    `form:"status"`
 		Namespace string `form:"namespace"`
 		Agent     string `form:"agent"`
+		OwnerRef  string `form:"ownerRef"`
 	}
 
 	RemoteSearchRequest struct {

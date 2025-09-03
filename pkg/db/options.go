@@ -63,6 +63,15 @@ func WithEnable(enable int) Options {
 	}
 }
 
+func WithFailTimes(t int) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if t == 0 {
+			return tx
+		}
+		return tx.Where("fail_times <= ?", t)
+	}
+}
+
 func WithRole(role int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("role = ?", role)
@@ -236,6 +245,15 @@ func WithAgent(agent string) Options {
 			return tx
 		}
 		return tx.Where("agent_name = ?", agent)
+	}
+}
+
+func WithRef(ref string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if ref == "0" || ref == "1" {
+			return tx.Where("owner_ref = ?", ref)
+		}
+		return tx
 	}
 }
 

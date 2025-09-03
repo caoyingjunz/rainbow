@@ -230,6 +230,45 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
+func (s *ServerController) DisableSubscribeWithMessage(ctx context.Context, sub model.Subscribe, msg string) {
+	if err := s.factory.Task().UpdateSubscribeDirectly(ctx, sub.Id, map[string]interface{}{
+		"enable": 0,
+	}); err != nil {
+		klog.Errorf("自动关闭订阅失败 %v", err)
+		return
+	}
+	if err := s.factory.Task().CreateSubscribeMessage(ctx, &model.SubscribeMessage{
+		SubscribeId: sub.Id,
+		Message:     msg,
+	}); err != nil {
+		klog.Errorf("创建订阅限制事件失败 %v", err)
+	}
+}
+
+func (s *ServerController) CreateSubscribeMessageAndFailTimesAdd(ctx context.Context, sub model.Subscribe, msg string) {
+	if err := s.factory.Task().UpdateSubscribeDirectly(ctx, sub.Id, map[string]interface{}{
+		"fail_times": sub.FailTimes + 1,
+	}); err != nil {
+		klog.Errorf("订阅次数+1失败 %v", err)
+	}
+
+	if err := s.factory.Task().CreateSubscribeMessage(ctx, &model.SubscribeMessage{
+		SubscribeId: sub.Id,
+		Message:     msg,
+	}); err != nil {
+		klog.Errorf("创建订阅限制事件失败 %v", err)
+	}
+}
+
+func (s *ServerController) CreateSubscribeMessageWithLog(ctx context.Context, sub model.Subscribe, msg string) {
+	if err := s.factory.Task().CreateSubscribeMessage(ctx, &model.SubscribeMessage{
+		SubscribeId: sub.Id,
+		Message:     msg,
+	}); err != nil {
+		klog.Errorf("创建订阅限制事件失败 %v", err)
+	}
+}
+
 func (s *ServerController) startSubscribeController(ctx context.Context) {
 	klog.Infof("starting subscribe controller")
 
@@ -237,15 +276,16 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		subscribes, err := s.factory.Task().ListSubscribes(ctx, db.WithEnable(1))
+		subscribes, err := s.factory.Task().ListSubscribes(ctx, db.WithEnable(1), db.WithFailTimes(5))
 		if err != nil {
-			klog.Errorf("获取全部订阅失败 %v", err)
+			klog.Errorf("获取全部订阅失败 %v 15分钟后重新执行订阅", err)
 			continue
 		}
 
 		for _, sub := range subscribes {
-			if sub.FailTimes >= 5 {
+			if sub.FailTimes > 5 {
 				klog.Warningf("订阅 (%s) 失败超过限制，已终止订阅", sub.Path)
+				s.DisableSubscribeWithMessage(ctx, sub, fmt.Sprintf("订阅 (%s) 失败超过限制，已终止订阅", sub.Path))
 				continue
 			}
 
@@ -258,12 +298,19 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 					continue
 				}
 			}
-			if err = s.subscribe(ctx, sub); err != nil {
+
+			err = s.subscribe(ctx, sub)
+			if err == nil {
+				// 订阅触发成功
+				s.CreateSubscribeMessageWithLog(ctx, sub, fmt.Sprintf("%s 在 %v 订阅执行成功", sub.Path, time.Now()))
+			} else {
 				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
+				s.CreateSubscribeMessageAndFailTimesAdd(ctx, sub, err.Error())
 			}
 		}
 	}
 }
+
 func (s *ServerController) reRunSubscribeTags(ctx context.Context, errTags []model.Tag) error {
 	taskIds := make([]string, 0)
 	for _, errTag := range errTags {
@@ -380,6 +427,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		RegisterId:  sub.RegisterId,
 		Namespace:   sub.Namespace,
 		Images:      addImages,
+		OwnerRef:    1,
 		Driver:      "skopeo",
 		PublicImage: true,
 	}); err != nil {

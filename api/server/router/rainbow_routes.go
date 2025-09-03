@@ -343,7 +343,6 @@ func (cr *rainbowRouter) listTasks(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if resp.Result, err = cr.c.Server().ListTasks(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return

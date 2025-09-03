@@ -31,6 +31,7 @@ type Task struct {
 	Logo              string `json:"logo"`
 	OnlyPushError     bool   `json:"only_push_error"` // 仅同步推送异常
 	Architecture      string `json:"architecture"`
+	OwnerRef          int    `json:"owner_ref"` // 任务所属，直接创建 0，订阅创建 1
 }
 
 func (t *Task) TableName() string {

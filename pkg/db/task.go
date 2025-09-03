@@ -56,6 +56,12 @@ type TaskInterface interface {
 	DeleteSubscribe(ctx context.Context, subId int64) error
 	GetSubscribe(ctx context.Context, subId int64) (*model.Subscribe, error)
 	ListSubscribes(ctx context.Context, opts ...Options) ([]model.Subscribe, error)
+
+	UpdateSubscribeDirectly(ctx context.Context, subId int64, updates map[string]interface{}) error
+
+	CreateSubscribeMessage(ctx context.Context, object *model.SubscribeMessage) error
+	DeleteSubscribeMessage(ctx context.Context, subId int64) error
+	ListSubscribeMessages(ctx context.Context, opts ...Options) ([]model.SubscribeMessage, error)
 }
 
 func newTask(db *gorm.DB) TaskInterface {
@@ -458,6 +464,48 @@ func (a *task) UpdateSubscribe(ctx context.Context, subId int64, resourceVersion
 	return nil
 }
 
+func (a *task) UpdateSubscribeDirectly(ctx context.Context, subId int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	f := a.db.WithContext(ctx).Model(&model.Subscribe{}).Where("id = ?", subId).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
+}
+
 func (a *task) DeleteSubscribe(ctx context.Context, subId int64) error {
 	return a.db.WithContext(ctx).Where("id = ?", subId).Delete(&model.Subscribe{}).Error
+}
+
+func (a *task) CreateSubscribeMessage(ctx context.Context, object *model.SubscribeMessage) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := a.db.WithContext(ctx).Create(object).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *task) DeleteSubscribeMessage(ctx context.Context, subId int64) error {
+	return a.db.WithContext(ctx).Where("subscribe_id = ?", subId).Delete(&model.SubscribeMessage{}).Error
+}
+
+func (a *task) ListSubscribeMessages(ctx context.Context, opts ...Options) ([]model.SubscribeMessage, error) {
+	var audits []model.SubscribeMessage
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	return audits, nil
 }
