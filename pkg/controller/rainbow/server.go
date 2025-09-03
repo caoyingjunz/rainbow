@@ -60,6 +60,8 @@ type ServerInterface interface {
 	UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error
 	DeleteSubscribe(ctx context.Context, subId int64) error
 
+	ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error)
+
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
@@ -232,7 +234,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 
 func (s *ServerController) DisableSubscribeWithMessage(ctx context.Context, sub model.Subscribe, msg string) {
 	if err := s.factory.Task().UpdateSubscribeDirectly(ctx, sub.Id, map[string]interface{}{
-		"enable": 0,
+		"enable": false,
 	}); err != nil {
 		klog.Errorf("自动关闭订阅失败 %v", err)
 		return
@@ -272,11 +274,11 @@ func (s *ServerController) CreateSubscribeMessageWithLog(ctx context.Context, su
 func (s *ServerController) startSubscribeController(ctx context.Context) {
 	klog.Infof("starting subscribe controller")
 
-	ticker := time.NewTicker(15 * time.Minute)
+	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		subscribes, err := s.factory.Task().ListSubscribes(ctx, db.WithEnable(1), db.WithFailTimes(5))
+		subscribes, err := s.factory.Task().ListSubscribes(ctx, db.WithEnable(1), db.WithFailTimes(6))
 		if err != nil {
 			klog.Errorf("获取全部订阅失败 %v 15分钟后重新执行订阅", err)
 			continue
@@ -696,4 +698,8 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (s *ServerController) ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error) {
+	return s.factory.Task().ListSubscribeMessages(ctx, db.WithSubscribe(subId))
 }

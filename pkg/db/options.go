@@ -194,6 +194,15 @@ func WithTask(taskId int64) Options {
 	}
 }
 
+func WithSubscribe(subId int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if subId == 0 {
+			return tx
+		}
+		return tx.Where("subscribe_id = ?", subId)
+	}
+}
+
 func WithTaskLike(taskId int64) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if taskId == 0 {
