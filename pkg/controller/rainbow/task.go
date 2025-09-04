@@ -517,14 +517,13 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 			UserId:   req.UserId,
 			UserName: req.UserName,
 		},
-		Namespace:    req.Namespace,
-		Path:         req.Path,
-		RawPath:      rawPath,
-		SrcPath:      srcPath,
-		Enable:       req.Enable,   // 是否启动订阅
-		Size:         req.Size,     // 最多同步多少个版本
-		Interval:     req.Interval, // 多久执行一次
-		WaitFirstRun: true,
+		Namespace: req.Namespace,
+		Path:      req.Path,
+		RawPath:   rawPath,
+		SrcPath:   srcPath,
+		Enable:    req.Enable,   // 是否启动订阅
+		Size:      req.Size,     // 最多同步多少个版本
+		Interval:  req.Interval, // 多久执行一次
 	})
 }
 
