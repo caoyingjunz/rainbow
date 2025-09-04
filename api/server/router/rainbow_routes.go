@@ -1250,6 +1250,27 @@ func (cr *rainbowRouter) listSubscribeMessages(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) runSubscribeImmediately(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta types.IdMeta
+		req    types.UpdateSubscribeRequest
+		err    error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	req.Id = idMeta.ID
+	if err = cr.c.Server().RunSubscribeImmediately(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) updateSubscribe(c *gin.Context) {
 	resp := httputils.NewResponse()
 

@@ -62,6 +62,7 @@ type ServerInterface interface {
 	GetSubscribe(ctx context.Context, subId int64) (interface{}, error)
 
 	ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error)
+	RunSubscribeImmediately(ctx context.Context, req *types.UpdateSubscribeRequest) error
 
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
@@ -708,4 +709,20 @@ func (s *ServerController) ListSubscribeMessages(ctx context.Context, subId int6
 
 func (s *ServerController) GetSubscribe(ctx context.Context, subId int64) (interface{}, error) {
 	return s.factory.Task().GetSubscribe(ctx, subId)
+}
+
+func (s *ServerController) RunSubscribeImmediately(ctx context.Context, req *types.UpdateSubscribeRequest) error {
+	sub, err := s.factory.Task().GetSubscribe(ctx, req.Id)
+	if err != nil {
+		return err
+	}
+
+	changed, err := s.subscribe(ctx, *sub)
+	if err != nil {
+		return err
+	}
+	if !changed {
+		return fmt.Errorf("未发现新增镜像，无需执行")
+	}
+	return nil
 }
