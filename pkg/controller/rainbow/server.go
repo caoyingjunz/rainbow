@@ -59,6 +59,7 @@ type ServerInterface interface {
 	ListSubscribes(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error
 	DeleteSubscribe(ctx context.Context, subId int64) error
+	GetSubscribe(ctx context.Context, subId int64) (interface{}, error)
 
 	ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error)
 
@@ -287,7 +288,7 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 		for _, sub := range subscribes {
 			if sub.FailTimes > 5 {
 				klog.Warningf("订阅 (%s) 失败超过限制，已终止订阅", sub.Path)
-				s.DisableSubscribeWithMessage(ctx, sub, fmt.Sprintf("订阅 (%s) 失败超过限制，已终止订阅", sub.Path))
+				s.DisableSubscribeWithMessage(ctx, sub, fmt.Sprintf("订阅(%s)失败已超过限制，终止订阅", sub.Path))
 				continue
 			}
 
@@ -301,16 +302,25 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 				}
 			}
 
-			err = s.subscribe(ctx, sub)
+			changed, err := s.subscribe(ctx, sub)
 			if err == nil {
 				// 订阅触发成功
-				s.CreateSubscribeMessageWithLog(ctx, sub, fmt.Sprintf("%s 在 %v 订阅执行成功", sub.Path, time.Now()))
+				if changed {
+					s.CreateSubscribeMessageWithLog(ctx, sub, fmt.Sprintf("%s 在 %v 订阅触发成功", sub.Path, time.Now().Format("2006-01-02 15:04:05")))
+				}
 			} else {
 				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
 				s.CreateSubscribeMessageAndFailTimesAdd(ctx, sub, err.Error())
 			}
+
+			// 仅保留最新的 n 个事件
+			_ = s.cleanSubscribeMessages(ctx, sub.Id, 5)
 		}
 	}
+}
+
+func (s *ServerController) cleanSubscribeMessages(ctx context.Context, subId int64, retains int) error {
+	return s.factory.Task().DeleteSubscribeMessage(ctx, subId)
 }
 
 func (s *ServerController) reRunSubscribeTags(ctx context.Context, errTags []model.Tag) error {
@@ -343,10 +353,10 @@ func (s *ServerController) reRunSubscribeTags(ctx context.Context, errTags []mod
 // 1. 获取本地已存在的镜像版本
 // 2. 获取远端镜像版本列表
 // 3. 同步差异镜像版本
-func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) error {
+func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (bool, error) {
 	exists, err := s.factory.Image().ListImagesWithTag(ctx, db.WithUser(sub.UserId), db.WithName(sub.SrcPath))
 	if err != nil {
-		return err
+		return false, err
 	}
 	// 常规情况下 exists 只含有一个镜像
 	if len(exists) > 1 {
@@ -366,7 +376,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		break
 	}
 
-	// 重新触发推送失败的tag
+	// 重新触发之前推送失败的tag
 	if err = s.reRunSubscribeTags(ctx, errTags); err != nil {
 		klog.Errorf("重新触发异常tag失败: %v", err)
 	}
@@ -404,7 +414,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 			}
 		}
 
-		return err
+		return false, err
 	}
 
 	tagResp := remotes.(HubTagResponse)
@@ -418,7 +428,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	if len(addImages) == 0 {
 		// 未发现新增镜像，则等待下次监控
 		klog.V(1).Infof("未发现镜像(%s)有新增版本，忽略", sub.Path)
-		return nil
+		return false, nil
 	}
 
 	klog.Infof("发现镜像(%s)有新增版本 %v", sub.Path, addImages)
@@ -434,7 +444,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 		PublicImage: true,
 	}); err != nil {
 		klog.Errorf("创建订阅任务失败 %v", err)
-		return err
+		return false, err
 	}
 
 	updates := make(map[string]interface{})
@@ -445,7 +455,7 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) e
 	if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, updates); err != nil {
 		klog.Infof("订阅 (%s) 更新失败 %v", sub.Path, err)
 	}
-	return nil
+	return true, nil
 }
 
 func (s *ServerController) startSyncKubernetesVersion(ctx context.Context) {
@@ -702,4 +712,8 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 
 func (s *ServerController) ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error) {
 	return s.factory.Task().ListSubscribeMessages(ctx, db.WithSubscribe(subId))
+}
+
+func (s *ServerController) GetSubscribe(ctx context.Context, subId int64) (interface{}, error) {
+	return s.factory.Task().GetSubscribe(ctx, subId)
 }

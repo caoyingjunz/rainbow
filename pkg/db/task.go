@@ -493,7 +493,19 @@ func (a *task) CreateSubscribeMessage(ctx context.Context, object *model.Subscri
 }
 
 func (a *task) DeleteSubscribeMessage(ctx context.Context, subId int64) error {
-	return a.db.WithContext(ctx).Where("subscribe_id = ?", subId).Delete(&model.SubscribeMessage{}).Error
+	result := a.db.Exec(`
+	DELETE FROM subscribe_messages
+	WHERE subscribe_id = ?
+	AND id NOT IN (
+		SELECT id FROM (
+		SELECT id
+	FROM subscribe_messages
+	WHERE subscribe_id = ?
+	ORDER BY id DESC
+	LIMIT 5
+	) AS temp
+	)`, subId, subId)
+	return result.Error
 }
 
 func (a *task) ListSubscribeMessages(ctx context.Context, opts ...Options) ([]model.SubscribeMessage, error) {

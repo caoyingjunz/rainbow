@@ -55,6 +55,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		subscribeRoute.POST("", cr.createSubscribe)
 		subscribeRoute.PUT("/:Id", cr.updateSubscribe)
 		subscribeRoute.DELETE("/:Id", cr.deleteSubscribe)
+		subscribeRoute.GET("/:Id", cr.getSubscribe)
 		subscribeRoute.GET("", cr.listSubscribes)
 		subscribeRoute.GET("/:Id/messages", cr.listSubscribeMessages)
 	}
