@@ -148,6 +148,7 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 				// 过滤
 				tagResults = append(tagResults, tag)
 			}
+			// 最后一组中断
 			if len(tagResp.Next) == 0 {
 				break
 			}
