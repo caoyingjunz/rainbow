@@ -100,6 +100,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 			IsOfficial:        req.IsOfficial,
 			Architecture:      req.Architecture, // 通用镜像架构，会被镜像自身的架构覆盖
 			OwnerRef:          req.OwnerRef,
+			SubscribeId:       req.SubscribeId,
 		})
 		if err != nil {
 			return err
@@ -133,6 +134,7 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 				IsOfficial:        req.IsOfficial,
 				Architecture:      req.Architecture,
 				OwnerRef:          req.OwnerRef,
+				SubscribeId:       req.SubscribeId,
 			})
 			if err != nil {
 				return err
@@ -379,6 +381,7 @@ func (s *ServerController) ListTasks(ctx context.Context, listOption types.ListO
 		db.WithNamespace(listOption.Namespace),
 		db.WithAgent(listOption.Agent),
 		db.WithRef(listOption.OwnerRef),
+		db.WithSubscribe(listOption.SubscribeId),
 	}
 
 	var err error

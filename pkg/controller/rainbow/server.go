@@ -25,6 +25,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 	"github.com/caoyingjunz/rainbow/pkg/util/huaweicloud"
 	"github.com/caoyingjunz/rainbow/pkg/util/uuid"
 )
@@ -384,8 +385,8 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 	}
 
 	size := sub.Size
-	if size > 15 {
-		size = 15
+	if size > 100 {
+		size = 100 // 最大并发是 100
 	}
 	pageSize := fmt.Sprintf("%d", size)
 
@@ -398,7 +399,6 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
-
 		// 如果返回报错是 404 Not Found 则说明远端进行不存在，终止订阅
 		if strings.Contains(err.Error(), "404 Not Found") {
 			klog.Infof("订阅镜像(%s)不存在，关闭订阅", sub.Path)
@@ -406,7 +406,12 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 				"status": "镜像不存在",
 				"enable": false,
 			}); err != nil {
-				klog.Infof("镜像不存在关闭订阅失败", sub.Path, err)
+				klog.Infof("镜像(%s)不存在关闭订阅失败 %v", sub.Path, err)
+			}
+			if err2 := s.factory.Task().CreateSubscribeMessage(ctx, &model.SubscribeMessage{
+				SubscribeId: sub.Id, Message: fmt.Sprintf("订阅镜像(%s)不存在，已自动关闭 %v", sub.Path, err.Error()),
+			}); err2 != nil {
+				klog.Errorf("创建订阅限制事件失败 %v", err)
 			}
 		}
 
@@ -429,13 +434,14 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 
 	klog.Infof("发现镜像(%s)有新增版本 %v", sub.Path, addImages)
 	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
-		Name:        uuid.NewRandName(fmt.Sprintf("subscribe-%s-", sub.Path), 8),
+		Name:        uuid.NewRandName(fmt.Sprintf("sub-%s-", sub.Path), 8),
 		UserId:      sub.UserId,
 		UserName:    sub.UserName,
 		RegisterId:  sub.RegisterId,
 		Namespace:   sub.Namespace,
 		Images:      addImages,
 		OwnerRef:    1,
+		SubscribeId: sub.Id,
 		Driver:      "skopeo",
 		PublicImage: true,
 	}); err != nil {
@@ -716,13 +722,16 @@ func (s *ServerController) RunSubscribeImmediately(ctx context.Context, req *typ
 	if err != nil {
 		return err
 	}
+	if !sub.Enable {
+		return errors.ErrDisableStatus
+	}
 
 	changed, err := s.subscribe(ctx, *sub)
 	if err != nil {
 		return err
 	}
 	if !changed {
-		return fmt.Errorf("未发现新增镜像，无需执行")
+		return errors.ErrImageNotFound
 	}
 	return nil
 }

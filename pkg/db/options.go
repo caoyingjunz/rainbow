@@ -196,7 +196,7 @@ func WithTask(taskId int64) Options {
 
 func WithSubscribe(subId int64) Options {
 	return func(tx *gorm.DB) *gorm.DB {
-		if subId == 0 {
+		if subId == 1 { // 默认获取全部, 否则按 subscribe_id 获取列表
 			return tx
 		}
 		return tx.Where("subscribe_id = ?", subId)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 func (cr *rainbowRouter) createDockerfile(c *gin.Context) {
@@ -1264,6 +1265,17 @@ func (cr *rainbowRouter) runSubscribeImmediately(c *gin.Context) {
 	}
 	req.Id = idMeta.ID
 	if err = cr.c.Server().RunSubscribeImmediately(c, &req); err != nil {
+		if errors.IsImageNotFound(err) {
+			resp.SetMessageWithCode(err, 1001)
+			c.JSON(http.StatusOK, resp)
+			return
+		}
+		if errors.IsDisableStatus(err) {
+			resp.SetMessageWithCode(err, 1002)
+			c.JSON(http.StatusOK, resp)
+			return
+		}
+
 		httputils.SetFailed(c, resp, err)
 		return
 	}

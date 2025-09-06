@@ -59,6 +59,7 @@ type (
 		IsOfficial        bool     `json:"is_official"`
 		Architecture      string   `json:"architecture"`
 		OwnerRef          int      `json:"owner_ref"` // 任务所属，直接创建 0，订阅创建 1
+		SubscribeId       int64    `json:"subscribe_id"`
 	}
 
 	UpdateTaskRequest struct {
@@ -227,10 +228,11 @@ type (
 	}
 
 	CustomMeta struct {
-		Status    int    `form:"status"`
-		Namespace string `form:"namespace"`
-		Agent     string `form:"agent"`
-		OwnerRef  string `form:"ownerRef"`
+		Status      int    `form:"status"`
+		Namespace   string `form:"namespace"`
+		Agent       string `form:"agent"`
+		OwnerRef    string `form:"ownerRef"`
+		SubscribeId int64  `form:"subscribe_id"`
 	}
 
 	RemoteSearchRequest struct {
