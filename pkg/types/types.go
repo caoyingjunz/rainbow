@@ -76,3 +76,58 @@ type ImageTag struct {
 	LastPushed   time.Time `json:"last_pushed"`
 	Architecture string    `json:"architecture"`
 }
+
+type HubSearchResponse struct {
+	Count    int                `json:"count"`
+	Next     string             `json:"next"`
+	Previous string             `json:"previous"`
+	Results  []RepositoryResult `json:"results"`
+}
+
+type RepositoryResult struct {
+	RepoName         string `json:"repo_name"`
+	ShortDescription string `json:"short_description"`
+	StarCount        int    `json:"star_count"`
+	PullCount        int64  `json:"pull_count"` // 使用 int64 因为拉取计数可能非常大
+	RepoOwner        string `json:"repo_owner"`
+	IsAutomated      bool   `json:"is_automated"`
+	IsOfficial       bool   `json:"is_official"`
+}
+
+type HubTagResponse struct {
+	Count    int         `json:"count"`
+	Next     string      `json:"next"`
+	Previous interface{} `json:"previous"` // 可能是 null 或字符串
+	Results  []TagResult `json:"results"`
+}
+
+type TagResult struct {
+	Images              []ImageInfo `json:"images"`
+	LastUpdated         time.Time   `json:"last_updated"`
+	LastUpdater         int64       `json:"last_updater"`
+	LastUpdaterUsername string      `json:"last_updater_username"`
+	Name                string      `json:"name"`
+	Repository          int64       `json:"repository"`
+	FullSize            int64       `json:"full_size"`
+	V2                  bool        `json:"v2"`
+	TagStatus           string      `json:"tag_status"`
+	TagLastPulled       time.Time   `json:"tag_last_pulled"`
+	TagLastPushed       time.Time   `json:"tag_last_pushed"`
+	MediaType           string      `json:"media_type"`
+	ContentType         string      `json:"content_type"`
+	Digest              string      `json:"digest"`
+}
+
+type ImageInfo struct {
+	Features     string    `json:"features"`
+	Variant      *string   `json:"variant"` // 可能是 null
+	Digest       string    `json:"digest"`
+	OS           string    `json:"os"`
+	OSFeatures   string    `json:"os_features"`
+	OSVersion    *string   `json:"os_version"` // 可能是 null
+	Size         int64     `json:"size"`
+	Status       string    `json:"status"`
+	LastPulled   time.Time `json:"last_pulled"`
+	LastPushed   time.Time `json:"last_pushed"`
+	Architecture string    `json:"architecture"`
+}

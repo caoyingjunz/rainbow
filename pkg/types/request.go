@@ -249,7 +249,7 @@ type (
 		Namespace  string        `json:"namespace" form:"namespace"`
 		Repository string        `json:"repository" form:"repository"`
 		Query      string        `json:"query" form:"query"`
-		Page       string        `json:"page" form:"page"`
+		Page       int           `json:"page" form:"page"`
 		PageSize   string        `json:"page_size" form:"page_size"`
 		Config     *SearchConfig `json:"config"`
 	}
