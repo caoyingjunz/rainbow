@@ -121,8 +121,13 @@ func (s *AgentController) SearchRepositories(ctx context.Context, req types.Remo
 }
 
 func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
-	switch req.Hub {
-	case "dockerhub":
+	cfg := req.Config
+
+	switch cfg.ImageFrom {
+	case types.ImageHubDocker:
+		var imageTags []types.ImageTag
+		baseURL := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags", req.Namespace, req.Repository)
+
 		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags?page_size=%s&page=%s", req.Namespace, req.Repository, req.PageSize, req.Page)
 		return DoHttpRequest(url)
 	}

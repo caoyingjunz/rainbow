@@ -396,6 +396,13 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 		Repository: repo,
 		Page:       "1",
 		PageSize:   pageSize, // 同步最新
+		Config: &types.SearchConfig{
+			ImageFrom: sub.ImageFrom,
+			Page:      "1",
+			Size:      size,
+			Policy:    sub.Policy,
+			Arch:      sub.Arch,
+		},
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)

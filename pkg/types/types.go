@@ -1,6 +1,10 @@
 package types
 
-import "github.com/caoyingjunz/rainbow/pkg/db/model"
+import (
+	"time"
+
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
+)
 
 type IdMeta struct {
 	ID int64 `uri:"Id" binding:"required"`
@@ -57,4 +61,18 @@ type SearchResult struct {
 	Result     []byte
 	ErrMessage string
 	StatusCode int
+}
+
+type ImageTag struct {
+	Features     string    `json:"features"`
+	Variant      *string   `json:"variant"` // 可能是 null
+	Digest       string    `json:"digest"`
+	OS           string    `json:"os"`
+	OSFeatures   string    `json:"os_features"`
+	OSVersion    *string   `json:"os_version"` // 可能是 null
+	Size         int64     `json:"size"`
+	Status       string    `json:"status"`
+	LastPulled   time.Time `json:"last_pulled"`
+	LastPushed   time.Time `json:"last_pushed"`
+	Architecture string    `json:"architecture"`
 }

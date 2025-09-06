@@ -244,13 +244,22 @@ type (
 	}
 
 	RemoteTagSearchRequest struct {
-		Hub        string `json:"hub" form:"hub"`
-		ClientId   string `json:"client_id" form:"client_id"`
-		Namespace  string `json:"namespace" form:"namespace"`
-		Repository string `json:"repository" form:"repository"`
-		Query      string `json:"query" form:"query"`
-		Page       string `json:"page" form:"page"`
-		PageSize   string `json:"page_size" form:"page_size"`
+		Hub        string        `json:"hub" form:"hub"`
+		ClientId   string        `json:"client_id" form:"client_id"`
+		Namespace  string        `json:"namespace" form:"namespace"`
+		Repository string        `json:"repository" form:"repository"`
+		Query      string        `json:"query" form:"query"`
+		Page       string        `json:"page" form:"page"`
+		PageSize   string        `json:"page_size" form:"page_size"`
+		Config     *SearchConfig `json:"config"`
+	}
+
+	SearchConfig struct {
+		Page      string `json:"page"`
+		Size      int    `json:"size"`
+		ImageFrom string `json:"image_from"`
+		Policy    string `json:"policy"`
+		Arch      string `json:"arch"`
 	}
 
 	RemoteTagInfoSearchRequest struct {
