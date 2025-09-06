@@ -47,6 +47,12 @@ const (
 	SyncTaskInitializing = "initializing"
 )
 
+const (
+	ImageHubDocker = "dockerhub"
+	ImageHubGCR    = "gcr"
+	ImageHubQuay   = "quay.io"
+)
+
 type SearchResult struct {
 	Result     []byte
 	ErrMessage string

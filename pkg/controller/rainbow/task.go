@@ -515,6 +515,15 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 	if len(parts) == 1 {
 		rawPath = "library" + "/" + rawPath
 	}
+
+	// 初始化镜像来源
+	if len(req.ImageFrom) == 0 {
+		req.ImageFrom = types.ImageHubDocker
+	}
+	if len(req.Policy) == 0 {
+		req.Policy = ".*"
+	}
+
 	return s.factory.Task().CreateSubscribe(ctx, &model.Subscribe{
 		UserModel: rainbow.UserModel{
 			UserId:   req.UserId,
@@ -527,6 +536,9 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 		Enable:    req.Enable,   // 是否启动订阅
 		Size:      req.Size,     // 最多同步多少个版本
 		Interval:  req.Interval, // 多久执行一次
+		ImageFrom: req.ImageFrom,
+		Policy:    req.Policy,
+		Arch:      req.Arch,
 	})
 }
 
