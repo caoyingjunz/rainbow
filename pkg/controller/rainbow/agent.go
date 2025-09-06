@@ -121,10 +121,46 @@ func (s *AgentController) SearchRepositories(ctx context.Context, req types.Remo
 }
 
 func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
-	switch req.Hub {
-	case "dockerhub":
-		url := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags?page_size=%s&page=%s", req.Namespace, req.Repository, req.PageSize, req.Page)
-		return DoHttpRequest(url)
+	cfg := req.Config
+
+	switch cfg.ImageFrom {
+	case types.ImageHubDocker:
+		var tagResults []types.TagResult
+
+		baseURL := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags", req.Namespace, req.Repository)
+		page := req.Page
+		for {
+			if len(tagResults) >= cfg.Size {
+				break
+			}
+
+			reqURL := fmt.Sprintf("%s?page_size=100&page=%s", baseURL, cfg.Page)
+			val, err := DoHttpRequest(reqURL)
+			if err != nil {
+				return nil, err
+			}
+			var tagResp types.HubTagResponse
+			if err = json.Unmarshal(val, &tagResp); err != nil {
+				return nil, err
+			}
+
+			for _, tag := range tagResp.Results {
+				// 过滤
+				tagResults = append(tagResults, tag)
+			}
+			// 最后一组中断
+			if len(tagResp.Next) == 0 {
+				break
+			}
+			page++
+		}
+
+		// 去除多余的t ag
+		if len(tagResults) > cfg.Size {
+			tagResults = tagResults[:cfg.Size]
+		}
+
+		return json.Marshal(tagResults)
 	}
 
 	return nil, nil

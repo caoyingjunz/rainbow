@@ -190,8 +190,8 @@ func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req type
 func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
 	client := GetRpcClient(clientId, RpcClients)
 	if client == nil {
-		klog.Errorf("client not connected or register")
-		return nil, fmt.Errorf("client not connected or register")
+		klog.Errorf("未发现可用的 agent，请联系管理员")
+		return nil, fmt.Errorf("未发现可用的 agent，请联系管理员")
 	}
 
 	if err := client.Send(&pb.Response{Result: data}); err != nil {

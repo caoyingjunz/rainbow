@@ -244,13 +244,22 @@ type (
 	}
 
 	RemoteTagSearchRequest struct {
-		Hub        string `json:"hub" form:"hub"`
-		ClientId   string `json:"client_id" form:"client_id"`
-		Namespace  string `json:"namespace" form:"namespace"`
-		Repository string `json:"repository" form:"repository"`
-		Query      string `json:"query" form:"query"`
-		Page       string `json:"page" form:"page"`
-		PageSize   string `json:"page_size" form:"page_size"`
+		Hub        string        `json:"hub" form:"hub"`
+		ClientId   string        `json:"client_id" form:"client_id"`
+		Namespace  string        `json:"namespace" form:"namespace"`
+		Repository string        `json:"repository" form:"repository"`
+		Query      string        `json:"query" form:"query"`
+		Page       int           `json:"page" form:"page"`
+		PageSize   string        `json:"page_size" form:"page_size"`
+		Config     *SearchConfig `json:"config"`
+	}
+
+	SearchConfig struct {
+		Page      string `json:"page"`
+		Size      int    `json:"size"`
+		ImageFrom string `json:"image_from"`
+		Policy    string `json:"policy"`
+		Arch      string `json:"arch"`
 	}
 
 	RemoteTagInfoSearchRequest struct {
@@ -290,10 +299,13 @@ type (
 
 		Path       string        `json:"path"`   // 默认会自动填充命名空间，比如 nginx 表示 library/nginx， jenkins/jenkins 则直接使用
 		Enable     bool          `json:"enable"` // 启动或者关闭
-		Size       int           `json:"size"`   // 同步最新多少个版本
+		Size       int           `json:"size"`   // 同步最新多少个版本, 最多 100 个，普通用户 5
 		RegisterId int64         `json:"register_id"`
 		Namespace  string        `json:"namespace"`
-		Interval   time.Duration `json:"interval"` // 间隔多久同步一次
+		Interval   time.Duration `json:"interval"`   // 间隔多久同步一次
+		ImageFrom  string        `json:"image_from"` // 镜像来源，支持 dockerhub, gcr, quay.io
+		Policy     string        `json:"policy"`     // 默认定义所有版本镜像，支持正则表达式，比如 v1.*
+		Arch       string        `json:"arch"`       // 支持的架构，默认不限制  linux/amd64
 	}
 
 	UpdateSubscribeRequest struct {
