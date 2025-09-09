@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -60,4 +61,21 @@ func KeyFunc(key interface{}) (int64, int64, error) {
 
 func GenRandInt(min, max int) int {
 	return rand.Intn(max-min+1) + min
+}
+
+func ToRegexp(pattern string) string {
+	var buffer bytes.Buffer
+	buffer.WriteString("^")
+	for _, ch := range pattern {
+		switch ch {
+		case '*':
+			buffer.WriteString(".*")
+		case '.', '+', '?', '|', '(', ')', '[', ']', '{', '}', '^', '$', '\\':
+			buffer.WriteString("\\")
+			buffer.WriteRune(ch)
+		default:
+			buffer.WriteRune(ch)
+		}
+	}
+	return buffer.String()
 }

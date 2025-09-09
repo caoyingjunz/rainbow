@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -128,13 +129,19 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 		var tagResults []types.TagResult
 
 		baseURL := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags", req.Namespace, req.Repository)
-		page := req.Page
+		page := cfg.Page
+
+		re, err := regexp.Compile(util.ToRegexp(cfg.Policy))
+		if err != nil {
+			return nil, err
+		}
+
 		for {
 			if len(tagResults) >= cfg.Size {
 				break
 			}
 
-			reqURL := fmt.Sprintf("%s?page_size=100&page=%s", baseURL, cfg.Page)
+			reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
 			val, err := DoHttpRequest(reqURL)
 			if err != nil {
 				return nil, err
@@ -145,14 +152,47 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 			}
 
 			for _, tag := range tagResp.Results {
-				// 过滤
+				if len(tagResults) >= cfg.Size {
+					break
+				}
+
+				// 策略限制
+				if cfg.Policy != ".*" {
+					if !re.MatchString(tag.Name) {
+						continue
+					}
+
+					// 判断是否架构是否符合要求
+					if len(cfg.Arch) != 0 {
+						newImage := make([]types.Image, 0)
+						for _, image := range tag.Images {
+							if image.Architecture == cfg.Arch {
+								newImage = append(newImage, image)
+							}
+						}
+						tag.Images = newImage
+					}
+				} else {
+					// 判断是否架构是否符合要求
+					if len(cfg.Arch) != 0 {
+						newImage := make([]types.Image, 0)
+						for _, image := range tag.Images {
+							if image.Architecture == cfg.Arch {
+								newImage = append(newImage, image)
+							}
+						}
+						tag.Images = newImage
+					}
+				}
 				tagResults = append(tagResults, tag)
 			}
-			// 最后一组中断
+
+			// 最后一页，无需继续查询
 			if len(tagResp.Next) == 0 {
 				break
 			}
 			page++
+
 		}
 
 		// 去除多余的t ag
@@ -161,6 +201,9 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 		}
 
 		return json.Marshal(tagResults)
+
+	default:
+		klog.Errorf("不支持的远端仓库类型“ %v", cfg.ImageFrom)
 	}
 
 	return nil, nil

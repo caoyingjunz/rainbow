@@ -255,7 +255,7 @@ type (
 	}
 
 	SearchConfig struct {
-		Page      string `json:"page"`
+		Page      int    `json:"page"`
 		Size      int    `json:"size"`
 		ImageFrom string `json:"image_from"`
 		Policy    string `json:"policy"`

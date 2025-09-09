@@ -97,28 +97,28 @@ type RepositoryResult struct {
 type HubTagResponse struct {
 	Count    int         `json:"count"`
 	Next     string      `json:"next"`
-	Previous interface{} `json:"previous"` // 可能是 null 或字符串
+	Previous string      `json:"previous"` // 可能是 null 或字符串
 	Results  []TagResult `json:"results"`
 }
 
 type TagResult struct {
-	Images              []ImageInfo `json:"images,omitempty"`
-	LastUpdated         time.Time   `json:"last_updated,omitempty"`
-	LastUpdater         int64       `json:"last_updater,omitempty"`
-	LastUpdaterUsername string      `json:"last_updater_username,omitempty"`
-	Name                string      `json:"name,omitempty"`
-	Repository          int64       `json:"repository,omitempty"`
-	FullSize            int64       `json:"full_size,omitempty"`
-	V2                  bool        `json:"v2,omitempty"`
-	TagStatus           string      `json:"tag_status,omitempty"`
-	TagLastPulled       time.Time   `json:"tag_last_pulled,omitempty"`
-	TagLastPushed       time.Time   `json:"tag_last_pushed,omitempty"`
-	MediaType           string      `json:"media_type,omitempty"`
-	ContentType         string      `json:"content_type,omitempty"`
-	Digest              string      `json:"digest,omitempty"`
+	Images              []Image   `json:"images,omitempty"`
+	LastUpdated         time.Time `json:"last_updated,omitempty"`
+	LastUpdater         int64     `json:"last_updater,omitempty"`
+	LastUpdaterUsername string    `json:"last_updater_username,omitempty"`
+	Name                string    `json:"name,omitempty"`
+	Repository          int64     `json:"repository,omitempty"`
+	FullSize            int64     `json:"full_size,omitempty"`
+	V2                  bool      `json:"v2,omitempty"`
+	TagStatus           string    `json:"tag_status,omitempty"`
+	TagLastPulled       time.Time `json:"tag_last_pulled,omitempty"`
+	TagLastPushed       time.Time `json:"tag_last_pushed,omitempty"`
+	MediaType           string    `json:"media_type,omitempty"`
+	ContentType         string    `json:"content_type,omitempty"`
+	Digest              string    `json:"digest,omitempty"`
 }
 
-type ImageInfo struct {
+type Image struct {
 	Features     string    `json:"features,omitempty"`
 	Variant      *string   `json:"variant,omitempty"` // 可能是 null
 	Digest       string    `json:"digest,omitempty"`

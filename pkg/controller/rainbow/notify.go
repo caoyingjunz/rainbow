@@ -43,6 +43,9 @@ func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotifi
 	switch req.Role {
 	case 1:
 		return s.SendRegisterNotify(ctx, req)
+
+	case 0:
+		// tood
 	default:
 		// TODO
 	}

@@ -394,11 +394,11 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 		Hub:        "dockerhub",
 		Namespace:  ns,
 		Repository: repo,
-		Page:       "1",
+		Page:       1,
 		PageSize:   pageSize, // 同步最新
 		Config: &types.SearchConfig{
 			ImageFrom: sub.ImageFrom,
-			Page:      "1",
+			Page:      1, // 从第一页开始搜索
 			Size:      size,
 			Policy:    sub.Policy,
 			Arch:      sub.Arch,
@@ -730,11 +730,13 @@ func (s *ServerController) RunSubscribeImmediately(ctx context.Context, req *typ
 		return err
 	}
 	if !sub.Enable {
+		klog.Warningf("订阅已被关闭")
 		return errors.ErrDisableStatus
 	}
 
 	changed, err := s.subscribe(ctx, *sub)
 	if err != nil {
+		klog.Errorf("执行订阅(%d)失败 %v", req.Id, err)
 		return err
 	}
 	if !changed {
