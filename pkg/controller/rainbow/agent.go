@@ -145,10 +145,8 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 			}
 
 			tagResults = append(tagResults, tagResp.Results...)
-		}
-
-		// 2. 架构和策略都限制，直接获取
-		if len(cfg.Arch) != 0 && cfg.Policy != ".*" {
+		} else {
+			// 2. 架构和策略至少有一个限制，均需要递归查询
 			re, err := regexp.Compile(util.ToRegexp(cfg.Policy))
 			if err != nil {
 				return nil, err
@@ -172,87 +170,44 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 					if len(tagResults) >= cfg.Size {
 						break
 					}
-
-					// 过滤 policy
-					// 不符合 policy 则忽略
-					if !re.MatchString(tag.Name) {
-						continue
-					}
-					// 过滤架构
-					newImage := make([]types.Image, 0)
-					for _, image := range tag.Images {
-						if image.Architecture == cfg.Arch {
-							newImage = append(newImage, image)
+					// 2. 架构和策略都限制，直接获取
+					if len(cfg.Arch) != 0 && cfg.Policy != ".*" {
+						// 过滤 policy, 不符合 policy 则忽略
+						if !re.MatchString(tag.Name) {
+							continue
 						}
-					}
-					tag.Images = newImage // 去除不符合要求的架构镜像
-					tagResults = append(tagResults, tag)
-				}
-			}
-		}
-
-		// 3. 架构不限，但是策略限制
-		if len(cfg.Arch) == 0 && cfg.Policy != ".*" {
-			if len(tagResults) >= cfg.Size {
-				break
-			}
-
-			re, err := regexp.Compile(util.ToRegexp(cfg.Policy))
-			if err != nil {
-				return nil, err
-			}
-
-			reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
-			val, err := DoHttpRequest(reqURL)
-			if err != nil {
-				return nil, err
-			}
-			var tagResp types.HubTagResponse
-			if err = json.Unmarshal(val, &tagResp); err != nil {
-				return nil, err
-			}
-
-			for _, tag := range tagResp.Results {
-				if len(tagResults) >= cfg.Size {
-					break
-				}
-				// 过滤 policy
-				// 不符合 policy 则忽略
-				if !re.MatchString(tag.Name) {
-					continue
-				}
-				tagResults = append(tagResults, tag)
-			}
-		}
-
-		if len(cfg.Arch) != 0 && cfg.Policy == ".*" {
-			for {
-				if len(tagResults) >= cfg.Size {
-					break
-				}
-				reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
-				val, err := DoHttpRequest(reqURL)
-				if err != nil {
-					return nil, err
-				}
-				var tagResp types.HubTagResponse
-				if err = json.Unmarshal(val, &tagResp); err != nil {
-					return nil, err
-				}
-				for _, tag := range tagResp.Results {
-					if len(tagResults) >= cfg.Size {
-						break
-					}
-					newImage := make([]types.Image, 0)
-					for _, image := range tag.Images {
-						if image.Architecture == cfg.Arch {
-							newImage = append(newImage, image)
+						// 过滤架构
+						newImage := make([]types.Image, 0)
+						for _, image := range tag.Images {
+							if image.Architecture == cfg.Arch {
+								newImage = append(newImage, image)
+							}
 						}
+						tag.Images = newImage // 去除不符合要求的架构镜像
+						tagResults = append(tagResults, tag)
 					}
-					tag.Images = newImage // 去除不符合要求的架构镜像
-					tagResults = append(tagResults, tag)
+					// 3. 架构不限，但是策略限制
+					if len(cfg.Arch) == 0 && cfg.Policy != ".*" {
+						// 过滤 policy
+						if !re.MatchString(tag.Name) {
+							continue
+						}
+						tagResults = append(tagResults, tag)
+					}
+					// 2. 架构限制，策略不限
+					if len(cfg.Arch) != 0 && cfg.Policy == ".*" {
+						newImage := make([]types.Image, 0)
+						for _, image := range tag.Images {
+							if image.Architecture == cfg.Arch {
+								newImage = append(newImage, image)
+							}
+						}
+						tag.Images = newImage // 去除不符合要求的架构镜像
+						tagResults = append(tagResults, tag)
+					}
 				}
 			}
+
 		}
 
 		// 去除多余的 tag
