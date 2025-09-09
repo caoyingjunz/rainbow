@@ -156,8 +156,6 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 		return nil, err
 	}
 
-	fmt.Println("dddd", val)
-
 	var tagResp HubTagResponse
 	if err = json.Unmarshal(val, &tagResp); err != nil {
 		return nil, err
