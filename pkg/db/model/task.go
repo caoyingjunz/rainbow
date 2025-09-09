@@ -67,7 +67,8 @@ type Subscribe struct { // 同步远端镜像更新状态
 	FailTimes      int           `json:"fail_times"`                                                                                       // 失败次数
 	ImageFrom      string        `json:"image_from"`                                                                                       // 镜像来源，支持 dockerhub, gcr, quay.io
 	Policy         string        `json:"policy"`                                                                                           // 默认定义所有版本镜像，支持正则表达式，比如 v1.*
-	Arch           string        `json:"arch"`                                                                                             // 支持的架构，默认不限制  linux/amd64
+	Arch           string        `json:"arch"`
+	Rewrite        bool          `json:"rewrite"`
 }
 
 func (t *Subscribe) TableName() string {

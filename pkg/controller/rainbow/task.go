@@ -539,6 +539,7 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 		ImageFrom: req.ImageFrom,
 		Policy:    req.Policy,
 		Arch:      req.Arch,
+		Rewrite:   req.Rewrite,
 	})
 }
 

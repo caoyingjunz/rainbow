@@ -107,7 +107,7 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 		return err
 	}
 
-	klog.Infof("搜索结果已暂存, key(%s)", reqMeta.RepositorySearchRequest.Query, reqMeta.Uid)
+	klog.Infof("搜索(%s)结果已暂存, key(%s)", reqMeta.RepositorySearchRequest.Query, reqMeta.Uid)
 	return nil
 }
 
@@ -131,14 +131,75 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 		baseURL := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags", req.Namespace, req.Repository)
 		page := cfg.Page
 
-		re, err := regexp.Compile(util.ToRegexp(cfg.Policy))
-		if err != nil {
-			return nil, err
+		// TODO: 后续优化
+		// 1. 架构和策略都不限，直接获取
+		if len(cfg.Arch) == 0 && cfg.Policy == ".*" {
+			reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, fmt.Sprintf("%d", cfg.Size), fmt.Sprintf("%d", page))
+			val, err := DoHttpRequest(reqURL)
+			if err != nil {
+				return nil, err
+			}
+			var tagResp types.HubTagResponse
+			if err = json.Unmarshal(val, &tagResp); err != nil {
+				return nil, err
+			}
+
+			tagResults = append(tagResults, tagResp.Results...)
 		}
 
-		for {
+		// 2. 架构和策略都限制，直接获取
+		if len(cfg.Arch) != 0 && cfg.Policy != ".*" {
+			re, err := regexp.Compile(util.ToRegexp(cfg.Policy))
+			if err != nil {
+				return nil, err
+			}
+
+			for {
+				if len(tagResults) >= cfg.Size {
+					break
+				}
+				reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
+				val, err := DoHttpRequest(reqURL)
+				if err != nil {
+					return nil, err
+				}
+				var tagResp types.HubTagResponse
+				if err = json.Unmarshal(val, &tagResp); err != nil {
+					return nil, err
+				}
+
+				for _, tag := range tagResp.Results {
+					if len(tagResults) >= cfg.Size {
+						break
+					}
+
+					// 过滤 policy
+					// 不符合 policy 则忽略
+					if !re.MatchString(tag.Name) {
+						continue
+					}
+					// 过滤架构
+					newImage := make([]types.Image, 0)
+					for _, image := range tag.Images {
+						if image.Architecture == cfg.Arch {
+							newImage = append(newImage, image)
+						}
+					}
+					tag.Images = newImage // 去除不符合要求的架构镜像
+					tagResults = append(tagResults, tag)
+				}
+			}
+		}
+
+		// 3. 架构不限，但是策略限制
+		if len(cfg.Arch) == 0 && cfg.Policy != ".*" {
 			if len(tagResults) >= cfg.Size {
 				break
+			}
+
+			re, err := regexp.Compile(util.ToRegexp(cfg.Policy))
+			if err != nil {
+				return nil, err
 			}
 
 			reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
@@ -155,53 +216,51 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 				if len(tagResults) >= cfg.Size {
 					break
 				}
-
-				// 策略限制
-				if cfg.Policy != ".*" {
-					if !re.MatchString(tag.Name) {
-						continue
-					}
-
-					// 判断是否架构是否符合要求
-					if len(cfg.Arch) != 0 {
-						newImage := make([]types.Image, 0)
-						for _, image := range tag.Images {
-							if image.Architecture == cfg.Arch {
-								newImage = append(newImage, image)
-							}
-						}
-						tag.Images = newImage
-					}
-				} else {
-					// 判断是否架构是否符合要求
-					if len(cfg.Arch) != 0 {
-						newImage := make([]types.Image, 0)
-						for _, image := range tag.Images {
-							if image.Architecture == cfg.Arch {
-								newImage = append(newImage, image)
-							}
-						}
-						tag.Images = newImage
-					}
+				// 过滤 policy
+				// 不符合 policy 则忽略
+				if !re.MatchString(tag.Name) {
+					continue
 				}
 				tagResults = append(tagResults, tag)
 			}
-
-			// 最后一页，无需继续查询
-			if len(tagResp.Next) == 0 {
-				break
-			}
-			page++
-
 		}
 
-		// 去除多余的t ag
+		if len(cfg.Arch) != 0 && cfg.Policy == ".*" {
+			for {
+				if len(tagResults) >= cfg.Size {
+					break
+				}
+				reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
+				val, err := DoHttpRequest(reqURL)
+				if err != nil {
+					return nil, err
+				}
+				var tagResp types.HubTagResponse
+				if err = json.Unmarshal(val, &tagResp); err != nil {
+					return nil, err
+				}
+				for _, tag := range tagResp.Results {
+					if len(tagResults) >= cfg.Size {
+						break
+					}
+					newImage := make([]types.Image, 0)
+					for _, image := range tag.Images {
+						if image.Architecture == cfg.Arch {
+							newImage = append(newImage, image)
+						}
+					}
+					tag.Images = newImage // 去除不符合要求的架构镜像
+					tagResults = append(tagResults, tag)
+				}
+			}
+		}
+
+		// 去除多余的 tag
 		if len(tagResults) > cfg.Size {
 			tagResults = tagResults[:cfg.Size]
 		}
 
 		return json.Marshal(tagResults)
-
 	default:
 		klog.Errorf("不支持的远端仓库类型“ %v", cfg.ImageFrom)
 	}
