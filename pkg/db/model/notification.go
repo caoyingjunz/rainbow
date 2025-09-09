@@ -12,12 +12,11 @@ type Notification struct {
 	rainbow.Model
 	rainbow.UserModel
 
-	Name      string `gorm:"index:idx_notifications_name,unique" json:"name"`
+	Name      string `json:"name"`
 	Role      int    `json:"role"`
 	Enable    bool   `json:"enable"`
-	Type      string `json:"type"` // 支持 webhook, dingtalk, wecom
-	Url       string `json:"url"`
-	Content   string `json:"content"`
+	Type      string `json:"type"`     // 支持 webhook, dingtalk, wecom, feishu, email, sms, lark
+	PushCfg   string `json:"push_cfg"` // json 格式
 	ShortDesc string `json:"short_desc"`
 }
 

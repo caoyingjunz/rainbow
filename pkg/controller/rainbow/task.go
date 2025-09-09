@@ -407,7 +407,64 @@ func (s *ServerController) ListTasks(ctx context.Context, listOption types.ListO
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
+	// 任务完成后发送通知
+	if req.Status == "镜像同步完成" {
+		if err := s.sendDoneNotify(ctx, req); err != nil {
+			klog.Errorf("任务(%d)完成后发送通知失败 %v", req.TaskId, err)
+		}
+	}
 	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message, "process": req.Process})
+}
+func (s *ServerController) sendDoneNotify(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
+	// 获取该任务下的所有镜像
+	task, err := s.factory.Task().Get(ctx, req.TaskId)
+	if err != nil {
+		klog.Errorf("获取任务(%d)的信息失败: %v", req.TaskId, err)
+	}
+	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(req.TaskId))
+	if err != nil {
+		klog.Errorf("获取任务(%d)的镜像列表失败: %v", req.TaskId, err)
+		return err
+	}
+
+	var successImages []string
+	var failedImages []string
+
+	for _, tag := range tags {
+		if tag.Status == "Completed" {
+			successImages = append(successImages, fmt.Sprintf("%s:%s", tag.Path, tag.Name))
+		} else {
+			failedImages = append(failedImages, fmt.Sprintf("%s:%s", tag.Path, tag.Name))
+		}
+	}
+	var content strings.Builder
+	content.WriteString(fmt.Sprintf("任务(%s)已完成\n", task.Name))
+
+	if len(successImages) > 0 {
+		content.WriteString("成功镜像:\n")
+		for _, name := range successImages {
+			content.WriteString(fmt.Sprintf("  - %s\n", name))
+		}
+	}
+
+	if len(failedImages) > 0 {
+		content.WriteString("失败镜像:\n")
+		for _, name := range failedImages {
+			content.WriteString(fmt.Sprintf("  - %s\n", name))
+		}
+	} else {
+		content.WriteString("\n所有镜像同步成功！")
+	}
+
+	err = s.SendNotify(ctx, &types.SendNotificationRequest{
+		TaskId:  req.TaskId,
+		Content: content.String(),
+	})
+	if err != nil {
+		klog.Errorf("任务(%d)镜像同步完成，发送通知失败 %v", req.TaskId, err)
+	}
+
+	return nil
 }
 
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
