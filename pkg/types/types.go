@@ -48,6 +48,11 @@ const (
 )
 
 const (
+	SkopeoDriver = "skopeo"
+	DockerDriver = "docker"
+)
+
+const (
 	SyncTaskInitializing = "initializing"
 )
 

@@ -388,14 +388,10 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 	if size > 100 {
 		size = 100 // 最大并发是 100
 	}
-	pageSize := fmt.Sprintf("%d", size)
 
 	remotes, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
-		Hub:        "dockerhub",
 		Namespace:  ns,
 		Repository: repo,
-		Page:       1,
-		PageSize:   pageSize, // 同步最新
 		Config: &types.SearchConfig{
 			ImageFrom: sub.ImageFrom,
 			Page:      1, // 从第一页开始搜索
@@ -425,35 +421,41 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 		return false, err
 	}
 
-	tagResp := remotes.(HubTagResponse)
-	var addImages []string
-	for _, tag := range tagResp.Results {
-		if tagMap[tag.Name] {
-			continue
+	tagResults := remotes.([]types.TagResult)
+
+	tagsMap := make(map[string][]string)
+	for _, tag := range tagResults {
+		for _, img := range tag.Images {
+			existImages, ok := tagsMap[img.Architecture]
+			if ok {
+				existImages = append(existImages, sub.Path+":"+tag.Name)
+				tagsMap[img.Architecture] = existImages
+			} else {
+				tagsMap[img.Architecture] = []string{sub.Path + ":" + tag.Name}
+			}
 		}
-		addImages = append(addImages, sub.Path+":"+tag.Name)
-	}
-	if len(addImages) == 0 {
-		// 未发现新增镜像，则等待下次监控
-		klog.V(1).Infof("未发现镜像(%s)有新增版本，忽略", sub.Path)
-		return false, nil
 	}
 
-	klog.Infof("发现镜像(%s)有新增版本 %v", sub.Path, addImages)
-	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
-		Name:        uuid.NewRandName(fmt.Sprintf("sub-%s-", sub.Path), 8),
-		UserId:      sub.UserId,
-		UserName:    sub.UserName,
-		RegisterId:  sub.RegisterId,
-		Namespace:   sub.Namespace,
-		Images:      addImages,
-		OwnerRef:    1,
-		SubscribeId: sub.Id,
-		Driver:      "skopeo",
-		PublicImage: true,
-	}); err != nil {
-		klog.Errorf("创建订阅任务失败 %v", err)
-		return false, err
+	// TODO: 后续实现增量推送
+	// 全部重新推送
+	klog.Infof("即将全量推送订阅镜像(%s)", sub.Path)
+	for arch, images := range tagsMap {
+		if err = s.CreateTask(ctx, &types.CreateTaskRequest{
+			Name:         uuid.NewRandName(fmt.Sprintf("sub-%s-", sub.Path), 8) + "-" + arch,
+			UserId:       sub.UserId,
+			UserName:     sub.UserName,
+			RegisterId:   sub.RegisterId,
+			Namespace:    sub.Namespace,
+			Images:       images,
+			OwnerRef:     1,
+			SubscribeId:  sub.Id,
+			Driver:       types.SkopeoDriver,
+			PublicImage:  true,
+			Architecture: arch,
+		}); err != nil {
+			klog.Errorf("创建订阅任务失败 %v", err)
+			return false, err
+		}
 	}
 
 	updates := make(map[string]interface{})

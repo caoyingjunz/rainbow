@@ -143,7 +143,6 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 			if err = json.Unmarshal(val, &tagResp); err != nil {
 				return nil, err
 			}
-
 			tagResults = append(tagResults, tagResp.Results...)
 		} else {
 			// 2. 架构和策略至少有一个限制，均需要递归查询
@@ -156,7 +155,7 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 				if len(tagResults) >= cfg.Size {
 					break
 				}
-				reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
+				reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "50", fmt.Sprintf("%d", page))
 				val, err := DoHttpRequest(reqURL)
 				if err != nil {
 					return nil, err
@@ -170,13 +169,14 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 					if len(tagResults) >= cfg.Size {
 						break
 					}
-					// 2. 架构和策略都限制，直接获取
-					if len(cfg.Arch) != 0 && cfg.Policy != ".*" {
+
+					if cfg.Policy != ".*" {
 						// 过滤 policy, 不符合 policy 则忽略
 						if !re.MatchString(tag.Name) {
 							continue
 						}
-						// 过滤架构
+					}
+					if len(cfg.Arch) != 0 {
 						newImage := make([]types.Image, 0)
 						for _, image := range tag.Images {
 							if image.Architecture == cfg.Arch {
@@ -184,30 +184,10 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 							}
 						}
 						tag.Images = newImage // 去除不符合要求的架构镜像
-						tagResults = append(tagResults, tag)
 					}
-					// 3. 架构不限，但是策略限制
-					if len(cfg.Arch) == 0 && cfg.Policy != ".*" {
-						// 过滤 policy
-						if !re.MatchString(tag.Name) {
-							continue
-						}
-						tagResults = append(tagResults, tag)
-					}
-					// 2. 架构限制，策略不限
-					if len(cfg.Arch) != 0 && cfg.Policy == ".*" {
-						newImage := make([]types.Image, 0)
-						for _, image := range tag.Images {
-							if image.Architecture == cfg.Arch {
-								newImage = append(newImage, image)
-							}
-						}
-						tag.Images = newImage // 去除不符合要求的架构镜像
-						tagResults = append(tagResults, tag)
-					}
+					tagResults = append(tagResults, tag)
 				}
 			}
-
 		}
 
 		// 去除多余的 tag
