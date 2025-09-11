@@ -243,8 +243,8 @@ func (s *ServerController) GetResult(ctx context.Context, key string) (string, e
 		return val, nil
 	}
 
-	// 30 秒超时
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// 60 秒超时
+	waitCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	ch := pubSub.Channel()

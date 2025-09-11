@@ -155,13 +155,16 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 				if len(tagResults) >= cfg.Size {
 					break
 				}
-				reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "50", fmt.Sprintf("%d", page))
+				reqURL := fmt.Sprintf("%s?page_size=%s&page=%s", baseURL, "100", fmt.Sprintf("%d", page))
+				klog.Infof("开始调用 %s 获取镜像tag", reqURL)
 				val, err := DoHttpRequest(reqURL)
 				if err != nil {
+					klog.Errorf("url(%s)请求失败 %v", reqURL, err)
 					return nil, err
 				}
 				var tagResp types.HubTagResponse
 				if err = json.Unmarshal(val, &tagResp); err != nil {
+					klog.Errorf("序列化 tag 失败 %v", err)
 					return nil, err
 				}
 
@@ -187,6 +190,7 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 					}
 					tagResults = append(tagResults, tag)
 				}
+				page++
 			}
 		}
 
