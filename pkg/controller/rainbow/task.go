@@ -545,8 +545,12 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 
 func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error {
 	update := map[string]interface{}{
-		"size":     req.Size,
-		"interval": req.Interval,
+		"size":       req.Size,
+		"interval":   req.Interval,
+		"image_from": req.ImageFrom,
+		"policy":     req.Policy,
+		"arch":       req.Arch,
+		"rewrite":    req.Rewrite,
 	}
 
 	enable := req.Enable
