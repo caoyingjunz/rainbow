@@ -192,7 +192,6 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 
 func (s *AgentController) SearchAllRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
 	// 遍历搜索所有已支持镜像仓库
-	klog.Infof("全量搜索所有镜像 %v", opt.Query)
 	searchFuncs := []func(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error){
 		s.SearchQuayRepositories,
 		s.SearchDockerhubRepositories,

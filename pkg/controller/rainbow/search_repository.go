@@ -91,7 +91,7 @@ type ImageInfo struct {
 
 func (s *ServerController) preRemoteSearch(ctx context.Context, req types.RemoteSearchRequest) error {
 	switch req.Hub {
-	case types.ImageHubDocker, types.ImageHubGCR, types.ImageHubQuay:
+	case types.ImageHubDocker, types.ImageHubGCR, types.ImageHubQuay, types.ImageHubAll:
 	default:
 		return fmt.Errorf("unsupported image hub type %s", req.Hub)
 	}
