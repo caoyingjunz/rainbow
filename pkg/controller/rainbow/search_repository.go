@@ -89,6 +89,16 @@ type ImageInfo struct {
 	Architecture string    `json:"architecture"`
 }
 
+func (s *ServerController) preRemoteSearch(ctx context.Context, req types.RemoteSearchRequest) error {
+	switch req.Hub {
+	case types.ImageHubDocker, types.ImageHubGCR, types.ImageHubQuay:
+	default:
+		return fmt.Errorf("unsupported image hub type %s", req.Hub)
+	}
+
+	return nil
+}
+
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
 	req.Query = strings.TrimSpace(req.Query)
 	if len(req.Query) == 0 {
@@ -99,6 +109,11 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 	if len(req.Hub) == 0 {
 		req.Hub = types.ImageHubDocker
 	}
+
+	if err := s.preRemoteSearch(ctx, req); err != nil {
+		return nil, err
+	}
+
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
 		Type:                    1,
