@@ -60,6 +60,7 @@ const (
 	ImageHubDocker = "dockerhub"
 	ImageHubGCR    = "gcr.io"
 	ImageHubQuay   = "quay.io"
+	ImageHubAll    = "all"
 )
 
 type SearchResult struct {

@@ -119,6 +119,8 @@ func (s *AgentController) SearchRepositories(ctx context.Context, req types.Remo
 		return s.SearchQuayRepositories(ctx, req)
 	case types.ImageHubGCR:
 		return s.SearchGcrRepositories(ctx, req)
+	case types.ImageHubAll:
+		return s.SearchAllRepositories(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unsupported hub type %s", req.Hub)
@@ -173,6 +175,10 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 		})
 	}
 	return json.Marshal(css)
+}
+
+func (s *AgentController) SearchAllRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
+	return nil, nil
 }
 
 func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
