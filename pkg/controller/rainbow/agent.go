@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -112,21 +113,31 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 }
 
 func (s *AgentController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]byte, error) {
+	var (
+		css []types.CommonSearchRepositoryResult
+		err error
+	)
+
 	switch req.Hub {
 	case types.ImageHubDocker:
-		return s.SearchDockerhubRepositories(ctx, req)
+		css, err = s.SearchDockerhubRepositories(ctx, req)
 	case types.ImageHubQuay:
-		return s.SearchQuayRepositories(ctx, req)
+		css, err = s.SearchQuayRepositories(ctx, req)
 	case types.ImageHubGCR:
-		return s.SearchGcrRepositories(ctx, req)
+		css, err = s.SearchGcrRepositories(ctx, req)
 	case types.ImageHubAll:
-		return s.SearchAllRepositories(ctx, req)
+		css, err = s.SearchAllRepositories(ctx, req)
+	default:
+		return nil, fmt.Errorf("unsupported hub type %s", req.Hub)
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("unsupported hub type %s", req.Hub)
+	return json.Marshal(css)
 }
 
-func (s *AgentController) SearchDockerhubRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]byte, error) {
+func (s *AgentController) SearchDockerhubRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
 	url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories?query=%s&page=%s&page_size=%s", req.Query, req.Page, req.PageSize)
 	resp, err := DoHttpRequest(url)
 	if err != nil {
@@ -149,10 +160,10 @@ func (s *AgentController) SearchDockerhubRepositories(ctx context.Context, req t
 		})
 	}
 
-	return json.Marshal(css)
+	return css, nil
 }
 
-func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
+func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
 	// https://docs.projectquay.io/api_quay.html#repo-manage-api
 	baseURL := fmt.Sprintf("https://quay.io/api/v1/find/repositories?query=%s&page=%s&page_size=%s", opt.Query, "1", "1")
 	resp, err := DoHttpRequest(baseURL)
@@ -174,14 +185,48 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 			LastModified: rep.LastModified,
 		})
 	}
-	return json.Marshal(css)
+	return css, nil
 }
 
-func (s *AgentController) SearchAllRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
-	return nil, nil
+func (s *AgentController) SearchAllRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
+	// 遍历搜索所有已支持镜像仓库
+	searchFuncs := []func(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error){
+		s.SearchQuayRepositories,
+		s.SearchDockerhubRepositories,
+		s.SearchGcrRepositories,
+	}
+
+	var css []types.CommonSearchRepositoryResult
+	diff := len(searchFuncs)
+
+	errCh := make(chan error, diff)
+	var wg sync.WaitGroup
+	wg.Add(diff)
+	for _, sf := range searchFuncs {
+		go func(f func(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error)) {
+			defer wg.Done()
+			res, err := f(ctx, opt)
+			if err != nil {
+				errCh <- err
+			} else {
+				css = append(css, res...)
+			}
+		}(sf)
+	}
+	wg.Wait()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return nil, err
+		}
+	default:
+	}
+
+	return css, nil
 }
 
-func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
+func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
 	// https://gcr.io/v2/google-containers/kibana/tags/list
 	// https://gcr.io/v2/google-containers/tags/list
 	// https://registry.k8s.io/v2/kube-apiserver/tags/list
@@ -210,7 +255,7 @@ func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.R
 			})
 		}
 	}
-	return json.Marshal(css)
+	return css, nil
 }
 
 func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
