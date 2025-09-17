@@ -58,7 +58,7 @@ const (
 
 const (
 	ImageHubDocker = "dockerhub"
-	ImageHubGCR    = "gcr"
+	ImageHubGCR    = "gcr.io"
 	ImageHubQuay   = "quay.io"
 )
 
@@ -135,4 +135,58 @@ type Image struct {
 	LastPulled   time.Time `json:"last_pulled,omitempty"`
 	LastPushed   time.Time `json:"last_pushed,omitempty"`
 	Architecture string    `json:"architecture,omitempty"`
+}
+
+type CommonSearchRepositoryResult struct {
+	Name         string  `json:"name"`
+	Registry     string  `json:"registry"`
+	Stars        int     `json:"stars"` //  点赞数
+	LastModified int64   `json:"last_modified"`
+	Pull         int64   `json:"pull"` // 下载数量
+	ShortDesc    *string `json:"short_desc"`
+}
+
+type SearchQuayResult struct {
+	Results       []Repository `json:"results"`
+	HasAdditional bool         `json:"has_additional"`
+	Page          int          `json:"page"`
+	PageSize      int          `json:"page_size"`
+	StartIndex    int          `json:"start_index"`
+}
+
+type Repository struct {
+	Kind         string    `json:"kind"`
+	Title        string    `json:"title"`
+	Namespace    Namespace `json:"namespace"`
+	Name         string    `json:"name"`
+	Description  *string   `json:"description"` // 使用指针来处理可能的 null 值
+	IsPublic     bool      `json:"is_public"`
+	Score        float64   `json:"score"`
+	Href         string    `json:"href"`
+	LastModified int64     `json:"last_modified"`
+	Stars        int       `json:"stars"`
+	Popularity   int       `json:"popularity"`
+}
+
+type Namespace struct {
+	Title  string  `json:"title"`
+	Kind   string  `json:"kind"`
+	Avatar Avatar  `json:"avatar"`
+	Name   string  `json:"name"`
+	Score  float64 `json:"score"`
+	Href   string  `json:"href"`
+}
+
+type Avatar struct {
+	Name  string `json:"name"`
+	Hash  string `json:"hash"`
+	Color string `json:"color"`
+	Kind  string `json:"kind"`
+}
+
+type SearchGCRResult struct {
+	Child    []string               `json:"child"`
+	Manifest map[string]interface{} `json:"manifest"`
+	Name     string                 `json:"name"`
+	Tags     []string               `json:"tags"`
 }

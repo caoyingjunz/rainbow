@@ -235,12 +235,23 @@ type (
 		SubscribeId int64  `form:"subscribe_id"`
 	}
 
+	// TODO: 准备废弃
 	RemoteSearchRequest struct {
-		Hub      string `json:"hub" form:"hub"`
-		ClientId string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
-		Query    string `json:"query" form:"query"`
-		Page     string `json:"page" form:"page"`
-		PageSize string `json:"page_size" form:"page_size"`
+		Hub       string `json:"hub" form:"hub"`
+		ClientId  string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
+		Namespace string `json:"namespace" form:"namespace"`
+		Query     string `json:"query" form:"query"`
+		Page      string `json:"page" form:"page"`
+		PageSize  string `json:"page_size" form:"page_size"`
+	}
+
+	SearchRepoRequest struct {
+		Hub       string `json:"hub" form:"hub"`
+		ClientId  string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
+		Namespace string `json:"namespace" form:"namespace"`
+		Query     string `json:"query" form:"query"`
+		Page      string `json:"page" form:"page"`
+		PageSize  string `json:"page_size" form:"page_size"`
 	}
 
 	RemoteTagSearchRequest struct {

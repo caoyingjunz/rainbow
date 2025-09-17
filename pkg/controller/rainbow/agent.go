@@ -113,12 +113,96 @@ func (s *AgentController) Search(ctx context.Context, date []byte) error {
 
 func (s *AgentController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]byte, error) {
 	switch req.Hub {
-	case "dockerhub":
-		url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories?query=%s&page=%s&page_size=%s", req.Query, req.Page, req.PageSize)
-		return DoHttpRequest(url)
+	case types.ImageHubDocker:
+		return s.SearchDockerhubRepositories(ctx, req)
+	case types.ImageHubQuay:
+		return s.SearchQuayRepositories(ctx, req)
+	case types.ImageHubGCR:
+		return s.SearchGcrRepositories(ctx, req)
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("unsupported hub type %s", req.Hub)
+}
+
+func (s *AgentController) SearchDockerhubRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]byte, error) {
+	url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories?query=%s&page=%s&page_size=%s", req.Query, req.Page, req.PageSize)
+	resp, err := DoHttpRequest(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var searchResp types.HubSearchResponse
+	if err = json.Unmarshal(resp, &searchResp); err != nil {
+		klog.Errorf("序列化 dockerhub 响应失败: %v", err)
+		return nil, err
+	}
+	var css []types.CommonSearchRepositoryResult
+	for _, rep := range searchResp.Results {
+		css = append(css, types.CommonSearchRepositoryResult{
+			Name:      rep.RepoName,
+			Registry:  types.ImageHubDocker,
+			ShortDesc: &rep.ShortDescription,
+			Stars:     rep.StarCount,
+			Pull:      rep.PullCount,
+		})
+	}
+
+	return json.Marshal(css)
+}
+
+func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
+	// https://docs.projectquay.io/api_quay.html#repo-manage-api
+	baseURL := fmt.Sprintf("https://quay.io/api/v1/find/repositories?query=%s&page=%s&page_size=%s", opt.Query, "1", "1")
+	resp, err := DoHttpRequest(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	var quayResult types.SearchQuayResult
+	if err = json.Unmarshal(resp, &quayResult); err != nil {
+		return nil, err
+	}
+
+	var css []types.CommonSearchRepositoryResult
+	for _, rep := range quayResult.Results {
+		css = append(css, types.CommonSearchRepositoryResult{
+			Name:         fmt.Sprintf("quay.io/%s/%s", rep.Namespace.Name, rep.Name),
+			Registry:     types.ImageHubQuay,
+			ShortDesc:    rep.Description,
+			Stars:        rep.Stars,
+			LastModified: rep.LastModified,
+		})
+	}
+	return json.Marshal(css)
+}
+
+func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
+	// https://gcr.io/v2/google-containers/kibana/tags/list
+	// https://gcr.io/v2/google-containers/tags/list
+	if len(opt.Namespace) == 0 {
+		return nil, fmt.Errorf("gcr.io 镜像仓库搜索时，必须指定命名空间")
+	}
+
+	baseURL := fmt.Sprintf("https://gcr.io/v2/%s/tags/list", opt.Namespace)
+	resp, err := DoHttpRequest(baseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var gcrResult types.SearchGCRResult
+	if err = json.Unmarshal(resp, &gcrResult); err != nil {
+		return nil, err
+	}
+
+	var css []types.CommonSearchRepositoryResult
+	for _, child := range gcrResult.Child {
+		if strings.Contains(child, opt.Query) { // 服务端过滤
+			css = append(css, types.CommonSearchRepositoryResult{
+				Name:     fmt.Sprintf("gcr.io/%s/%s", opt.Namespace, child),
+				Registry: types.ImageHubGCR,
+			})
+		}
+	}
+	return json.Marshal(css)
 }
 
 func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {

@@ -1131,10 +1131,6 @@ func (cr *rainbowRouter) searchRepositories(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	// TODO: 默认值自动设置
-	if len(req.Hub) == 0 {
-		req.Hub = "dockerhub"
-	}
 	if resp.Result, err = cr.c.Server().SearchRepositories(c, req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return

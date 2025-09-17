@@ -46,23 +46,6 @@ func (s *ServerController) Connect(stream pb.Tunnel_ConnectServer) error {
 	}
 }
 
-type HubSearchResponse struct {
-	Count    int                `json:"count"`
-	Next     string             `json:"next"`
-	Previous string             `json:"previous"`
-	Results  []RepositoryResult `json:"results"`
-}
-
-type RepositoryResult struct {
-	RepoName         string `json:"repo_name"`
-	ShortDescription string `json:"short_description"`
-	StarCount        int    `json:"star_count"`
-	PullCount        int64  `json:"pull_count"` // 使用 int64 因为拉取计数可能非常大
-	RepoOwner        string `json:"repo_owner"`
-	IsAutomated      bool   `json:"is_automated"`
-	IsOfficial       bool   `json:"is_official"`
-}
-
 type HubTagResponse struct {
 	Count    int         `json:"count"`
 	Next     string      `json:"next"`
@@ -109,11 +92,13 @@ type ImageInfo struct {
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
 	req.Query = strings.TrimSpace(req.Query)
 	if len(req.Query) == 0 {
-		return HubSearchResponse{
-			Results: []RepositoryResult{},
-		}, nil
+		return []types.CommonSearchRepositoryResult{}, nil
 	}
 
+	// 设置默认仓库类型
+	if len(req.Hub) == 0 {
+		req.Hub = types.ImageHubDocker
+	}
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
 		Type:                    1,
@@ -130,7 +115,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 		return nil, err
 	}
 
-	var searchResp HubSearchResponse
+	var searchResp []types.CommonSearchRepositoryResult
 	if err = json.Unmarshal(val, &searchResp); err != nil {
 		klog.Errorf("序列化 HubSearchResponse失败: %v", err)
 		return nil, fmt.Errorf("序列化 HubSearchResponse失败: %v", err)
