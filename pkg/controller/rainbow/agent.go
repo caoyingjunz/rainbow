@@ -138,6 +138,7 @@ func (s *AgentController) SearchRepositories(ctx context.Context, req types.Remo
 }
 
 func (s *AgentController) SearchDockerhubRepositories(ctx context.Context, req types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
+	klog.Infof("搜索 dockerhub 镜像 %v", req.Query)
 	url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories?query=%s&page=%s&page_size=%s", req.Query, req.Page, req.PageSize)
 	resp, err := DoHttpRequest(url)
 	if err != nil {
@@ -164,6 +165,7 @@ func (s *AgentController) SearchDockerhubRepositories(ctx context.Context, req t
 }
 
 func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
+	klog.Infof("搜索 quay.io 镜像 %v", opt.Query)
 	// https://docs.projectquay.io/api_quay.html#repo-manage-api
 	baseURL := fmt.Sprintf("https://quay.io/api/v1/find/repositories?query=%s&page=%s&page_size=%s", opt.Query, "1", "1")
 	resp, err := DoHttpRequest(baseURL)
@@ -190,6 +192,7 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 
 func (s *AgentController) SearchAllRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
 	// 遍历搜索所有已支持镜像仓库
+	klog.Infof("全量搜索所有镜像 %v", opt.Query)
 	searchFuncs := []func(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error){
 		s.SearchQuayRepositories,
 		s.SearchDockerhubRepositories,
@@ -227,6 +230,7 @@ func (s *AgentController) SearchAllRepositories(ctx context.Context, opt types.R
 }
 
 func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error) {
+	klog.Infof("搜索 gcr 镜像 %v", opt.Query)
 	// https://gcr.io/v2/google-containers/kibana/tags/list
 	// https://gcr.io/v2/google-containers/tags/list
 	// https://registry.k8s.io/v2/kube-apiserver/tags/list
