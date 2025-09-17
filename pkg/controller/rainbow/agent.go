@@ -178,6 +178,8 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.RemoteSearchRequest) ([]byte, error) {
 	// https://gcr.io/v2/google-containers/kibana/tags/list
 	// https://gcr.io/v2/google-containers/tags/list
+	// https://registry.k8s.io/v2/kube-apiserver/tags/list
+	// crane ls registry.k8s.io/kube-apiserver
 	if len(opt.Namespace) == 0 {
 		return nil, fmt.Errorf("gcr.io 镜像仓库搜索时，必须指定命名空间")
 	}
