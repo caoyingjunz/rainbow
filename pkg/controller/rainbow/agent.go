@@ -65,7 +65,7 @@ func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis
 func (s *AgentController) Search(ctx context.Context, date []byte) error {
 	var reqMeta types.RemoteMetaRequest
 	if err := json.Unmarshal(date, &reqMeta); err != nil {
-		klog.Errorf("failed to unmarshal remote meta request", err)
+		klog.Errorf("failed to unmarshal remote meta request %v", err)
 		return err
 	}
 
