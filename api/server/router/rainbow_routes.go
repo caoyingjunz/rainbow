@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -1131,6 +1132,7 @@ func (cr *rainbowRouter) searchRepositories(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+	req.Query = strings.TrimSpace(req.Query)
 	if resp.Result, err = cr.c.Server().SearchRepositories(c, req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -1153,7 +1155,7 @@ func (cr *rainbowRouter) searchRepositoryTags(c *gin.Context) {
 	if len(req.Hub) == 0 {
 		req.Hub = "dockerhub"
 	}
-
+	req.Query = strings.TrimSpace(req.Query)
 	if resp.Result, err = cr.c.Server().SearchRepositoryTags(c, req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
