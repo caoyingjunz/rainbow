@@ -307,8 +307,9 @@ func (s *AgentController) SearchTags(ctx context.Context, req types.RemoteTagSea
 	}
 
 	return json.Marshal(types.CommonSearchTagResult{
-		Name: req.Repository,
-		Tags: tags,
+		Name:  req.Repository,
+		Tags:  tags,
+		Total: len(tags),
 	})
 	//switch cfg.ImageFrom {
 	//case types.ImageHubDocker:

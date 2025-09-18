@@ -159,8 +159,9 @@ type CommonSearchRepositoryResult struct {
 }
 
 type CommonSearchTagResult struct {
-	Name string   `json:"name"`
-	Tags []string `json:"tags"`
+	Name  string   `json:"name"`
+	Total int      `json:"total"`
+	Tags  []string `json:"tags"`
 }
 
 type CommonSearchImageResult struct {
