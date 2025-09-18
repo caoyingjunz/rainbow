@@ -99,16 +99,26 @@ func (s *ServerController) preRemoteSearch(ctx context.Context, req types.Remote
 	return nil
 }
 
+// 兼容前端缺陷
+func (s *ServerController) setSearchHubType(req *types.RemoteSearchRequest) {
+	// 设置默认仓库类型
+	if len(req.Hub) == 0 {
+		req.Hub = types.ImageHubDocker
+	}
+	if req.Hub == "gcr" {
+		req.Hub = types.ImageHubGCR
+	}
+	if req.Hub == "quay" {
+		req.Hub = types.ImageHubQuay
+	}
+}
+
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
 	req.Query = strings.TrimSpace(req.Query)
 	if len(req.Query) == 0 {
 		return []types.CommonSearchRepositoryResult{}, nil
 	}
-
-	// 设置默认仓库类型
-	if len(req.Hub) == 0 {
-		req.Hub = types.ImageHubDocker
-	}
+	s.setSearchHubType(&req)
 
 	if err := s.preRemoteSearch(ctx, req); err != nil {
 		return nil, err
@@ -116,7 +126,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:                    1,
+		Type:                    types.SearchTypeRepo,
 		Uid:                     key,
 		RepositorySearchRequest: req,
 	})
@@ -142,7 +152,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:             2,
+		Type:             types.SearchTypeTag,
 		Uid:              key,
 		TagSearchRequest: req,
 	})
@@ -155,8 +165,7 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 	if err != nil {
 		return nil, err
 	}
-
-	var tagResp []types.TagResult
+	var tagResp types.CommonSearchTagResult
 	if err = json.Unmarshal(val, &tagResp); err != nil {
 		return nil, err
 	}

@@ -63,6 +63,17 @@ const (
 	ImageHubAll    = "all"
 )
 
+const (
+	DefaultGCRNamespace       = "google-containers"
+	DefaultDockerhubNamespace = "library"
+)
+
+const (
+	SearchTypeRepo = iota + 1
+	SearchTypeTag
+	SearchTypeImage
+)
+
 type SearchResult struct {
 	Result     []byte
 	ErrMessage string
@@ -145,6 +156,15 @@ type CommonSearchRepositoryResult struct {
 	LastModified int64   `json:"last_modified"`
 	Pull         int64   `json:"pull"` // 下载数量
 	ShortDesc    *string `json:"short_desc"`
+}
+
+type CommonSearchTagResult struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+type CommonSearchImageResult struct {
+	Name string `json:"name"`
 }
 
 type SearchQuayResult struct {
