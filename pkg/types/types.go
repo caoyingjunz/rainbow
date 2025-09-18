@@ -154,7 +154,8 @@ type CommonSearchRepositoryResult struct {
 	Registry     string  `json:"registry"`
 	Stars        int     `json:"stars"` //  点赞数
 	LastModified int64   `json:"last_modified"`
-	Pull         int64   `json:"pull"` // 下载数量
+	Pull         int64   `json:"pull"`        // 下载数量
+	IsOfficial   bool    `json:"is_official"` // 在 dockerhub 时生效
 	ShortDesc    *string `json:"short_desc"`
 }
 
