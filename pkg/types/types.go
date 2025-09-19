@@ -64,6 +64,11 @@ const (
 )
 
 const (
+	FuzzySearch    = 0 // 模糊查询
+	AccurateSearch = 1 // 精准查询
+)
+
+const (
 	DefaultGCRNamespace       = "google-containers"
 	DefaultDockerhubNamespace = "library"
 )
@@ -71,7 +76,7 @@ const (
 const (
 	SearchTypeRepo = iota + 1
 	SearchTypeTag
-	SearchTypeImage
+	SearchTypeTagInfo
 )
 
 type SearchResult struct {
@@ -160,13 +165,13 @@ type CommonSearchRepositoryResult struct {
 }
 
 type CommonSearchTagResult struct {
-	Name  string   `json:"name"`
-	Total int      `json:"total"`
-	Tags  []string `json:"tags"`
-}
-
-type CommonSearchImageResult struct {
-	Name string `json:"name"`
+	Hub        string   `json:"hub"`
+	Namespace  string   `json:"namespace"`
+	Repository string   `json:"repository"`
+	Total      int      `json:"total"`
+	Page       int      `json:"page"`
+	PageSize   int      `json:"page_size"`
+	Tags       []string `json:"tags"`
 }
 
 type SearchQuayResult struct {
@@ -212,4 +217,96 @@ type SearchGCRResult struct {
 	Manifest map[string]interface{} `json:"manifest"`
 	Name     string                 `json:"name"`
 	Tags     []string               `json:"tags"`
+}
+
+type QuaySearchTagResult struct {
+	Tags          []QuayTag `json:"tags"`
+	Page          int       `json:"page"`
+	HasAdditional bool      `json:"has_additional"`
+}
+
+type QuayTag struct {
+	Name           string `json:"name"`
+	Reversion      bool   `json:"reversion"`
+	StartTS        int64  `json:"start_ts"`
+	EndTS          int64  `json:"end_ts"`
+	ManifestDigest string `json:"manifest_digest"`
+	IsManifestList bool   `json:"is_manifest_list"`
+	Size           *int64 `json:"size"` // 使用指针处理可能的null值
+	LastModified   string `json:"last_modified"`
+}
+
+type DockerToken struct {
+	Token string `json:"token"`
+}
+
+type DockerhubSearchTagResult struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+type GCRSearchTagResult struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+// CommonSearchTagInfoResult TODO
+type CommonSearchTagInfoResult struct {
+	Name     string           `json:"name"`
+	FullSize int64            `json:"full_size"`
+	Digest   string           `json:"digest"`
+	Images   []DockerhubImage `json:"images"`
+}
+
+type SearchDockerhubTagInfoResult struct {
+	Name                string           `json:"name"`
+	Creator             int64            `json:"creator,omitempty"`
+	ID                  int64            `json:"id,omitempty"`
+	Images              []DockerhubImage `json:"images"`
+	LastUpdated         time.Time        `json:"last_updated"`
+	LastUpdater         int64            `json:"last_updater"`
+	LastUpdaterUsername string           `json:"last_updater_username"`
+	Repository          int64            `json:"repository"`
+	FullSize            int64            `json:"full_size"`
+	V2                  bool             `json:"v2"`
+	TagStatus           string           `json:"tag_status"`
+	TagLastPulled       time.Time        `json:"tag_last_pulled"`
+	TagLastPushed       time.Time        `json:"tag_last_pushed"`
+	MediaType           string           `json:"media_type"`
+	ContentType         string           `json:"content_type"`
+	Digest              string           `json:"digest"`
+}
+
+type DockerhubImage struct {
+	Architecture string    `json:"architecture"`
+	Features     string    `json:"features"`
+	Variant      *string   `json:"variant"` // 使用指针处理可能的 null 值
+	Digest       string    `json:"digest"`
+	OS           string    `json:"os"`
+	OSFeatures   string    `json:"os_features"`
+	OSVersion    *string   `json:"os_version"` // 使用指针处理可能的 null 值
+	Size         int64     `json:"size"`
+	Status       string    `json:"status"`
+	LastPulled   time.Time `json:"last_pulled"`
+	LastPushed   time.Time `json:"last_pushed"`
+}
+
+type ImageManifest struct {
+	SchemaVersion int        `json:"schemaVersion"`
+	MediaType     string     `json:"mediaType"`
+	Manifests     []Manifest `json:"manifests"`
+}
+
+type Manifest struct {
+	MediaType string   `json:"mediaType"`
+	Size      int      `json:"size"`
+	Digest    string   `json:"digest"`
+	Platform  Platform `json:"platform"`
+}
+
+type Platform struct {
+	Architecture string  `json:"architecture"`
+	OS           string  `json:"os"`
+	Variant      *string `json:"variant,omitempty"` // 使用指针处理可选字段
+	OSVersion    *string `json:"os.version,omitempty"`
 }

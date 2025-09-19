@@ -46,49 +46,6 @@ func (s *ServerController) Connect(stream pb.Tunnel_ConnectServer) error {
 	}
 }
 
-type HubTagResponse struct {
-	Count    int         `json:"count"`
-	Next     string      `json:"next"`
-	Previous interface{} `json:"previous"` // 可能是 null 或字符串
-	Results  []TagResult `json:"results"`
-}
-
-type TagResult struct {
-	Images              []ImageInfo `json:"images"`
-	LastUpdated         time.Time   `json:"last_updated"`
-	LastUpdater         int64       `json:"last_updater"`
-	LastUpdaterUsername string      `json:"last_updater_username"`
-	Name                string      `json:"name"`
-	Repository          int64       `json:"repository"`
-	FullSize            int64       `json:"full_size"`
-	V2                  bool        `json:"v2"`
-	TagStatus           string      `json:"tag_status"`
-	TagLastPulled       time.Time   `json:"tag_last_pulled"`
-	TagLastPushed       time.Time   `json:"tag_last_pushed"`
-	MediaType           string      `json:"media_type"`
-	ContentType         string      `json:"content_type"`
-	Digest              string      `json:"digest"`
-}
-
-type HubTagInfoResponse struct {
-	Creator int         `json:"creator"`
-	Images  []ImageInfo `json:"images"`
-}
-
-type ImageInfo struct {
-	Features     string    `json:"features"`
-	Variant      *string   `json:"variant"` // 可能是 null
-	Digest       string    `json:"digest"`
-	OS           string    `json:"os"`
-	OSFeatures   string    `json:"os_features"`
-	OSVersion    *string   `json:"os_version"` // 可能是 null
-	Size         int64     `json:"size"`
-	Status       string    `json:"status"`
-	LastPulled   time.Time `json:"last_pulled"`
-	LastPushed   time.Time `json:"last_pushed"`
-	Architecture string    `json:"architecture"`
-}
-
 func (s *ServerController) preRemoteSearch(ctx context.Context, req types.RemoteSearchRequest) error {
 	switch req.Hub {
 	case types.ImageHubDocker, types.ImageHubGCR, types.ImageHubQuay, types.ImageHubAll:
@@ -176,7 +133,7 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) (interface{}, error) {
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:                 3,
+		Type:                 types.SearchTypeTagInfo,
 		Uid:                  key,
 		TagInfoSearchRequest: req,
 	})
@@ -189,8 +146,7 @@ func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req type
 	if err != nil {
 		return nil, err
 	}
-
-	var infoResp HubTagInfoResponse
+	var infoResp types.CommonSearchTagInfoResult
 	if err = json.Unmarshal(val, &infoResp); err != nil {
 		return nil, err
 	}
