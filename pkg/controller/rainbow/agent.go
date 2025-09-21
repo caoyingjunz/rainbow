@@ -315,6 +315,7 @@ func (s *AgentController) SearchQuayTags(ctx context.Context, req types.RemoteTa
 
 func (s *AgentController) SearchDockerhubTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
 	// https://docs.docker.com/reference/api/registry/latest/#tag/Manifests
+	// https://docs.docker.com/reference/api/hub/latest/#tag/repositories/operation/GetRepositoryTag
 	// repo=langgenius/dify-api
 	// token="$(curl -fsSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$repo:pull" | jq --raw-output '.token')"
 	// curl -s -H "Authorization: Bearer $token" "https://registry-1.docker.io/v2/$repo/tags/list"
