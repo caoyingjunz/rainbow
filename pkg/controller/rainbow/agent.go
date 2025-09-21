@@ -317,6 +317,7 @@ func (s *AgentController) SearchDockerhubTags(ctx context.Context, req types.Rem
 	// repo=langgenius/dify-api
 	// token="$(curl -fsSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$repo:pull" | jq --raw-output '.token')"
 	// curl -s -H "Authorization: Bearer $token" "https://registry-1.docker.io/v2/$repo/tags/list"
+	// curl -H "Authorization: Bearer $token" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" https://registry-1.docker.io/v2/$repo/manifests/latest
 	repo := fmt.Sprintf("%s/%s", req.Namespace, req.Repository)
 	tokenResp, err := DoHttpRequest(fmt.Sprintf("https://auth.docker.io/token?service=registry.docker.io&scope=repository:%s:pull", repo))
 	if err != nil {
