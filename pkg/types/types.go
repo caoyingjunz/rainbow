@@ -225,6 +225,12 @@ type QuaySearchTagResult struct {
 	HasAdditional bool      `json:"has_additional"`
 }
 
+//"0.12.0": {
+//"name": "0.12.0",
+//"size": 16995121,
+//"last_modified": "Thu, 05 May 2016 22:24:12 -0000",
+//"manifest_digest": "sha256:d341765ca94ffa63f4caada5e89bbe04b937e079a4a820a5016bef8e1084dcf5"
+
 type QuayTag struct {
 	Name           string `json:"name"`
 	Reversion      bool   `json:"reversion"`
