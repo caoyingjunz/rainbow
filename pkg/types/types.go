@@ -165,13 +165,21 @@ type CommonSearchRepositoryResult struct {
 }
 
 type CommonSearchTagResult struct {
-	Hub        string   `json:"hub"`
-	Namespace  string   `json:"namespace"`
-	Repository string   `json:"repository"`
-	Total      int      `json:"total"`
-	Page       int      `json:"page"`
-	PageSize   int      `json:"page_size"`
-	Tags       []string `json:"tags"`
+	Hub        string      `json:"hub"`
+	Namespace  string      `json:"namespace"`
+	Repository string      `json:"repository"`
+	Total      int         `json:"total"`
+	Page       int         `json:"page"`
+	PageSize   int         `json:"page_size"`
+	TagResult  []CommonTag `json:"tags"`
+}
+
+type CommonTag struct {
+	Name           string  `json:"name"`
+	Size           int64   `json:"size"`
+	LastModified   string  `json:"last_modified"`
+	ManifestDigest string  `json:"manifest_digest"`
+	Images         []Image `json:"images"` // 可能存在多架构
 }
 
 type SearchQuayResult struct {
@@ -258,43 +266,29 @@ type GCRSearchTagResult struct {
 
 // CommonSearchTagInfoResult TODO
 type CommonSearchTagInfoResult struct {
-	Name     string           `json:"name"`
-	FullSize int64            `json:"full_size"`
-	Digest   string           `json:"digest"`
-	Images   []DockerhubImage `json:"images"`
+	Name     string  `json:"name"`
+	FullSize int64   `json:"full_size"`
+	Digest   string  `json:"digest"`
+	Images   []Image `json:"images"`
 }
 
 type SearchDockerhubTagInfoResult struct {
-	Name                string           `json:"name"`
-	Creator             int64            `json:"creator,omitempty"`
-	ID                  int64            `json:"id,omitempty"`
-	Images              []DockerhubImage `json:"images"`
-	LastUpdated         time.Time        `json:"last_updated"`
-	LastUpdater         int64            `json:"last_updater"`
-	LastUpdaterUsername string           `json:"last_updater_username"`
-	Repository          int64            `json:"repository"`
-	FullSize            int64            `json:"full_size"`
-	V2                  bool             `json:"v2"`
-	TagStatus           string           `json:"tag_status"`
-	TagLastPulled       time.Time        `json:"tag_last_pulled"`
-	TagLastPushed       time.Time        `json:"tag_last_pushed"`
-	MediaType           string           `json:"media_type"`
-	ContentType         string           `json:"content_type"`
-	Digest              string           `json:"digest"`
-}
-
-type DockerhubImage struct {
-	Architecture string    `json:"architecture"`
-	Features     string    `json:"features"`
-	Variant      *string   `json:"variant"` // 使用指针处理可能的 null 值
-	Digest       string    `json:"digest"`
-	OS           string    `json:"os"`
-	OSFeatures   string    `json:"os_features"`
-	OSVersion    *string   `json:"os_version"` // 使用指针处理可能的 null 值
-	Size         int64     `json:"size"`
-	Status       string    `json:"status"`
-	LastPulled   time.Time `json:"last_pulled"`
-	LastPushed   time.Time `json:"last_pushed"`
+	Name                string    `json:"name"`
+	Creator             int64     `json:"creator,omitempty"`
+	ID                  int64     `json:"id,omitempty"`
+	Images              []Image   `json:"images"`
+	LastUpdated         time.Time `json:"last_updated"`
+	LastUpdater         int64     `json:"last_updater"`
+	LastUpdaterUsername string    `json:"last_updater_username"`
+	Repository          int64     `json:"repository"`
+	FullSize            int64     `json:"full_size"`
+	V2                  bool      `json:"v2"`
+	TagStatus           string    `json:"tag_status"`
+	TagLastPulled       time.Time `json:"tag_last_pulled"`
+	TagLastPushed       time.Time `json:"tag_last_pushed"`
+	MediaType           string    `json:"media_type"`
+	ContentType         string    `json:"content_type"`
+	Digest              string    `json:"digest"`
 }
 
 type ImageManifest struct {

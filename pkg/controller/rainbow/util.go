@@ -9,6 +9,7 @@ import (
 	"time"
 
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
+	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
 func GetRpcClient(clientId string, m map[string]pb.Tunnel_ConnectServer) pb.Tunnel_ConnectServer {
@@ -87,6 +88,32 @@ func PaginateTagSlice(s []string, page int, pageSize int) []string {
 	// 检查请求的页码是否超出范围
 	if page > totalPages {
 		return []string{}
+	}
+
+	// 计算起始和结束索引
+	startIndex := (page - 1) * pageSize
+	endIndex := startIndex + pageSize
+
+	// 确保结束索引不超过数组长度
+	if endIndex > totalItems {
+		endIndex = totalItems
+	}
+
+	return s[startIndex:endIndex]
+}
+
+func PaginateCommonTagSlice(s []types.CommonTag, page int, pageSize int) []types.CommonTag {
+	// 验证参数有效性
+	if page < 1 || pageSize < 1 || len(s) == 0 {
+		return []types.CommonTag{}
+	}
+
+	// 计算总页数
+	totalItems := len(s)
+	totalPages := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+	// 检查请求的页码是否超出范围
+	if page > totalPages {
+		return []types.CommonTag{}
 	}
 
 	// 计算起始和结束索引

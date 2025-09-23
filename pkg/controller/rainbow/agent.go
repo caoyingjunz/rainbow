@@ -296,21 +296,35 @@ func (s *AgentController) SearchQuayTags(ctx context.Context, req types.RemoteTa
 	}
 
 	// TODO：后续在结构体直接序列化或反序列化
-	tags := make([]string, 0)
+	tagResult := make([]types.CommonTag, 0)
 	for _, t := range quaySearchTagResult.Tags {
-		tags = append(tags, t.Name)
+		var tagSize int64
+		if t.Size != nil {
+			tagSize = *t.Size
+		}
+		tagResult = append(tagResult, types.CommonTag{
+			Name:           t.Name,
+			Size:           tagSize,
+			LastModified:   t.LastModified,
+			ManifestDigest: t.ManifestDigest,
+		})
 	}
 
-	pageTags := PaginateTagSlice(tags, req.Page, req.PageSize)
+	pageTags := PaginateCommonTagSlice(tagResult, req.Page, req.PageSize)
 	return json.Marshal(types.CommonSearchTagResult{
 		Hub:        types.ImageHubQuay,
 		Namespace:  req.Namespace,
 		Repository: req.Repository,
-		Total:      len(tags),
+		Total:      len(pageTags),
 		PageSize:   req.PageSize,
 		Page:       req.Page,
-		Tags:       pageTags,
+		TagResult:  pageTags,
 	})
+}
+
+func (s *AgentController) getManifestForQuay(ctx context.Context, hub, ns, repo, tag string) (*types.Image, error) {
+	//fullRepo := fmt.Sprintf("%s/%s/%s:%s", hub, ns, repo, tag)
+	return nil, nil
 }
 
 func (s *AgentController) SearchDockerhubTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
@@ -364,8 +378,7 @@ func (s *AgentController) SearchDockerhubTags(ctx context.Context, req types.Rem
 		// 全局场景
 		tags = ds.Tags
 	}
-
-	pageTags := PaginateTagSlice(tags, req.Page, req.PageSize)
+	commonTags := s.makeCommonTagForDockerhub(ctx, req.Namespace, req.Repository, PaginateTagSlice(tags, req.Page, req.PageSize))
 	return json.Marshal(types.CommonSearchTagResult{
 		Hub:        types.ImageHubDocker,
 		Namespace:  req.Namespace,
@@ -373,8 +386,178 @@ func (s *AgentController) SearchDockerhubTags(ctx context.Context, req types.Rem
 		Total:      len(tags),
 		PageSize:   req.PageSize,
 		Page:       req.Page,
-		Tags:       pageTags,
+		TagResult:  commonTags,
 	})
+}
+
+func (s *AgentController) getDockerhubTag(ns, repo, tag string) (types.SearchDockerhubTagInfoResult, error) {
+	reqURL := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags/%s", ns, repo, tag)
+	resp, err := DoHttpRequest(reqURL)
+	if err != nil {
+		return types.SearchDockerhubTagInfoResult{}, err
+	}
+
+	var sdt types.SearchDockerhubTagInfoResult
+	if err = json.Unmarshal(resp, &sdt); err != nil {
+		return types.SearchDockerhubTagInfoResult{}, err
+	}
+	return sdt, nil
+}
+
+type GCRTag struct {
+	sync.RWMutex
+	exec exec.Interface
+
+	Namespace string
+	Repo      string
+
+	Tags   []string
+	Result map[string]string
+}
+
+func (g *GCRTag) GetResults() map[string]string {
+	diff := len(g.Tags)
+	var wg sync.WaitGroup
+	wg.Add(diff)
+	for _, tagS := range g.Tags {
+		go func(tag string) {
+			defer wg.Done()
+			_ = g.getOne(tag)
+		}(tagS)
+	}
+	wg.Wait()
+
+	return g.Result
+}
+
+func (g *GCRTag) getOne(tag string) error {
+	cmd := []string{"crane", "digest", fmt.Sprintf("gcr.io/%s/%s:%s", g.Namespace, g.Repo, tag)}
+	out, err := util.RunCmd(g.exec, cmd)
+	if err != nil {
+		return err
+	}
+
+	g.Lock()
+	defer g.Unlock()
+
+	g.Result[tag] = strings.TrimSpace(string(out))
+	return nil
+}
+
+func (s *AgentController) makeCommonTagForGCR(ctx context.Context, ns string, repo string, tagStr []string) []types.CommonTag {
+	gcrTag := GCRTag{
+		exec:      s.exec,
+		Namespace: ns,
+		Repo:      repo,
+		Tags:      tagStr,
+		Result:    map[string]string{},
+	}
+	resultMap := gcrTag.GetResults()
+
+	cts := make([]types.CommonTag, 0)
+	// 排序效果
+	for _, tagS := range tagStr {
+		digest, ok := resultMap[tagS]
+		if ok {
+			cts = append(cts, types.CommonTag{
+				Name:           tagS,
+				ManifestDigest: digest,
+			})
+		} else {
+			cts = append(cts, types.CommonTag{
+				Name: tagS,
+			})
+		}
+	}
+	return cts
+}
+
+type DockerHubTag struct {
+	sync.RWMutex
+
+	Namespace string
+	Repo      string
+
+	Tags   []string
+	Result map[string]types.SearchDockerhubTagInfoResult
+}
+
+func (g *DockerHubTag) GetDigest() {
+	diff := len(g.Tags)
+
+	var wg sync.WaitGroup
+	wg.Add(diff)
+	for _, tagS := range g.Tags {
+		go func(tag string) {
+			defer wg.Done()
+			_ = g.getOne(tag)
+		}(tagS)
+	}
+	wg.Wait()
+}
+
+func (g *DockerHubTag) getOne(tag string) error {
+	reqURL := fmt.Sprintf("https://hub.docker.com/v2/repositories/%s/%s/tags/%s", g.Namespace, g.Repo, tag)
+	resp, err := DoHttpRequest(reqURL)
+	if err != nil {
+		return err
+	}
+
+	var sdt types.SearchDockerhubTagInfoResult
+	if err = json.Unmarshal(resp, &sdt); err != nil {
+		return err
+	}
+
+	g.Lock()
+	defer g.Unlock()
+
+	g.Result[tag] = sdt
+	return nil
+}
+
+func (g *DockerHubTag) GetResults() map[string]types.SearchDockerhubTagInfoResult {
+	diff := len(g.Tags)
+	var wg sync.WaitGroup
+	wg.Add(diff)
+	for _, tagS := range g.Tags {
+		go func(tag string) {
+			defer wg.Done()
+			_ = g.getOne(tag)
+		}(tagS)
+	}
+	wg.Wait()
+
+	return g.Result
+}
+
+func (s *AgentController) makeCommonTagForDockerhub(ctx context.Context, ns string, repo string, tagStr []string) []types.CommonTag {
+	t := DockerHubTag{
+		Namespace: ns,
+		Repo:      repo,
+		Tags:      tagStr,
+		Result:    map[string]types.SearchDockerhubTagInfoResult{},
+	}
+	cts := t.GetResults()
+
+	var commonTags []types.CommonTag
+	for _, tagS := range tagStr {
+		old, ok := cts[tagS]
+		if ok {
+			commonTags = append(commonTags, types.CommonTag{
+				Name:           old.Name,
+				Size:           old.FullSize,
+				LastModified:   old.LastUpdated.String(),
+				ManifestDigest: old.Digest,
+				//Images:         old.Images,
+			})
+		} else {
+			commonTags = append(commonTags, types.CommonTag{
+				Name: old.Name,
+			})
+		}
+	}
+
+	return commonTags
 }
 
 func (s *AgentController) SearchGCRTags(ctx context.Context, req types.RemoteTagSearchRequest) ([]byte, error) {
@@ -414,7 +597,7 @@ func (s *AgentController) SearchGCRTags(ctx context.Context, req types.RemoteTag
 		tags = gCRSearchTagResult.Tags
 	}
 
-	pageTags := PaginateTagSlice(tags, req.Page, req.PageSize)
+	tagResult := s.makeCommonTagForGCR(ctx, req.Namespace, req.Repository, PaginateTagSlice(tags, req.Page, req.PageSize))
 	return json.Marshal(types.CommonSearchTagResult{
 		Hub:        types.ImageHubGCR,
 		Namespace:  req.Namespace,
@@ -422,7 +605,7 @@ func (s *AgentController) SearchGCRTags(ctx context.Context, req types.RemoteTag
 		Total:      len(tags),
 		PageSize:   req.PageSize,
 		Page:       req.Page,
-		Tags:       pageTags,
+		TagResult:  tagResult,
 	})
 }
 

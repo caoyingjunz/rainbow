@@ -3,8 +3,11 @@ package util
 import (
 	"bytes"
 	"fmt"
+	"k8s.io/klog/v2"
 	"math/rand"
 	"strings"
+
+	"github.com/caoyingjunz/pixiulib/exec"
 
 	"github.com/caoyingjunz/pixiulib/strutil"
 )
@@ -78,4 +81,15 @@ func ToRegexp(pattern string) string {
 		}
 	}
 	return buffer.String()
+}
+
+func RunCmd(exec exec.Interface, cmd []string) ([]byte, error) {
+	klog.Infof("%s is running", cmd)
+	out, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+	if err != nil {
+		klog.Errorf("failed to run %v %v %v", cmd, string(out), err)
+		return nil, fmt.Errorf("failed to run %v %v %v", cmd, string(out), err)
+	}
+
+	return out, nil
 }
