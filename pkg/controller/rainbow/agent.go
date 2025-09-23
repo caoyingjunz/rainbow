@@ -183,7 +183,7 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 	var css []types.CommonSearchRepositoryResult
 	for _, rep := range quayResult.Results {
 		css = append(css, types.CommonSearchRepositoryResult{
-			Name:         fmt.Sprintf("quay.io/%s/%s", rep.Namespace.Name, rep.Name),
+			Name:         fmt.Sprintf("%s/%s", rep.Namespace.Name, rep.Name),
 			Registry:     types.ImageHubQuay,
 			ShortDesc:    rep.Description,
 			Stars:        rep.Stars,
@@ -256,7 +256,7 @@ func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.R
 	for _, child := range gcrResult.Child {
 		if strings.Contains(child, opt.Query) { // 服务端过滤
 			css = append(css, types.CommonSearchRepositoryResult{
-				Name:     fmt.Sprintf("gcr.io/%s/%s", opt.Namespace, child),
+				Name:     fmt.Sprintf("%s/%s", opt.Namespace, child),
 				Registry: types.ImageHubGCR,
 			})
 		}
