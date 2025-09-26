@@ -55,7 +55,7 @@ func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
 
 func (s *rainbowdController) Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range msgs {
-		klog.V(1).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
+		klog.V(0).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
 		s.queue.Add(string(msg.Body))
 	}
 	return consumer.ConsumeSuccess, nil

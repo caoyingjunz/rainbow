@@ -3,7 +3,6 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/apache/rocketmq-client-go/v2"
 	"math/rand"
 	"net"
 	"os"
@@ -12,6 +11,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 
 	"github.com/go-redis/redis/v8"
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
@@ -197,14 +199,34 @@ func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interfa
 	return s.factory.Agent().Get(ctx, agentId)
 }
 
-func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
-	s.lock.Lock()
-	if RpcClients != nil {
-		delete(RpcClients, req.AgentName)
+func (s *ServerController) sendMessageForRainbowd(ctx context.Context, rainbowName string, data []byte) error {
+	msg := &primitive.Message{
+		Topic: s.cfg.Rocketmq.Topic,
+		Body:  data,
 	}
-	s.lock.Unlock()
 
-	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
+	msg.WithTag(fmt.Sprintf("rainbowd-%s", rainbowName))
+	msg.WithKeys([]string{"Rainbowd"})
+	res, err := s.Producer.SendSync(ctx, msg)
+	if err != nil {
+		klog.Errorf("send message to rainbowd error: %v", err)
+		return err
+	}
+
+	klog.V(0).Infof("send message to rainbowd success: result=%s", res.String())
+	return nil
+}
+
+func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
+	old, err := s.factory.Agent().GetByName(ctx, req.AgentName)
+	if err != nil {
+		return err
+	}
+	if err := s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)}); err != nil {
+		return err
+	}
+
+	return s.sendMessageForRainbowd(ctx, old.RainbowdName, []byte(fmt.Sprintf("%d/%d", old.Id, old.ResourceVersion)))
 }
 
 func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
