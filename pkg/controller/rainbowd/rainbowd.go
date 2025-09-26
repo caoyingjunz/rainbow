@@ -67,7 +67,8 @@ func (s *rainbowdController) Run(ctx context.Context, workers int) error {
 		return err
 	}
 
-	go s.startHealthChecker(ctx) // 可用性检查
+	// TODO
+	//go s.startHealthChecker(ctx) // 可用性检查
 
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
