@@ -10,6 +10,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2/consumer"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -30,6 +32,7 @@ type RainbowdGetter interface {
 
 type Interface interface {
 	Run(ctx context.Context, workers int) error
+	Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 }
 
 type rainbowdController struct {
@@ -48,6 +51,10 @@ func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
 		exec:    exec.New(),
 		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbowd"),
 	}
+}
+
+func (s *rainbowdController) Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+	return 0, nil
 }
 
 func (s *rainbowdController) Run(ctx context.Context, workers int) error {
