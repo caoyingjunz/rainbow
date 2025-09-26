@@ -5,6 +5,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/apache/rocketmq-client-go/v2/producer"
+	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"github.com/caoyingjunz/pixiulib/config"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -25,6 +29,7 @@ type ServerOptions struct {
 	Factory rainbowdb.ShareDaoFactory
 
 	RedisClient *redis.Client
+	Producer    rocketmq.Producer
 
 	HttpEngine *gin.Engine
 	Controller controller.RainbowInterface
@@ -68,8 +73,28 @@ func (o *ServerOptions) Complete() error {
 	if err := o.registerRedis(); err != nil {
 		return err
 	}
+	if err := o.registerProducer(); err != nil {
+		return err
+	}
 
-	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient)
+	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient, o.Producer)
+	return nil
+}
+
+func (o *ServerOptions) registerProducer() error {
+	rlog.SetLogLevel("warn")
+	rocketmqConfig := o.ComponentConfig.Rocketmq
+	p, err := rocketmq.NewProducer(
+		producer.WithNameServer(rocketmqConfig.NameServers), // NameServer地址
+		producer.WithRetry(3),                               // 重试次数
+		producer.WithGroupName(rocketmqConfig.GroupName),    // 生产者组名
+		producer.WithCredentials(primitive.Credentials{AccessKey: rocketmqConfig.Credential.AccessKey, SecretKey: rocketmqConfig.Credential.SecretKey}),
+	)
+	if err != nil {
+		return err
+	}
+
+	o.Producer = p
 	return nil
 }
 

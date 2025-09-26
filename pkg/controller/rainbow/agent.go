@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2/consumer"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/go-redis/redis/v8"
 	"gopkg.in/yaml.v3"
@@ -36,7 +38,7 @@ type AgentGetter interface {
 }
 type Interface interface {
 	Run(ctx context.Context, workers int) error
-	Search(ctx context.Context, date []byte) error
+	Search(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 }
 
 type AgentController struct {
@@ -65,7 +67,17 @@ func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis
 	}
 }
 
-func (s *AgentController) Search(ctx context.Context, date []byte) error {
+func (s *AgentController) Search(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+	for _, msg := range msgs {
+		klog.V(1).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
+		if err := s.search(ctx, msg.Body); err != nil {
+			klog.Errorf("处理搜索失败 %v", err)
+		}
+	}
+	return consumer.ConsumeSuccess, nil
+}
+
+func (s *AgentController) search(ctx context.Context, date []byte) error {
 	var reqMeta types.RemoteMetaRequest
 	if err := json.Unmarshal(date, &reqMeta); err != nil {
 		klog.Errorf("failed to unmarshal remote meta request %v", err)
@@ -183,7 +195,7 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 	var css []types.CommonSearchRepositoryResult
 	for _, rep := range quayResult.Results {
 		css = append(css, types.CommonSearchRepositoryResult{
-			Name:         fmt.Sprintf("%s/%s", rep.Namespace.Name, rep.Name),
+			Name:         fmt.Sprintf("quay.io/%s/%s", rep.Namespace.Name, rep.Name),
 			Registry:     types.ImageHubQuay,
 			ShortDesc:    rep.Description,
 			Stars:        rep.Stars,
@@ -256,7 +268,7 @@ func (s *AgentController) SearchGcrRepositories(ctx context.Context, opt types.R
 	for _, child := range gcrResult.Child {
 		if strings.Contains(child, opt.Query) { // 服务端过滤
 			css = append(css, types.CommonSearchRepositoryResult{
-				Name:     fmt.Sprintf("%s/%s", opt.Namespace, child),
+				Name:     fmt.Sprintf("gcr.io/%s/%s", opt.Namespace, child),
 				Registry: types.ImageHubGCR,
 			})
 		}

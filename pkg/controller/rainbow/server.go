@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"github.com/apache/rocketmq-client-go/v2"
 	"math/rand"
 	"net"
 	"os"
@@ -138,6 +139,7 @@ type ServerInterface interface {
 	ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
+	Stop(ctx context.Context)
 }
 
 var (
@@ -149,17 +151,19 @@ type ServerController struct {
 	factory     db.ShareDaoFactory
 	cfg         rainbowconfig.Config
 	redisClient *redis.Client
+	Producer    rocketmq.Producer
 
 	// rpcServer
 	pb.UnimplementedTunnelServer
 	lock sync.RWMutex
 }
 
-func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *ServerController {
+func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client, p rocketmq.Producer) *ServerController {
 	sc := &ServerController{
 		factory:     f,
 		cfg:         cfg,
 		redisClient: redisClient,
+		Producer:    p,
 	}
 
 	if SwrClient == nil || RegistryId == nil {
@@ -227,12 +231,22 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.schedule(ctx)
 	go s.sync(ctx)
 	go s.startSyncDailyPulls(ctx)
-	go s.startRpcServer(ctx)
+	//go s.startRpcServer(ctx)
 	go s.startAgentHeartbeat(ctx)
 	go s.startSyncKubernetesVersion(ctx)
 	go s.startSubscribeController(ctx)
 
+	klog.Infof("starting rocketmq producer")
+	if err := s.Producer.Start(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *ServerController) Stop(ctx context.Context) {
+	klog.Infof("停止服务!!!")
+	_ = s.Producer.Shutdown()
 }
 
 func (s *ServerController) DisableSubscribeWithMessage(ctx context.Context, sub model.Subscribe, msg string) {

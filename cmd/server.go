@@ -42,6 +42,7 @@ func main() {
 			klog.Fatal("failed to rainbow agent: ", err)
 		}
 	}
+	defer opts.Controller.Server().Stop(context.TODO())
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", opts.ComponentConfig.Default.Listen),

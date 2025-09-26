@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"io"
 	"strings"
 	"time"
@@ -153,23 +154,37 @@ func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req type
 	return infoResp, nil
 }
 
-func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
-	client := GetRpcClient(clientId, RpcClients)
-	if client == nil {
-		klog.Errorf("未发现可用的 agent，请联系管理员")
-		return nil, fmt.Errorf("未发现可用的 agent，请联系管理员")
+func (s *ServerController) sendMessage(ctx context.Context, clientId string, data []byte) error {
+	tags := "all"
+	if len(clientId) != 0 {
+		tags = clientId
+	}
+	msg := &primitive.Message{
+		Topic: s.cfg.Rocketmq.Topic,
+		Body:  data,
 	}
 
-	if err := client.Send(&pb.Response{Result: data}); err != nil {
-		klog.Errorf("调用 Client(%v)失败 %v", clientId, err)
-		return nil, fmt.Errorf("调用 Client(%v) 失败 %v", clientId, err)
+	msg.WithTag(tags)
+	msg.WithKeys([]string{"PixiuHub"})
+	res, err := s.Producer.SendSync(ctx, msg)
+	if err != nil {
+		klog.Errorf("send message error: %v", err)
+		return err
+	}
+
+	klog.V(0).Infof("send message success: result=%s", res.String())
+	return nil
+}
+
+func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
+	if err := s.sendMessage(ctx, clientId, data); err != nil {
+		return nil, err
 	}
 
 	val, err := s.GetResult(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-
 	var sr types.SearchResult
 	if err = json.Unmarshal([]byte(val), &sr); err != nil {
 		klog.Errorf("反序列化（%v）失败 %v", val, err)

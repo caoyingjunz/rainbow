@@ -23,6 +23,15 @@ agent:
   retain_days: 5
 #  healthz_port: 10086
 
+rocketmq:
+  name_servers:
+    - test:8080
+  group_name: test
+  topic: test
+  credential:
+    access_key: test
+    secret_key: test
+
 plugin:
   callback: http://127.0.0.1:8090
   task_id: 20220801
