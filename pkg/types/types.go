@@ -240,14 +240,14 @@ type QuaySearchTagResult struct {
 //"manifest_digest": "sha256:d341765ca94ffa63f4caada5e89bbe04b937e079a4a820a5016bef8e1084dcf5"
 
 type QuayTag struct {
-	Name           string `json:"name"`
-	Reversion      bool   `json:"reversion"`
-	StartTS        int64  `json:"start_ts"`
-	EndTS          int64  `json:"end_ts"`
-	ManifestDigest string `json:"manifest_digest"`
-	IsManifestList bool   `json:"is_manifest_list"`
-	Size           *int64 `json:"size"` // 使用指针处理可能的null值
-	LastModified   string `json:"last_modified"`
+	Name           string    `json:"name"`
+	Reversion      bool      `json:"reversion"`
+	StartTS        int64     `json:"start_ts"`
+	EndTS          int64     `json:"end_ts"`
+	ManifestDigest string    `json:"manifest_digest"`
+	IsManifestList bool      `json:"is_manifest_list"`
+	Size           *int64    `json:"size"` // 使用指针处理可能的null值
+	LastModified   time.Time `json:"last_modified"`
 }
 
 type DockerToken struct {

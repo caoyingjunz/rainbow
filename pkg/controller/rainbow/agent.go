@@ -31,6 +31,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
+	"github.com/caoyingjunz/rainbow/pkg/util/timeutil"
 )
 
 type AgentGetter interface {
@@ -137,8 +138,8 @@ func (s *AgentController) SearchRepositories(ctx context.Context, req types.Remo
 		css, err = s.SearchDockerhubRepositories(ctx, req)
 	case types.ImageHubQuay:
 		css, err = s.SearchQuayRepositories(ctx, req)
-	case types.ImageHubGCR:
-		css, err = s.SearchGcrRepositories(ctx, req)
+	//case types.ImageHubGCR:
+	//	css, err = s.SearchGcrRepositories(ctx, req)
 	case types.ImageHubAll:
 		css, err = s.SearchAllRepositories(ctx, req)
 	default:
@@ -195,7 +196,7 @@ func (s *AgentController) SearchQuayRepositories(ctx context.Context, opt types.
 	var css []types.CommonSearchRepositoryResult
 	for _, rep := range quayResult.Results {
 		css = append(css, types.CommonSearchRepositoryResult{
-			Name:         fmt.Sprintf("quay.io/%s/%s", rep.Namespace.Name, rep.Name),
+			Name:         fmt.Sprintf("%s/%s", rep.Namespace.Name, rep.Name),
 			Registry:     types.ImageHubQuay,
 			ShortDesc:    rep.Description,
 			Stars:        rep.Stars,
@@ -210,7 +211,7 @@ func (s *AgentController) SearchAllRepositories(ctx context.Context, opt types.R
 	searchFuncs := []func(ctx context.Context, opt types.RemoteSearchRequest) ([]types.CommonSearchRepositoryResult, error){
 		s.SearchQuayRepositories,
 		s.SearchDockerhubRepositories,
-		s.SearchGcrRepositories,
+		//s.SearchGcrRepositories,
 	}
 
 	var css []types.CommonSearchRepositoryResult
@@ -314,10 +315,11 @@ func (s *AgentController) SearchQuayTags(ctx context.Context, req types.RemoteTa
 		if t.Size != nil {
 			tagSize = *t.Size
 		}
+
 		tagResult = append(tagResult, types.CommonTag{
 			Name:           t.Name,
 			Size:           tagSize,
-			LastModified:   t.LastModified,
+			LastModified:   timeutil.ToTimeAgo(t.LastModified),
 			ManifestDigest: t.ManifestDigest,
 		})
 	}
@@ -558,7 +560,7 @@ func (s *AgentController) makeCommonTagForDockerhub(ctx context.Context, ns stri
 			commonTags = append(commonTags, types.CommonTag{
 				Name:           old.Name,
 				Size:           old.FullSize,
-				LastModified:   old.LastUpdated.String(),
+				LastModified:   timeutil.ToTimeAgo(old.LastUpdated),
 				ManifestDigest: old.Digest,
 				//Images:         old.Images,
 			})
