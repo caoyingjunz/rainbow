@@ -274,3 +274,12 @@ func WithStatus(status string) Options {
 		return tx.Where("status = ?", status)
 	}
 }
+
+func WithType(Type string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(Type) == 0 {
+			return tx
+		}
+		return tx.Where("Type = ?", Type)
+	}
+}
