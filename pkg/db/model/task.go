@@ -65,6 +65,10 @@ type Subscribe struct { // 同步远端镜像更新状态
 	LastNotifyTime time.Time     `json:"last_notify_time" gorm:"column:last_notify_time;type:datetime;default:current_timestamp;not null"` // 上次触发时间
 	Interval       time.Duration `json:"interval"`                                                                                         // 间隔多久同步一次
 	FailTimes      int           `json:"fail_times"`                                                                                       // 失败次数
+	ImageFrom      string        `json:"image_from"`                                                                                       // 镜像来源，支持 dockerhub, gcr, quay.io
+	Policy         string        `json:"policy"`                                                                                           // 默认定义所有版本镜像，支持正则表达式，比如 v1.*
+	Arch           string        `json:"arch"`
+	Rewrite        bool          `json:"rewrite"`
 }
 
 func (t *Subscribe) TableName() string {

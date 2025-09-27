@@ -10,6 +10,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2/consumer"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -30,6 +32,7 @@ type RainbowdGetter interface {
 
 type Interface interface {
 	Run(ctx context.Context, workers int) error
+	Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 }
 
 type rainbowdController struct {
@@ -50,14 +53,22 @@ func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
 	}
 }
 
+func (s *rainbowdController) Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+	for _, msg := range msgs {
+		klog.V(0).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
+		s.queue.Add(string(msg.Body))
+	}
+	return consumer.ConsumeSuccess, nil
+}
+
 func (s *rainbowdController) Run(ctx context.Context, workers int) error {
 	if err := s.RegisterIfNotExist(ctx); err != nil {
 		klog.Errorf("register rainbowd failed: %v", err)
 		return err
 	}
 
-	go s.getNextWorkItems(ctx)
-	go s.startHealthChecker(ctx) // 可用性检查
+	// TODO
+	//go s.startHealthChecker(ctx) // 可用性检查
 
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
@@ -147,27 +158,6 @@ func (s *rainbowdController) doCheck(agent model.Agent) error {
 		return nil
 	}
 	return fmt.Errorf("%s", string(out))
-}
-
-func (s *rainbowdController) getNextWorkItems(ctx context.Context) {
-	ticker := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		// 获取未处理
-		agents, err := s.factory.Agent().List(ctx, db.WithRainbowdName(s.name))
-		if err != nil {
-			klog.Error("failed to list my agents %v", err)
-			continue
-		}
-		if len(agents) == 0 {
-			klog.V(1).Infof("未发现 agent，等待下次同步")
-			continue
-		}
-		for _, agent := range agents {
-			s.queue.Add(fmt.Sprintf("%d/%d", agent.Id, agent.ResourceVersion))
-		}
-	}
 }
 
 // TODO

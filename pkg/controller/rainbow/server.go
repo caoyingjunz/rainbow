@@ -12,6 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
+
 	"github.com/go-redis/redis/v8"
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
@@ -138,6 +141,7 @@ type ServerInterface interface {
 	ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
+	Stop(ctx context.Context)
 }
 
 var (
@@ -149,17 +153,19 @@ type ServerController struct {
 	factory     db.ShareDaoFactory
 	cfg         rainbowconfig.Config
 	redisClient *redis.Client
+	Producer    rocketmq.Producer
 
 	// rpcServer
 	pb.UnimplementedTunnelServer
 	lock sync.RWMutex
 }
 
-func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *ServerController {
+func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client, p rocketmq.Producer) *ServerController {
 	sc := &ServerController{
 		factory:     f,
 		cfg:         cfg,
 		redisClient: redisClient,
+		Producer:    p,
 	}
 
 	if SwrClient == nil || RegistryId == nil {
@@ -193,14 +199,34 @@ func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interfa
 	return s.factory.Agent().Get(ctx, agentId)
 }
 
-func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
-	s.lock.Lock()
-	if RpcClients != nil {
-		delete(RpcClients, req.AgentName)
+func (s *ServerController) sendMessageForRainbowd(ctx context.Context, rainbowName string, data []byte) error {
+	msg := &primitive.Message{
+		Topic: s.cfg.Rocketmq.Topic,
+		Body:  data,
 	}
-	s.lock.Unlock()
 
-	return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)})
+	msg.WithTag(fmt.Sprintf("rainbowd-%s", rainbowName))
+	msg.WithKeys([]string{"Rainbowd"})
+	res, err := s.Producer.SendSync(ctx, msg)
+	if err != nil {
+		klog.Errorf("send message to rainbowd error: %v", err)
+		return err
+	}
+
+	klog.V(0).Infof("send message to rainbowd success: result=%s", res.String())
+	return nil
+}
+
+func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
+	old, err := s.factory.Agent().GetByName(ctx, req.AgentName)
+	if err != nil {
+		return err
+	}
+	if err := s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)}); err != nil {
+		return err
+	}
+
+	return s.sendMessageForRainbowd(ctx, old.RainbowdName, []byte(fmt.Sprintf("%d/%d", old.Id, old.ResourceVersion)))
 }
 
 func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
@@ -227,12 +253,22 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.schedule(ctx)
 	go s.sync(ctx)
 	go s.startSyncDailyPulls(ctx)
-	go s.startRpcServer(ctx)
+	//go s.startRpcServer(ctx)
 	go s.startAgentHeartbeat(ctx)
 	go s.startSyncKubernetesVersion(ctx)
 	go s.startSubscribeController(ctx)
 
+	klog.Infof("starting rocketmq producer")
+	if err := s.Producer.Start(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *ServerController) Stop(ctx context.Context) {
+	klog.Infof("停止服务!!!")
+	_ = s.Producer.Shutdown()
 }
 
 func (s *ServerController) DisableSubscribeWithMessage(ctx context.Context, sub model.Subscribe, msg string) {
@@ -388,14 +424,17 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 	if size > 100 {
 		size = 100 // 最大并发是 100
 	}
-	pageSize := fmt.Sprintf("%d", size)
 
 	remotes, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
-		Hub:        "dockerhub",
 		Namespace:  ns,
 		Repository: repo,
-		Page:       "1",
-		PageSize:   pageSize, // 同步最新
+		Config: &types.SearchConfig{
+			ImageFrom: sub.ImageFrom,
+			Page:      1, // 从第一页开始搜索
+			Size:      size,
+			Policy:    sub.Policy,
+			Arch:      sub.Arch,
+		},
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)
@@ -418,35 +457,41 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 		return false, err
 	}
 
-	tagResp := remotes.(HubTagResponse)
-	var addImages []string
-	for _, tag := range tagResp.Results {
-		if tagMap[tag.Name] {
-			continue
+	tagResults := remotes.([]types.TagResult)
+
+	tagsMap := make(map[string][]string)
+	for _, tag := range tagResults {
+		for _, img := range tag.Images {
+			existImages, ok := tagsMap[img.Architecture]
+			if ok {
+				existImages = append(existImages, sub.Path+":"+tag.Name)
+				tagsMap[img.Architecture] = existImages
+			} else {
+				tagsMap[img.Architecture] = []string{sub.Path + ":" + tag.Name}
+			}
 		}
-		addImages = append(addImages, sub.Path+":"+tag.Name)
-	}
-	if len(addImages) == 0 {
-		// 未发现新增镜像，则等待下次监控
-		klog.V(1).Infof("未发现镜像(%s)有新增版本，忽略", sub.Path)
-		return false, nil
 	}
 
-	klog.Infof("发现镜像(%s)有新增版本 %v", sub.Path, addImages)
-	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
-		Name:        uuid.NewRandName(fmt.Sprintf("sub-%s-", sub.Path), 8),
-		UserId:      sub.UserId,
-		UserName:    sub.UserName,
-		RegisterId:  sub.RegisterId,
-		Namespace:   sub.Namespace,
-		Images:      addImages,
-		OwnerRef:    1,
-		SubscribeId: sub.Id,
-		Driver:      "skopeo",
-		PublicImage: true,
-	}); err != nil {
-		klog.Errorf("创建订阅任务失败 %v", err)
-		return false, err
+	// TODO: 后续实现增量推送
+	// 全部重新推送
+	klog.Infof("即将全量推送订阅镜像(%s)", sub.Path)
+	for arch, images := range tagsMap {
+		if err = s.CreateTask(ctx, &types.CreateTaskRequest{
+			Name:         uuid.NewRandName(fmt.Sprintf("sub-%s-", sub.Path), 8) + "-" + arch,
+			UserId:       sub.UserId,
+			UserName:     sub.UserName,
+			RegisterId:   sub.RegisterId,
+			Namespace:    sub.Namespace,
+			Images:       images,
+			OwnerRef:     1,
+			SubscribeId:  sub.Id,
+			Driver:       types.SkopeoDriver,
+			PublicImage:  true,
+			Architecture: arch,
+		}); err != nil {
+			klog.Errorf("创建订阅任务失败 %v", err)
+			return false, err
+		}
 	}
 
 	updates := make(map[string]interface{})
@@ -723,11 +768,13 @@ func (s *ServerController) RunSubscribeImmediately(ctx context.Context, req *typ
 		return err
 	}
 	if !sub.Enable {
+		klog.Warningf("订阅已被关闭")
 		return errors.ErrDisableStatus
 	}
 
 	changed, err := s.subscribe(ctx, *sub)
 	if err != nil {
+		klog.Errorf("执行订阅(%d)失败 %v", req.Id, err)
 		return err
 	}
 	if !changed {

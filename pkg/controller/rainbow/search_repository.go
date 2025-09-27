@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"io"
 	"strings"
 	"time"
@@ -46,77 +47,44 @@ func (s *ServerController) Connect(stream pb.Tunnel_ConnectServer) error {
 	}
 }
 
-type HubSearchResponse struct {
-	Count    int                `json:"count"`
-	Next     string             `json:"next"`
-	Previous string             `json:"previous"`
-	Results  []RepositoryResult `json:"results"`
+func (s *ServerController) preRemoteSearch(ctx context.Context, req types.RemoteSearchRequest) error {
+	switch req.Hub {
+	case types.ImageHubDocker, types.ImageHubGCR, types.ImageHubQuay, types.ImageHubAll:
+	default:
+		return fmt.Errorf("unsupported image hub type %s", req.Hub)
+	}
+
+	return nil
 }
 
-type RepositoryResult struct {
-	RepoName         string `json:"repo_name"`
-	ShortDescription string `json:"short_description"`
-	StarCount        int    `json:"star_count"`
-	PullCount        int64  `json:"pull_count"` // 使用 int64 因为拉取计数可能非常大
-	RepoOwner        string `json:"repo_owner"`
-	IsAutomated      bool   `json:"is_automated"`
-	IsOfficial       bool   `json:"is_official"`
-}
-
-type HubTagResponse struct {
-	Count    int         `json:"count"`
-	Next     string      `json:"next"`
-	Previous interface{} `json:"previous"` // 可能是 null 或字符串
-	Results  []TagResult `json:"results"`
-}
-
-type TagResult struct {
-	Images              []ImageInfo `json:"images"`
-	LastUpdated         time.Time   `json:"last_updated"`
-	LastUpdater         int64       `json:"last_updater"`
-	LastUpdaterUsername string      `json:"last_updater_username"`
-	Name                string      `json:"name"`
-	Repository          int64       `json:"repository"`
-	FullSize            int64       `json:"full_size"`
-	V2                  bool        `json:"v2"`
-	TagStatus           string      `json:"tag_status"`
-	TagLastPulled       time.Time   `json:"tag_last_pulled"`
-	TagLastPushed       time.Time   `json:"tag_last_pushed"`
-	MediaType           string      `json:"media_type"`
-	ContentType         string      `json:"content_type"`
-	Digest              string      `json:"digest"`
-}
-
-type HubTagInfoResponse struct {
-	Creator int         `json:"creator"`
-	Images  []ImageInfo `json:"images"`
-}
-
-type ImageInfo struct {
-	Features     string    `json:"features"`
-	Variant      *string   `json:"variant"` // 可能是 null
-	Digest       string    `json:"digest"`
-	OS           string    `json:"os"`
-	OSFeatures   string    `json:"os_features"`
-	OSVersion    *string   `json:"os_version"` // 可能是 null
-	Size         int64     `json:"size"`
-	Status       string    `json:"status"`
-	LastPulled   time.Time `json:"last_pulled"`
-	LastPushed   time.Time `json:"last_pushed"`
-	Architecture string    `json:"architecture"`
+// 兼容前端缺陷
+func (s *ServerController) setSearchHubType(req *types.RemoteSearchRequest) {
+	// 设置默认仓库类型
+	if len(req.Hub) == 0 {
+		req.Hub = types.ImageHubDocker
+	}
+	if req.Hub == "gcr" {
+		req.Hub = types.ImageHubGCR
+	}
+	if req.Hub == "quay" {
+		req.Hub = types.ImageHubQuay
+	}
 }
 
 func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
 	req.Query = strings.TrimSpace(req.Query)
 	if len(req.Query) == 0 {
-		return HubSearchResponse{
-			Results: []RepositoryResult{},
-		}, nil
+		return []types.CommonSearchRepositoryResult{}, nil
+	}
+	s.setSearchHubType(&req)
+
+	if err := s.preRemoteSearch(ctx, req); err != nil {
+		return nil, err
 	}
 
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:                    1,
+		Type:                    types.SearchTypeRepo,
 		Uid:                     key,
 		RepositorySearchRequest: req,
 	})
@@ -130,7 +98,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 		return nil, err
 	}
 
-	var searchResp HubSearchResponse
+	var searchResp []types.CommonSearchRepositoryResult
 	if err = json.Unmarshal(val, &searchResp); err != nil {
 		klog.Errorf("序列化 HubSearchResponse失败: %v", err)
 		return nil, fmt.Errorf("序列化 HubSearchResponse失败: %v", err)
@@ -142,7 +110,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:             2,
+		Type:             types.SearchTypeTag,
 		Uid:              key,
 		TagSearchRequest: req,
 	})
@@ -155,18 +123,18 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 	if err != nil {
 		return nil, err
 	}
-
-	var tagResp HubTagResponse
+	var tagResp types.CommonSearchTagResult
 	if err = json.Unmarshal(val, &tagResp); err != nil {
 		return nil, err
 	}
+
 	return tagResp, nil
 }
 
 func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) (interface{}, error) {
 	key := uuid.NewString()
 	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:                 3,
+		Type:                 types.SearchTypeTagInfo,
 		Uid:                  key,
 		TagInfoSearchRequest: req,
 	})
@@ -179,31 +147,44 @@ func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req type
 	if err != nil {
 		return nil, err
 	}
-
-	var infoResp HubTagInfoResponse
+	var infoResp types.CommonSearchTagInfoResult
 	if err = json.Unmarshal(val, &infoResp); err != nil {
 		return nil, err
 	}
 	return infoResp, nil
 }
 
-func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
-	client := GetRpcClient(clientId, RpcClients)
-	if client == nil {
-		klog.Errorf("client not connected or register")
-		return nil, fmt.Errorf("client not connected or register")
+func (s *ServerController) sendMessage(ctx context.Context, clientId string, data []byte) error {
+	tags := "all"
+	if len(clientId) != 0 {
+		tags = clientId
+	}
+	msg := &primitive.Message{
+		Topic: s.cfg.Rocketmq.Topic,
+		Body:  data,
 	}
 
-	if err := client.Send(&pb.Response{Result: data}); err != nil {
-		klog.Errorf("调用 Client(%v)失败 %v", clientId, err)
-		return nil, fmt.Errorf("调用 Client(%v) 失败 %v", clientId, err)
+	msg.WithTag(tags)
+	msg.WithKeys([]string{"PixiuHub"})
+	res, err := s.Producer.SendSync(ctx, msg)
+	if err != nil {
+		klog.Errorf("send message error: %v", err)
+		return err
+	}
+
+	klog.V(0).Infof("send message success: result=%s", res.String())
+	return nil
+}
+
+func (s *ServerController) doSearch(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
+	if err := s.sendMessage(ctx, clientId, data); err != nil {
+		return nil, err
 	}
 
 	val, err := s.GetResult(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-
 	var sr types.SearchResult
 	if err = json.Unmarshal([]byte(val), &sr); err != nil {
 		klog.Errorf("反序列化（%v）失败 %v", val, err)
@@ -242,8 +223,8 @@ func (s *ServerController) GetResult(ctx context.Context, key string) (string, e
 		return val, nil
 	}
 
-	// 30 秒超时
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// 60 秒超时
+	waitCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	ch := pubSub.Channel()
