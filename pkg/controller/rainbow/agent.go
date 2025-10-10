@@ -316,10 +316,11 @@ func (s *AgentController) SearchQuayTags(ctx context.Context, req types.RemoteTa
 			tagSize = *t.Size
 		}
 
+		pt, _ := time.Parse("Mon, 02 Jan 2006 15:04:05 -0700", t.LastModified)
 		tagResult = append(tagResult, types.CommonTag{
 			Name:           t.Name,
 			Size:           tagSize,
-			LastModified:   timeutil.ToTimeAgo(t.LastModified),
+			LastModified:   timeutil.ToTimeAgo(pt),
 			ManifestDigest: t.ManifestDigest,
 		})
 	}
