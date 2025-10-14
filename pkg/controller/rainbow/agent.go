@@ -169,11 +169,12 @@ func (s *AgentController) SearchDockerhubRepositories(ctx context.Context, req t
 	for _, rep := range searchResp.Results {
 		desc := rep.ShortDescription
 		css = append(css, types.CommonSearchRepositoryResult{
-			Name:      rep.RepoName,
-			Registry:  types.ImageHubDocker,
-			ShortDesc: &desc,
-			Stars:     rep.StarCount,
-			Pull:      rep.PullCount,
+			Name:       rep.RepoName,
+			Registry:   types.ImageHubDocker,
+			ShortDesc:  &desc,
+			Stars:      rep.StarCount,
+			Pull:       rep.PullCount,
+			IsOfficial: rep.IsOfficial,
 		})
 	}
 
