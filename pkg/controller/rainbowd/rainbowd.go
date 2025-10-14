@@ -35,6 +35,8 @@ type Interface interface {
 	Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 }
 
+var Items []string
+
 type rainbowdController struct {
 	name    string
 	factory db.ShareDaoFactory
@@ -44,6 +46,7 @@ type rainbowdController struct {
 }
 
 func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
+	Items = make([]string, 0)
 	return &rainbowdController{
 		factory: f,
 		cfg:     cfg,
@@ -56,7 +59,7 @@ func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
 func (s *rainbowdController) Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range msgs {
 		klog.V(0).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
-		s.queue.Add(string(msg.Body))
+		Items = append(Items, string(msg.Body))
 	}
 	return consumer.ConsumeSuccess, nil
 }
@@ -100,11 +103,12 @@ func (s *rainbowdController) worker(ctx context.Context) {
 }
 
 func (s *rainbowdController) processNextWorkItem(ctx context.Context) bool {
-	key, quit := s.queue.Get()
-	if quit {
+	if len(Items) == 0 {
 		return false
 	}
-	defer s.queue.Done(key)
+
+	key := Items[0]
+	Items = Items[1:]
 
 	agentId, resourceVersion, err := util.KeyFunc(key)
 	if err != nil {
@@ -178,6 +182,7 @@ func (s *rainbowdController) sync(ctx context.Context, agentId int64, resourceVe
 		return err
 	}
 
+	klog.V(1).Infof("agent(%d/%d) 即将状态同步, 当前状态是 %s", agentId, resourceVersion, old.Status)
 	return s.reconcileAgent(old)
 }
 
@@ -310,6 +315,7 @@ func (s *rainbowdController) runCmd(cmd []string) error {
 func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 	runContainer, err := s.getAgentContainer(agent)
 	if err != nil {
+		klog.Errorf("获取 agent 容器失败 %v", err)
 		return err
 	}
 

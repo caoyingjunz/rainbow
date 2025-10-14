@@ -32,8 +32,8 @@ func main() {
 	}
 
 	for _, runner := range []func(context.Context, int) error{opts.Controller.Rainbowd().Run} {
-		if err = runner(context.TODO(), 5); err != nil {
-			klog.Fatal("failed to rainbowd: ", err)
+		if err = runner(context.TODO(), 2); err != nil {
+			klog.Fatal("failed to run rainbowd: %v", err)
 		}
 	}
 
