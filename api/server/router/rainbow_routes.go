@@ -1378,6 +1378,15 @@ func (cr *rainbowRouter) listTaskMessages(c *gin.Context) {
 
 func (cr *rainbowRouter) listArchitectures(c *gin.Context) {
 	resp := httputils.NewResponse()
+
+	var (
+		err error
+	)
+	if resp.Result, err = cr.c.Server().ListArchitectures(c, types.ListOptions{}); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
 	httputils.SetSuccess(c, resp)
 }
 
