@@ -1376,6 +1376,11 @@ func (cr *rainbowRouter) listTaskMessages(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) listArchitectures(c *gin.Context) {
+	resp := httputils.NewResponse()
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createUser(c *gin.Context) {
 	resp := httputils.NewResponse()
 

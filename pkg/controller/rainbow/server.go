@@ -126,6 +126,8 @@ type ServerInterface interface {
 	CreateTaskMessage(ctx context.Context, req types.CreateTaskMessageRequest) error
 	ListTaskMessages(ctx context.Context, taskId int64) (interface{}, error)
 
+	ListArchitectures(ctx context.Context, listOption types.ListOptions) ([]string, error)
+
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
 	UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error
 	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
@@ -781,4 +783,12 @@ func (s *ServerController) RunSubscribeImmediately(ctx context.Context, req *typ
 		return errors.ErrImageNotFound
 	}
 	return nil
+}
+
+func (s *ServerController) ListArchitectures(ctx context.Context, listOption types.ListOptions) ([]string, error) {
+	return []string{
+		"linux/amd64",
+		"linux/arm64",
+		"windows/amd64",
+	}, nil
 }
