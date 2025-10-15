@@ -323,8 +323,23 @@ func (p *PluginController) sync(imageToPush string, targetImage string, img conf
 	case SkopeoDriver:
 		klog.Infof("use skopeo to copying image: %s", targetImage)
 		cmd1 := []string{"skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, ">", "/dev/null", "2>&1", "&&", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
-		if p.Cfg.Plugin.Arch != "amd64" {
-			cmd1 = append(cmd1, []string{"--override-arch", p.Cfg.Plugin.Arch}...)
+
+		// p.Cfg.Plugin.Arch 解析平台架构配置，格式为: 操作系统/架构/变体 (如: linux/amd64/8)
+		// 支持两种格式:
+		//   - 完整格式: linux/amd64/8  → os=linux, arch=amd64, variant=8
+		//   - 简化格式: linux/amd64    → os=linux, arch=amd64
+		parts := strings.Split(p.Cfg.Plugin.Arch, "/")
+		if len(parts) >= 2 {
+			targetOS := parts[0]
+			arch := parts[1]
+
+			cmd1 = append(cmd1, "--override-os", targetOS)
+			cmd1 = append(cmd1, "--override-arch", arch)
+
+			if len(parts) >= 3 {
+				variant := parts[2]
+				cmd1 = append(cmd1, "--override-variant", variant)
+			}
 		}
 
 		cmd = []string{"docker", "run", "--network", "host", "pixiuio/skopeo:1.17.0", "sh", "-c", strings.Join(cmd1, " ")}
