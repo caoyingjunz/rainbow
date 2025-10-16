@@ -16,8 +16,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"gopkg.in/yaml.v3"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
@@ -35,33 +33,43 @@ type Interface interface {
 	Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 }
 
-var Items []string
-
 type rainbowdController struct {
 	name    string
 	factory db.ShareDaoFactory
 	cfg     rainbowconfig.Config
 	exec    exec.Interface
-	queue   workqueue.RateLimitingInterface
 }
 
 func New(f db.ShareDaoFactory, cfg rainbowconfig.Config) *rainbowdController {
-	Items = make([]string, 0)
 	return &rainbowdController{
 		factory: f,
 		cfg:     cfg,
 		name:    cfg.Rainbowd.Name,
 		exec:    exec.New(),
-		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbowd"),
 	}
 }
 
 func (s *rainbowdController) Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range msgs {
 		klog.V(0).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
-		Items = append(Items, string(msg.Body))
+		if err := s.handler(ctx, string(msg.Body)); err != nil {
+			klog.Errorf("处理 rainbowd 服务失败 %v", err)
+		}
 	}
 	return consumer.ConsumeSuccess, nil
+}
+
+func (s *rainbowdController) handler(ctx context.Context, key string) error {
+	agentId, resourceVersion, err := util.KeyFunc(key)
+	if err != nil {
+		return fmt.Errorf("解析获取到的 key %s 失败 %v", key, err)
+	}
+	if err = s.sync(ctx, agentId, resourceVersion); err != nil {
+		_ = s.factory.Agent().Update(context.TODO(), agentId, resourceVersion, map[string]interface{}{"status": model.ErrorAgentType, "message": err.Error()})
+		return fmt.Errorf("同步agent状态失败 %v", err)
+	}
+
+	return nil
 }
 
 func (s *rainbowdController) Run(ctx context.Context, workers int) error {
@@ -72,10 +80,6 @@ func (s *rainbowdController) Run(ctx context.Context, workers int) error {
 
 	// TODO
 	//go s.startHealthChecker(ctx) // 可用性检查
-
-	for i := 0; i < workers; i++ {
-		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
-	}
 
 	return nil
 }
@@ -95,32 +99,6 @@ func (s *rainbowdController) RegisterIfNotExist(ctx context.Context) error {
 		Status: model.RunAgentType,
 	})
 	return nil
-}
-
-func (s *rainbowdController) worker(ctx context.Context) {
-	for s.processNextWorkItem(ctx) {
-	}
-}
-
-func (s *rainbowdController) processNextWorkItem(ctx context.Context) bool {
-	if len(Items) == 0 {
-		return false
-	}
-
-	key := Items[0]
-	Items = Items[1:]
-
-	agentId, resourceVersion, err := util.KeyFunc(key)
-	if err != nil {
-		s.handleErr(ctx, err, key)
-	} else {
-		if err = s.sync(ctx, agentId, resourceVersion); err != nil {
-			_ = s.factory.Agent().Update(context.TODO(), agentId, resourceVersion, map[string]interface{}{"status": model.ErrorAgentType, "message": err.Error()})
-			s.handleErr(ctx, err, key)
-		}
-	}
-
-	return true
 }
 
 func (s *rainbowdController) startHealthChecker(ctx context.Context) {
@@ -162,14 +140,6 @@ func (s *rainbowdController) doCheck(agent model.Agent) error {
 		return nil
 	}
 	return fmt.Errorf("%s", string(out))
-}
-
-// TODO
-func (s *rainbowdController) handleErr(ctx context.Context, err error, key interface{}) {
-	if err == nil {
-		return
-	}
-	klog.Error(err)
 }
 
 // 1. 获取 agent 期望状态 (数据库状态)

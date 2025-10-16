@@ -48,7 +48,7 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 
 const (
 	defaultNamespace = "emptyNamespace"
-	defaultArch      = "amd64"
+	defaultArch      = "linux/amd64"
 )
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {

@@ -789,6 +789,9 @@ func (s *ServerController) ListArchitectures(ctx context.Context, listOption typ
 	return []string{
 		"linux/amd64",
 		"linux/arm64",
-		"windows/amd64",
+		"linux/arm",
+		"windows/x86",
+		"windows/x86-64",
+		"自定义",
 	}, nil
 }

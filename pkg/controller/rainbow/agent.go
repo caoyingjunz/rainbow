@@ -70,7 +70,7 @@ func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis
 
 func (s *AgentController) Search(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range msgs {
-		klog.V(1).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
+		klog.V(0).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
 		if err := s.search(ctx, msg.Body); err != nil {
 			klog.Errorf("处理搜索失败 %v", err)
 		}
