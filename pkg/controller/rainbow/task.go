@@ -506,22 +506,23 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 		srcPath = ns + "/" + srcPath
 	}
 
-	rawPath := req.Path
-	parts := strings.Split(rawPath, "/")
-	if len(parts) != 1 && len(parts) != 2 {
-		return fmt.Errorf("订阅镜像名称路径不符合要求")
-	}
-
-	if len(parts) == 1 {
-		rawPath = "library" + "/" + rawPath
-	}
-
 	// 初始化镜像来源
 	if len(req.ImageFrom) == 0 {
 		req.ImageFrom = types.ImageHubDocker
 	}
+
+	rawPath := req.Path
+	// 默认dockerhub不指定 ns时，会添加默认值
+	if req.ImageFrom == types.ImageHubDocker {
+		parts := strings.Split(rawPath, "/")
+		if len(parts) == 1 {
+			rawPath = "library" + "/" + rawPath
+		}
+	}
+
+	req.Policy = strings.TrimSpace(req.Policy)
 	if len(req.Policy) == 0 {
-		req.Policy = ".*"
+		req.Policy = "latest"
 	}
 
 	return s.factory.Task().CreateSubscribe(ctx, &model.Subscribe{
@@ -551,6 +552,7 @@ func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.Updat
 		"policy":     req.Policy,
 		"arch":       req.Arch,
 		"rewrite":    req.Rewrite,
+		"namespace":  req.Namespace,
 	}
 
 	enable := req.Enable
@@ -577,8 +579,22 @@ func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.Updat
 	return nil
 }
 
+// DeleteSubscribe 删除订阅
+// 1. 删除订阅
+// 2. 删除订阅记录
+// 3. 删除订阅关联的同步任务
 func (s *ServerController) DeleteSubscribe(ctx context.Context, subId int64) error {
-	return s.factory.Task().DeleteSubscribe(ctx, subId)
+	if err := s.factory.Task().DeleteSubscribe(ctx, subId); err != nil {
+		return err
+	}
+	if err := s.factory.Task().DeleteSubscribeAllMessage(ctx, subId); err != nil {
+		return err
+	}
+	if err := s.factory.Task().DeleteBySubscribe(ctx, subId); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *ServerController) preCreateAgent(ctx context.Context, req *types.CreateAgentRequest) error {

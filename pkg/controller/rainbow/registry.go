@@ -2,7 +2,9 @@ package rainbow
 
 import (
 	"context"
+	"fmt"
 	"k8s.io/klog/v2"
+	"strings"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -11,6 +13,10 @@ import (
 )
 
 func (s *ServerController) CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error {
+	if strings.Contains(req.Password, ";") {
+		return fmt.Errorf("镜像仓库密码不能包含特殊字符串 !")
+	}
+
 	_, err := s.factory.Registry().Create(ctx, &model.Registry{
 		Name:       req.Name,
 		UserId:     req.UserId,
@@ -37,6 +43,10 @@ func (s *ServerController) LoginRegistry(ctx context.Context, req *types.CreateR
 }
 
 func (s *ServerController) UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error {
+	if strings.Contains(req.Password, ";") {
+		return fmt.Errorf("镜像仓库密码不能包含特殊字符串 !")
+	}
+
 	return s.factory.Registry().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
 		"user_id":    req.UserId,
 		"repository": req.Repository,

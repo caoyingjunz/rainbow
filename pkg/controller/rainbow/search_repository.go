@@ -191,7 +191,7 @@ func (s *ServerController) doSearch(ctx context.Context, clientId string, key st
 		return nil, err
 	}
 	if sr.StatusCode != 0 {
-		klog.Errorf("远程调用失败 %v", err)
+		klog.Errorf("doSearch 远程调用失败 %v", err)
 		return nil, fmt.Errorf(sr.ErrMessage)
 	}
 

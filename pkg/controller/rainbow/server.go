@@ -389,6 +389,87 @@ func (s *ServerController) reRunSubscribeTags(ctx context.Context, errTags []mod
 // 2. 获取远端镜像版本列表
 // 3. 同步差异镜像版本
 func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (bool, error) {
+	//if sub.Rewrite {
+	//	return s.subscribeAll(ctx, sub)
+	//}
+	//return s.subscribeDiff(ctx, sub)
+
+	return s.subscribeAll(ctx, sub)
+}
+
+func (s *ServerController) subscribeAll(ctx context.Context, sub model.Subscribe) (bool, error) {
+	var ns, repo string
+	parts := strings.Split(sub.RawPath, "/")
+	if len(parts) == 2 || len(parts) == 3 {
+		ns, repo = parts[len(parts)-2], parts[len(parts)-1]
+	}
+
+	size := sub.Size
+	if size > 10 {
+		size = 10 // 最大并发是 10，
+	}
+
+	tagResp, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
+		Hub:        sub.ImageFrom,
+		Namespace:  ns,
+		Repository: repo,
+		Query:      sub.Policy,
+		Page:       1,
+		PageSize:   size,
+	})
+
+	if err != nil {
+		if strings.Contains(err.Error(), "404 Not Found") {
+			klog.Warningf("订阅镜像(%s)不存在，即将关闭订阅", sub.Path)
+			s.DisableSubscribeWithMessage(ctx, sub, fmt.Sprintf("订阅镜像(%s)不存在，自动关闭", sub.Path))
+			return false, fmt.Errorf("订阅镜像(%s)不存在", sub.Path)
+		} else {
+			klog.Errorf("获取仓库(%s)的(%s)镜像 %v", sub.ImageFrom, sub.Path, err)
+			return false, err
+		}
+	}
+
+	commonSearchTagResult := tagResp.(types.CommonSearchTagResult)
+	if len(commonSearchTagResult.TagResult) == 0 {
+		s.DisableSubscribeWithMessage(ctx, sub, fmt.Sprintf("订阅镜像的版本(%s)不存在，即将关闭订阅", sub.Policy))
+		return false, fmt.Errorf("订阅镜像(%s)的版本不存在", sub.Path)
+	}
+
+	// 构造镜像列表，
+	var images []string
+	for _, tag := range commonSearchTagResult.TagResult {
+		image := fmt.Sprintf("%s:%s", sub.RawPath, tag.Name)
+		images = append(images, image)
+	}
+	// 创建同步任务
+	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
+		Name:         uuid.NewRandName("", 8),
+		UserId:       sub.UserId,
+		UserName:     sub.UserName,
+		RegisterId:   sub.RegisterId,
+		Namespace:    sub.Namespace,
+		Images:       images,
+		OwnerRef:     1,
+		SubscribeId:  sub.Id,
+		Driver:       types.SkopeoDriver,
+		PublicImage:  true,
+		Architecture: sub.Arch,
+	}); err != nil {
+		klog.Errorf("创建订阅任务失败 %v", err)
+		return false, err
+	}
+
+	s.CreateSubscribeMessageWithLog(ctx, sub, "订阅执行成功")
+	updates := make(map[string]interface{})
+	updates["last_notify_time"] = time.Now()
+	if err = s.factory.Task().UpdateSubscribe(ctx, sub.Id, sub.ResourceVersion, updates); err != nil {
+		klog.Infof("订阅 (%s) 更新失败 %v", sub.Path, err)
+	}
+
+	return true, nil
+}
+
+func (s *ServerController) subscribeDiff(ctx context.Context, sub model.Subscribe) (bool, error) {
 	exists, err := s.factory.Image().ListImagesWithTag(ctx, db.WithUser(sub.UserId), db.WithName(sub.SrcPath))
 	if err != nil {
 		return false, err
@@ -423,8 +504,8 @@ func (s *ServerController) subscribe(ctx context.Context, sub model.Subscribe) (
 	}
 
 	size := sub.Size
-	if size > 100 {
-		size = 100 // 最大并发是 100
+	if size > 10 {
+		size = 10 // 最大并发是 100
 	}
 
 	remotes, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{

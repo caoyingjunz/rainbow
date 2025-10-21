@@ -21,6 +21,8 @@ type TaskInterface interface {
 	DeleteInBatch(ctx context.Context, taskIds []int64) error
 	UpdateDirectly(ctx context.Context, taskId int64, updates map[string]interface{}) error
 
+	DeleteBySubscribe(ctx context.Context, subId int64) error
+
 	GetOne(ctx context.Context, taskId int64, resourceVersion int64) (*model.Task, error)
 	AssignToAgent(ctx context.Context, taskId int64, agentName string) error
 	ListWithAgent(ctx context.Context, agentName string, process int, opts ...Options) ([]model.Task, error)
@@ -57,6 +59,7 @@ type TaskInterface interface {
 	GetSubscribe(ctx context.Context, subId int64) (*model.Subscribe, error)
 	ListSubscribes(ctx context.Context, opts ...Options) ([]model.Subscribe, error)
 
+	DeleteSubscribeAllMessage(ctx context.Context, subId int64) error
 	UpdateSubscribeDirectly(ctx context.Context, subId int64, updates map[string]interface{}) error
 
 	CreateSubscribeMessage(ctx context.Context, object *model.SubscribeMessage) error
@@ -113,6 +116,10 @@ func (a *task) UpdateDirectly(ctx context.Context, taskId int64, updates map[str
 
 func (a *task) Delete(ctx context.Context, taskId int64) error {
 	return a.db.WithContext(ctx).Where("id = ?", taskId).Delete(&model.Task{}).Error
+}
+
+func (a *task) DeleteBySubscribe(ctx context.Context, subId int64) error {
+	return a.db.WithContext(ctx).Where("subscribe_id = ?", subId).Delete(&model.Task{}).Error
 }
 
 func (a *task) DeleteInBatch(ctx context.Context, taskIds []int64) error {
@@ -490,6 +497,10 @@ func (a *task) CreateSubscribeMessage(ctx context.Context, object *model.Subscri
 		return err
 	}
 	return nil
+}
+
+func (a *task) DeleteSubscribeAllMessage(ctx context.Context, subId int64) error {
+	return a.db.WithContext(ctx).Where("subscribe_id = ?", subId).Delete(&model.SubscribeMessage{}).Error
 }
 
 func (a *task) DeleteSubscribeMessage(ctx context.Context, subId int64) error {

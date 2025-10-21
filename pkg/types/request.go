@@ -317,6 +317,7 @@ type (
 		Policy    string        `json:"policy"`     // 默认定义所有版本镜像，支持正则表达式，比如 v1.*
 		Arch      string        `json:"arch"`       // 支持的架构，默认不限制  linux/amd64
 		Rewrite   bool          `json:"rewrite"`    // 是否覆盖推送
+		Namespace string        `json:"namespace"`
 	}
 )
 
