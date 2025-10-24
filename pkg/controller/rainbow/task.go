@@ -626,10 +626,6 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 		return err
 	}
 
-	if req.HealthzPort == 0 {
-		// 未做去重，暂时人工确认
-		req.HealthzPort = util.GenRandInt(10086, 10186)
-	}
 	if len(req.GithubRepository) == 0 {
 		req.GithubRepository = fmt.Sprintf("https://github.com/%s/plugin.git", req.GithubUser)
 	}
@@ -640,7 +636,6 @@ func (s *ServerController) CreateAgent(ctx context.Context, req *types.CreateAge
 		GithubToken:      req.GithubToken,
 		GithubRepository: req.GithubRepository,
 		GithubEmail:      req.GithubEmail,
-		HealthzPort:      req.HealthzPort,
 		Type:             req.Type,
 		RainbowdName:     req.RainbowdName,
 		Status:           model.UnStartType,

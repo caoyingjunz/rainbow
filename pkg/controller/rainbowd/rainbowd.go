@@ -130,7 +130,7 @@ func (s *rainbowdController) startHealthChecker(ctx context.Context) {
 
 // 一次失败就直接重启
 func (s *rainbowdController) doCheck(agent model.Agent) error {
-	cmd := []string{"docker", "exec", agent.Name, "curl", "-s", "-o", "/dev/null", "-w", `"%{http_code}"`, "-X", "POST", fmt.Sprintf("http://127.0.0.1:%d/healthz", agent.HealthzPort)}
+	cmd := []string{"docker", "exec", agent.Name, "curl", "-s", "-o", "/dev/null", "-w", `"%{http_code}"`, "-X", "POST", fmt.Sprintf("http://127.0.0.1:%d/healthz", 10086)}
 	out, err := s.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to exec %s container %v", string(out), err)
@@ -487,7 +487,6 @@ func (s *rainbowdController) prepareConfig(agent *model.Agent) error {
 
 	// 追加差异化配置
 	cfg.Agent.Name = agentName
-	cfg.Agent.HealthzPort = agent.HealthzPort
 	cfgData, err := yaml.Marshal(cfg)
 	if err != nil {
 		return err

@@ -17,11 +17,9 @@ rainbowd:
   agent_image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/rainbow-agent:v1.1
 
 agent:
-  rpc_server: 127.0.0.1:8091
   name: agent-dev
   data_dir: /tmp
   retain_days: 5
-#  healthz_port: 10086
 
 rocketmq:
   name_servers:
@@ -62,6 +60,7 @@ mysql:
 
 redis:
   addr: redis:6379
+  username: ""
   password: ""
   db: 0
 

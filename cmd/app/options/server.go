@@ -129,6 +129,7 @@ func (o *ServerOptions) registerRedis() error {
 	redisConfig := o.ComponentConfig.Redis
 	o.RedisClient = redis.NewClient(&redis.Options{
 		Addr:        redisConfig.Addr,
+		Username:    redisConfig.Username,
 		Password:    redisConfig.Password,
 		DB:          redisConfig.Db,
 		ReadTimeout: 10 * time.Second,

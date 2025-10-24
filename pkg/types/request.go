@@ -179,7 +179,6 @@ type (
 		GithubRepository string `json:"github_repository"` // github 仓库地址
 		GithubToken      string `json:"github_token"`      // github token
 		GithubEmail      string `json:"github_email"`
-		HealthzPort      int    `json:"healthz_port"`
 		RainbowdName     string `json:"rainbowd_name"`
 	}
 
@@ -190,7 +189,6 @@ type (
 		GithubRepository string `json:"github_repository"` // github 仓库地址
 		GithubToken      string `json:"github_token"`      // github token
 		GithubEmail      string `json:"github_email"`
-		HealthzPort      int    `json:"healthz_port"`
 		RainbowdName     string `json:"rainbowd_name"`
 	}
 

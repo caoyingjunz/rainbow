@@ -5,7 +5,6 @@ import (
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/apache/rocketmq-client-go/v2/producer"
-	"math/rand"
 	"os"
 	"time"
 
@@ -78,12 +77,6 @@ func (o *Options) Complete() error {
 	if o.ComponentConfig.Agent.RetainDays == 0 {
 		o.ComponentConfig.Agent.RetainDays = defaultRetainDays
 	}
-	if o.ComponentConfig.Agent.HealthzPort == 0 {
-		// 临时处理
-		rand.Seed(time.Now().UnixNano())
-		min, max := 1000, 5000
-		o.ComponentConfig.Agent.HealthzPort = rand.Intn(max-min+1) + min
-	}
 	if o.ComponentConfig.Default.Listen == 0 {
 		o.ComponentConfig.Default.Listen = defaultListen
 	}
@@ -151,6 +144,7 @@ func (o *Options) registerRedis() error {
 	redisConfig := o.ComponentConfig.Redis
 	o.RedisClient = redis.NewClient(&redis.Options{
 		Addr:        redisConfig.Addr,
+		Username:    redisConfig.Username,
 		Password:    redisConfig.Password,
 		DB:          redisConfig.Db,
 		ReadTimeout: 10 * time.Second,

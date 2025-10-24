@@ -642,7 +642,6 @@ func (cr *rainbowRouter) listAgents(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if resp.Result, err = cr.c.Server().ListAgents(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return

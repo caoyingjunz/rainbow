@@ -38,7 +38,6 @@ type Agent struct {
 	Status             string    `gorm:"column:status;" json:"status"`
 	Message            string    `json:"message"`
 	RainbowdName       string    `json:"rainbowd_name"`
-	HealthzPort        int       `json:"healthz_port"` // 检查检查端口 随机挑选 10086 - 10186
 
 	GithubUser       string  `json:"github_user"`       // github 后端用户名
 	GithubEmail      string  `json:"github_email"`      // github 邮箱

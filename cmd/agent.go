@@ -4,13 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
-
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/apache/rocketmq-client-go/v2/rlog"
-	"github.com/gin-gonic/gin"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
@@ -67,14 +64,14 @@ func main() {
 		_ = c.Shutdown()
 	}()
 
-	// 启动 RPC 探活 API
-	r := gin.Default()
-	healthz := r.Group("/healthz")
-	{
-		healthz.POST("", func(c *gin.Context) {
-			c.JSON(http.StatusOK, "ok")
-		})
-	}
-
-	r.Run(fmt.Sprintf(":%d", opts.ComponentConfig.Agent.HealthzPort))
+	select {}
+	//r := gin.Default()
+	//healthz := r.Group("/healthz")
+	//{
+	//	healthz.POST("", func(c *gin.Context) {
+	//		c.JSON(http.StatusOK, "ok")
+	//	})
+	//}
+	//
+	//r.Run(fmt.Sprintf(":%d", 10086))
 }
