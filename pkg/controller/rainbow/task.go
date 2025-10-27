@@ -472,8 +472,8 @@ func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) er
 
 func (s *ServerController) preCreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
 	// 订阅默认不超过 20
-	if req.Size > 20 {
-		return fmt.Errorf("订阅镜像版本数超过阈值 100")
+	if req.Size > 50 {
+		return fmt.Errorf("订阅镜像版本数超过阈值 50")
 	}
 
 	parts := strings.Split(req.Arch, "/")
