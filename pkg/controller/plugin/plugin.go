@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,8 +23,7 @@ import (
 )
 
 const (
-	Kubeadm   = "kubeadm"
-	IgnoreKey = "W0508"
+	Kubeadm = "kubeadm"
 
 	SkopeoDriver = "skopeo"
 	DockerDriver = "docker"
@@ -159,16 +159,6 @@ func (p *PluginController) Validate() error {
 		if len(p.KubernetesVersion) == 0 {
 			return fmt.Errorf("failed to find kubernetes version")
 		}
-		// 检查 kubeadm 的版本是否和 k8s 版本一致
-		kubeadmVersion, err := p.getKubeadmVersion()
-		if err != nil {
-			klog.Error("failed to get kubeadm version: %v", err)
-			return fmt.Errorf("failed to get kubeadm version: %v", err)
-		}
-		if kubeadmVersion != p.KubernetesVersion {
-			klog.Errorf("kubeadm version %s not match kubernetes version %s", kubeadmVersion, p.KubernetesVersion)
-			return fmt.Errorf("kubeadm version %s not match kubernetes version %s", kubeadmVersion, p.KubernetesVersion)
-		}
 	}
 
 	// 检查 docker 的客户端是否正常
@@ -279,41 +269,21 @@ func (p *PluginController) getKubeadmVersion() (string, error) {
 	return kubeadmVersion.ClientVersion.GitVersion, nil
 }
 
-func (p *PluginController) cleanImages(in []byte) []byte {
-	inStr := string(in)
-	if !strings.Contains(inStr, IgnoreKey) {
-		return in
-	}
-
-	klog.V(2).Infof("cleaning images: %+v", inStr)
-	parts := strings.Split(inStr, "\n")
-	index := 0
-	for _, p := range parts {
-		if strings.HasPrefix(p, IgnoreKey) {
-			index += 1
-		}
-	}
-	newInStr := strings.Join(parts[index:], "\n")
-	klog.V(2).Infof("cleaned images: %+v", newInStr)
-
-	return []byte(newInStr)
-}
-
 func (p *PluginController) getImages() ([]string, error) {
-	cmd := []string{Kubeadm, "config", "images", "list", "--kubernetes-version", p.KubernetesVersion, "-o", "json"}
-	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+	cmd := []string{Kubeadm, "config", "images", "list", "--kubernetes-version", p.KubernetesVersion}
+	klog.Infof("将执行命令: %v", cmd)
+
+	var stdout, stderr bytes.Buffer
+
+	command := p.exec.Command(cmd[0], cmd[1:]...)
+	command.SetStdout(&stdout)
+	command.SetStderr(&stderr)
+	err := command.Run()
 	if err != nil {
-		return nil, fmt.Errorf("failed to exec kubeadm config images list %v %v", string(out), err)
+		return nil, fmt.Errorf("failed to exec kubeadm config images list %v %s", err, stderr.String())
 	}
-	out = p.cleanImages(out)
-	klog.V(2).Infof("images is %+v", string(out))
-
-	var kubeadmImage KubeadmImage
-	if err := json.Unmarshal(out, &kubeadmImage); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal kubeadm images %v", err)
-	}
-
-	return kubeadmImage.Images, nil
+	klog.Infof("执行结果是: %v", stdout.String())
+	return strings.Split(stdout.String(), "\n"), nil
 }
 
 func (p *PluginController) sync(imageToPush string, targetImage string, img config.Image) error {
