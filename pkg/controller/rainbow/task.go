@@ -20,10 +20,21 @@ import (
 
 const (
 	TaskWaitStatus  = "调度中"
-	HuaweiNamespace = "pixiu-public"
+	HuaweiNamespace = "pixiu-public" // pixiuHub 内置默认外部命名空间
+)
+
+const (
+	defaultNamespace = "emptyNamespace" // pixiuHub 内置默认空命名空间
+	defaultArch      = "linux/amd64"
+	defaultDriver    = "skopeo"
 )
 
 func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
+	parts := strings.Split(req.Architecture, "/")
+	if len(parts) != 2 && len(parts) != 3 {
+		return fmt.Errorf("架构不符合要求，仅支持<操作系统>/<架构> 或 <操作系统>/<架构>/<variant> 格式")
+	}
+
 	if req.Type == 1 {
 		if !strings.HasPrefix(req.KubernetesVersion, "v1.") {
 			return fmt.Errorf("invaild kubernetes version (%s)", req.KubernetesVersion)
@@ -46,11 +57,6 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 	return nil
 }
 
-const (
-	defaultNamespace = "emptyNamespace"
-	defaultArch      = "linux/amd64"
-)
-
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
 	if err := s.preCreateTask(ctx, req); err != nil {
 		klog.Errorf("创建任务前置检查未通过 %v", err)
@@ -61,22 +67,18 @@ func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTask
 	if len(strings.TrimSpace(req.Name)) == 0 {
 		req.Name = uuid.NewRandName("", 8)
 	}
+	req.Namespace = WrapNamespace(req.Namespace, req.UserName)
+
 	// 初始化仓库
 	if req.RegisterId == 0 {
 		req.RegisterId = *RegistryId
 	}
 
-	if len(req.Namespace) == 0 {
-		req.Namespace = strings.ToLower(req.UserName)
-	}
-	if req.Namespace == defaultNamespace {
-		req.Namespace = ""
-	}
 	if len(req.Architecture) == 0 {
 		req.Architecture = defaultArch
 	}
 	if len(req.Driver) == 0 {
-		req.Driver = "skopeo"
+		req.Driver = defaultDriver
 	}
 
 	// 如果是k8s类型的镜像，则由 plugin 回调创建
@@ -469,16 +471,14 @@ func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) er
 }
 
 func (s *ServerController) preCreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
-	if req.Size > 100 {
+	// 订阅默认不超过 20
+	if req.Size > 20 {
 		return fmt.Errorf("订阅镜像版本数超过阈值 100")
 	}
 
-	old, err := s.factory.Task().ListSubscribes(ctx, db.WithPath(req.Path), db.WithUser(req.UserId))
-	if err != nil {
-		return fmt.Errorf("创建前置检查时，获取订阅列表失败 %v", err)
-	}
-	if len(old) != 0 {
-		return fmt.Errorf("用户(%s)已存在订阅镜像(%s)，无法重复创建", req.UserName, req.Path)
+	parts := strings.Split(req.Arch, "/")
+	if len(parts) != 2 && len(parts) != 3 {
+		return fmt.Errorf("架构不符合要求，仅支持<操作系统>/<架构> 或 <操作系统>/<架构>/<variant> 格式")
 	}
 
 	return nil
@@ -495,13 +495,7 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 		return fmt.Errorf("不合规镜像名称 %s", req.Path)
 	}
 
-	ns := req.Namespace
-	if len(ns) == 0 {
-		ns = strings.ToLower(req.UserName)
-	}
-	if ns == defaultNamespace {
-		ns = ""
-	}
+	ns := WrapNamespace(req.Namespace, req.UserName)
 	if len(ns) != 0 {
 		srcPath = ns + "/" + srcPath
 	}
@@ -516,7 +510,7 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 	if req.ImageFrom == types.ImageHubDocker {
 		parts := strings.Split(rawPath, "/")
 		if len(parts) == 1 {
-			rawPath = "library" + "/" + rawPath
+			rawPath = types.DefaultDockerhubNamespace + "/" + rawPath
 		}
 	}
 
@@ -530,7 +524,7 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 			UserId:   req.UserId,
 			UserName: req.UserName,
 		},
-		Namespace: req.Namespace,
+		Namespace: ns,
 		Path:      req.Path,
 		RawPath:   rawPath,
 		SrcPath:   srcPath,
@@ -545,6 +539,11 @@ func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.Creat
 }
 
 func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error {
+	parts := strings.Split(req.Arch, "/")
+	if len(parts) != 2 && len(parts) != 3 {
+		return fmt.Errorf("架构不符合要求，仅支持<操作系统>/<架构> 或 <操作系统>/<架构>/<variant> 格式")
+	}
+
 	update := map[string]interface{}{
 		"size":       req.Size,
 		"interval":   req.Interval,
@@ -570,6 +569,12 @@ func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.Updat
 				msg = fmt.Sprintf("手动关闭制品订阅")
 			}
 			s.CreateSubscribeMessageWithLog(ctx, *old, msg)
+
+			// 同步更新（订正）命名空间
+			newNS := WrapNamespace(req.Namespace, old.UserName)
+			if newNS != old.Namespace {
+				update["namespace"] = newNS
+			}
 		}
 	}
 

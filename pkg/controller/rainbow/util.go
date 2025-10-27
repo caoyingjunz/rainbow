@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
@@ -126,4 +127,15 @@ func PaginateCommonTagSlice(s []types.CommonTag, page int, pageSize int) []types
 	}
 
 	return s[startIndex:endIndex]
+}
+
+func WrapNamespace(ns string, user string) string {
+	if len(ns) == 0 {
+		ns = strings.ToLower(user)
+	}
+	if ns == defaultNamespace {
+		ns = ""
+	}
+
+	return ns
 }
