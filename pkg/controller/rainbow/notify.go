@@ -150,12 +150,41 @@ func (s *ServerController) ListNotifies(ctx context.Context, listOption types.Li
 		db.WithLimit(listOption.Limit),
 	}...)
 
-	pageResult.Items, err = s.factory.Notify().List(ctx, opts...)
+	nos, err := s.factory.Notify().List(ctx, opts...)
 	if err != nil {
 		klog.Errorf("获取镜像列表失败 %v", err)
 		pageResult.Message = err.Error()
 		return pageResult, err
 	}
+
+	var convertResults []types.NotificationResult
+	for _, no := range nos {
+		var pushCfg types.PushConfig
+		if err = pushCfg.Unmarshal(no.PushCfg); err != nil {
+			pageResult.Message = err.Error()
+			return pageResult, err
+		}
+
+		convertResults = append(convertResults, types.NotificationResult{
+			Id:              no.Id,
+			GmtModified:     no.GmtModified,
+			GmtCreate:       no.GmtCreate,
+			ResourceVersion: no.ResourceVersion,
+			CreateNotificationRequest: types.CreateNotificationRequest{
+				UserMetaRequest: types.UserMetaRequest{
+					UserName: no.UserName,
+					UserId:   no.UserId,
+				},
+				Name:      no.Name,
+				Role:      no.Role,
+				Enable:    no.Enable,
+				Type:      no.Type,
+				PushCfg:   &pushCfg,
+				ShortDesc: no.ShortDesc,
+			},
+		})
+	}
+	pageResult.Items = convertResults
 
 	return pageResult, nil
 }

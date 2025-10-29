@@ -204,8 +204,17 @@ type (
 		Role      int         `json:"role"` // 1 管理员 0 普通用户
 		Enable    bool        `json:"enable"`
 		Type      string      `json:"type"` // 支持 webhook, dingtalk, wecom
-		PushCfg   *PushConfig `json:"push_cfg,omitempty"`
+		PushCfg   *PushConfig `json:"push_cfg"`
 		ShortDesc string      `json:"short_desc"`
+	}
+
+	NotificationResult struct {
+		Id              int64     `json:"id"`
+		GmtCreate       time.Time `json:"gmt_create"`
+		GmtModified     time.Time `json:"gmt_modified"`
+		ResourceVersion int64     `json:"resource_version"`
+
+		CreateNotificationRequest `json:",inline"`
 	}
 
 	SendNotificationRequest struct {

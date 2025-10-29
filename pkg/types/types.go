@@ -324,10 +324,10 @@ const (
 )
 
 type PushConfig struct {
-	Webhook  *WebhookConfig  `json:"webhook,omitempty"`
-	Dingtalk *DingtalkConfig `json:"dingtalk,omitempty"`
-	QiWei    *QiWeiConfig    `json:"qiwei,omitempty"`
-	Email    *EmailConfig    `json:"email,omitempty"`
+	Webhook  WebhookConfig  `json:"webhook"`
+	Dingtalk DingtalkConfig `json:"dingtalk"`
+	QiWei    QiWeiConfig    `json:"qiwei"`
+	Email    EmailConfig    `json:"email"`
 }
 
 type WebhookConfig struct {
