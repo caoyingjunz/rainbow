@@ -1572,6 +1572,19 @@ func (cr *rainbowRouter) listNotifications(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) getNotificationTypes(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		err error
+	)
+	if resp.Result, err = cr.c.Server().GetNotifyTypes(c); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) sendNotification(c *gin.Context) {
 	resp := httputils.NewResponse()
 

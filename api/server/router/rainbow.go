@@ -182,6 +182,12 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		notifyRoute.GET("/:Id", cr.getNotification)
 		notifyRoute.GET("", cr.listNotifications)
 	}
+
+	notifyTypeRoute := httpEngine.Group("/rainbow/notification/types")
+	{
+		notifyTypeRoute.GET("", cr.getNotificationTypes)
+	}
+
 	sendNotifyRoute := httpEngine.Group("/rainbow/send/notification")
 	{
 		sendNotifyRoute.POST("", cr.sendNotification)

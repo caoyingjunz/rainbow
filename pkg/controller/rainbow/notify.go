@@ -188,3 +188,21 @@ func (s *ServerController) ListNotifies(ctx context.Context, listOption types.Li
 
 	return pageResult, nil
 }
+
+type NotifyType struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+func (s *ServerController) GetNotifyTypes(ctx context.Context) (interface{}, error) {
+	return []NotifyType{
+		{
+			Name:  "钉钉",
+			Value: "dingtalk",
+		},
+		{
+			Name:  "企微",
+			Value: "qiwei",
+		},
+	}, nil
+}
