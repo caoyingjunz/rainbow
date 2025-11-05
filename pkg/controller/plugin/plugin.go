@@ -319,31 +319,79 @@ func (p *PluginController) getImages() ([]string, error) {
 func (p *PluginController) sync(imageToPush string, targetImage string, img config.Image) error {
 	klog.Infof("preparing to sync image %s to %s", imageToPush, targetImage)
 	var cmd []string
+
 	switch p.Cfg.Plugin.Driver {
 	case SkopeoDriver:
 		klog.Infof("use skopeo to copying image: %s", targetImage)
-		cmd1 := []string{"skopeo", "login", "-u", p.Registry.Username, "-p", p.Registry.Password, p.Registry.Repository, ">", "/dev/null", "2>&1", "&&", "skopeo", "copy", "docker://" + imageToPush, "docker://" + targetImage}
 
-		// p.Cfg.Plugin.Arch 解析平台架构配置，格式为: 操作系统/架构/变体 (如: linux/amd64/8)
-		// 支持两种格式:
-		//   - 完整格式: linux/amd64/8  → os=linux, arch=amd64, variant=8
-		//   - 简化格式: linux/amd64    → os=linux, arch=amd64
-		parts := strings.Split(p.Cfg.Plugin.Arch, "/")
-		if len(parts) >= 2 {
-			targetOS := parts[0]
-			arch := parts[1]
-
-			cmd1 = append(cmd1, "--override-os", targetOS)
-			cmd1 = append(cmd1, "--override-arch", arch)
-
-			if len(parts) >= 3 {
-				variant := parts[2]
-				cmd1 = append(cmd1, "--override-variant", variant)
-			}
+		// 登录命令
+		loginCmd := []string{
+			"skopeo", "login",
+			"-u", p.Registry.Username,
+			"-p", p.Registry.Password,
+			p.Registry.Repository,
+			">", "/dev/null", "2>&1",
 		}
 
-		cmd = []string{"docker", "run", "--network", "host", "pixiuio/skopeo:1.17.0", "sh", "-c", strings.Join(cmd1, " ")}
-		klog.Infof("即将执行命令(%s)进行同步", cmd)
+		// 执行登录
+		login := []string{
+			"docker", "run", "--network", "host",
+			"pixiuio/skopeo:1.17.0", "sh", "-c",
+			strings.Join(loginCmd, " "),
+		}
+
+		klog.Infof("logging in to registry: %v", login)
+		out, err := p.exec.Command(login[0], login[1:]...).CombinedOutput()
+		if err != nil {
+			klog.Errorf("Failed to login to registry: %v, output: %s", err, string(out))
+			return fmt.Errorf("failed to login registry: %v, output: %s", err, string(out))
+		}
+
+		// 支持多个架构，如 "linux/amd64/8;linux/arm64"
+		arches := strings.Split(p.Cfg.Plugin.Arch, ";")
+		for _, archConf := range arches {
+			archConf = strings.TrimSpace(archConf)
+			if archConf == "" {
+				continue
+			}
+			klog.Infof("Syncing architecture: %s", archConf)
+
+			cmd1 := []string{
+				"skopeo", "copy",
+				"docker://" + imageToPush,
+				"docker://" + targetImage,
+			}
+
+			parts := strings.Split(archConf, "/")
+			if len(parts) >= 2 {
+				targetOS := parts[0]
+				arch := parts[1]
+				cmd1 = append(cmd1, "--override-os", targetOS)
+				cmd1 = append(cmd1, "--override-arch", arch)
+
+				if len(parts) >= 3 {
+					variant := parts[2]
+					cmd1 = append(cmd1, "--override-variant", variant)
+				}
+			}
+
+			cmd = []string{
+				"docker", "run", "--network", "host",
+				"pixiuio/skopeo:1.17.0", "sh", "-c",
+				strings.Join(cmd1, " "),
+			}
+
+			klog.Infof("executing command for arch (%s): %s", archConf, strings.Join(cmd, " "))
+
+			out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+			if err != nil {
+				klog.Errorf("Failed to push image for arch %s: %v, output: %s", archConf, err, string(out))
+				return fmt.Errorf("failed to push image %s for arch %s: %v", targetImage, archConf, err)
+			}
+
+			klog.Infof("Successfully synced architecture: %s", archConf)
+		}
+
 	case DockerDriver:
 		klog.Infof("Pulling image: %s", imageToPush)
 		reader, err := p.docker.ImagePull(context.TODO(), imageToPush, types.ImagePullOptions{})
@@ -360,15 +408,18 @@ func (p *PluginController) sync(imageToPush string, targetImage string, img conf
 		}
 
 		cmd = []string{"docker", "push", targetImage}
+		klog.Infof("executing docker push: %s", strings.Join(cmd, " "))
+
+		out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
+		if err != nil {
+			klog.Errorf("Failed to push image %s: %v, output: %s", targetImage, err, string(out))
+			return fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
+		}
+
+		klog.Infof("Successfully pushed image: %s", targetImage)
+
 	default:
 		return fmt.Errorf("unsupported driver: %s", p.Cfg.Plugin.Driver)
-	}
-
-	klog.Infof("syncing image %s to %s", imageToPush, targetImage)
-	out, err := p.exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
-	if err != nil {
-		klog.Errorf("Failed to push image %s: %v, output: %s", targetImage, err, string(out))
-		return fmt.Errorf("failed to push image %s %v %v", targetImage, string(out), err)
 	}
 
 	klog.Infof("Successfully sync image: %s", targetImage)
