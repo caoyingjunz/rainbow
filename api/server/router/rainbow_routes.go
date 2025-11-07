@@ -1515,6 +1515,19 @@ func (cr *rainbowRouter) createNotification(c *gin.Context) {
 func (cr *rainbowRouter) updateNotification(c *gin.Context) {
 	resp := httputils.NewResponse()
 
+	var (
+		req types.UpdateNotificationRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().UpdateNotify(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
 	httputils.SetSuccess(c, resp)
 }
 
@@ -1565,6 +1578,25 @@ func (cr *rainbowRouter) listNotifications(c *gin.Context) {
 		return
 	}
 	if resp.Result, err = cr.c.Server().ListNotifies(c, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) enableNotify(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.UpdateNotificationRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().EnableNotify(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

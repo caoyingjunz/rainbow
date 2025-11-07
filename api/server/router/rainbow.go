@@ -181,6 +181,8 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		notifyRoute.DELETE("/:Id", cr.deleteNotification)
 		notifyRoute.GET("/:Id", cr.getNotification)
 		notifyRoute.GET("", cr.listNotifications)
+
+		notifyRoute.POST("/enable/notify", cr.enableNotify)
 	}
 
 	notifyTypeRoute := httpEngine.Group("/rainbow/notification/types")

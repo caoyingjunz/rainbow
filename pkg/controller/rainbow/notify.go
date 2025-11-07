@@ -23,6 +23,27 @@ func (s *ServerController) preCreateNotify(ctx context.Context, req *types.Creat
 	return nil
 }
 
+func (s *ServerController) UpdateNotify(ctx context.Context, req *types.UpdateNotificationRequest) error {
+	pushCfg, err := req.PushCfg.Marshal()
+	if err != nil {
+		return err
+	}
+	return s.factory.Notify().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+		"name":       req.Name,
+		"role":       req.Role,
+		"enable":     req.Enable,
+		"type":       req.Type,
+		"short_desc": req.ShortDesc,
+		"push_cfg":   pushCfg,
+	})
+}
+
+func (s *ServerController) EnableNotify(ctx context.Context, req *types.UpdateNotificationRequest) error {
+	return s.factory.Notify().Update(ctx, req.Id, req.ResourceVersion, map[string]interface{}{
+		"enable": req.Enable,
+	})
+}
+
 func (s *ServerController) CreateNotify(ctx context.Context, req *types.CreateNotificationRequest) error {
 	if err := s.preCreateNotify(ctx, req); err != nil {
 		return err
@@ -51,8 +72,34 @@ func (s *ServerController) CreateNotify(ctx context.Context, req *types.CreateNo
 	return err
 }
 
-func (s *ServerController) GetNotify(ctx context.Context, notifyId int64) (*model.Notification, error) {
-	return s.factory.Notify().Get(ctx, notifyId)
+func (s *ServerController) GetNotify(ctx context.Context, notifyId int64) (interface{}, error) {
+	no, err := s.factory.Notify().Get(ctx, notifyId)
+	if err != nil {
+		return nil, err
+	}
+	var pushCfg types.PushConfig
+	if err = pushCfg.Unmarshal(no.PushCfg); err != nil {
+		return nil, err
+	}
+
+	return types.NotificationResult{
+		Id:              no.Id,
+		GmtModified:     no.GmtModified,
+		GmtCreate:       no.GmtCreate,
+		ResourceVersion: no.ResourceVersion,
+		CreateNotificationRequest: types.CreateNotificationRequest{
+			UserMetaRequest: types.UserMetaRequest{
+				UserName: no.UserName,
+				UserId:   no.UserId,
+			},
+			Name:      no.Name,
+			Role:      no.Role,
+			Enable:    no.Enable,
+			Type:      no.Type,
+			PushCfg:   &pushCfg,
+			ShortDesc: no.ShortDesc,
+		},
+	}, nil
 }
 
 func (s *ServerController) DeleteNotify(ctx context.Context, notifyId int64) error {

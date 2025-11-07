@@ -8,6 +8,11 @@ type (
 		UserName string `json:"user_name"`
 	}
 
+	IdMetaRequest struct {
+		Id              int64 `json:"id"`
+		ResourceVersion int64 `json:"resource_version"`
+	}
+
 	CreateDockerfileRequest struct {
 		Name       string `json:"name"`
 		Dockerfile string `json:"dockerfile"`
@@ -198,6 +203,18 @@ type (
 	}
 
 	CreateNotificationRequest struct {
+		UserMetaRequest `json:",inline"`
+
+		Name      string      `json:"name"`
+		Role      int         `json:"role"` // 1 管理员 0 普通用户
+		Enable    bool        `json:"enable"`
+		Type      string      `json:"type"` // 支持 webhook, dingtalk, wecom
+		PushCfg   *PushConfig `json:"push_cfg,omitempty"`
+		ShortDesc string      `json:"short_desc"`
+	}
+
+	UpdateNotificationRequest struct {
+		IdMetaRequest   `json:",inline"`
 		UserMetaRequest `json:",inline"`
 
 		Name      string      `json:"name"`
