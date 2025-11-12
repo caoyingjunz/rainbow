@@ -108,26 +108,19 @@ func (i *image) Run() error {
 			klog.Errorf("回调API创建 kubernetes 镜像失败: %v", err)
 			return err
 		}
-		klog.Infof("已完成 kubernetes 镜像的回调创建，镜像列表为 %v", is)
 
-		imageMap := make(map[string]model.Image)
-		for _, ii := range is {
-			imageMap[ii.Path] = ii
-		}
 		var tplImages []config.Image
-		for _, kubeImage := range kubeImages {
-			parts := strings.Split(kubeImage, ":")
-
-			path := parts[0]
-			tag := parts[1]
-
-			tplImages = append(tplImages, config.Image{
-				Path: path,
-				Name: imageMap[path].Name,
-				Tags: []string{tag},
-				Id:   imageMap[path].Id,
-			})
+		for _, img := range is {
+			for _, tag := range img.Tags {
+				tplImages = append(tplImages, config.Image{
+					Name: img.Name,
+					Path: tag.Path,
+					Tags: []string{tag.Name},
+					Id:   tag.ImageId,
+				})
+			}
 		}
+		klog.Infof("已完成 kubernetes 镜像的回调创建，镜像模板为 %v", tplImages)
 		i.p.Images = tplImages
 	}
 

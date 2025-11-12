@@ -265,7 +265,6 @@ func (cr *rainbowRouter) UpdateTaskStatus(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	req.TaskId = idMeta.ID
 	if err = cr.c.Server().UpdateTaskStatus(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
