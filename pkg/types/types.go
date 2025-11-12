@@ -345,6 +345,7 @@ type QiWeiConfig struct {
 }
 
 type EmailConfig struct {
+	Address string `json:"address,omitempty"`
 }
 
 func (pc *PushConfig) Marshal() (string, error) {
