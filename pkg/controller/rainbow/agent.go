@@ -1127,15 +1127,8 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 		}
 
 		var imageIds []int64
-		imageMap := make(map[int64][]model.Tag)
 		for _, tag := range tags {
 			imageIds = append(imageIds, tag.ImageId)
-			old, ok := imageMap[tag.ImageId]
-			if ok {
-				imageMap[tag.ImageId] = append(old, tag)
-			} else {
-				imageMap[tag.ImageId] = []model.Tag{tag}
-			}
 		}
 		images, err := s.factory.Image().List(ctx, db.WithIDIn(imageIds...))
 		if err != nil {
@@ -1143,24 +1136,25 @@ func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task)
 			return nil, err
 		}
 
+		iNameMap := make(map[int64]string)
+		for _, image := range images {
+			iNameMap[image.Id] = image.Name
+		}
 		var img []rainbowconfig.Image
-		for _, i := range images {
-			ts, ok := imageMap[i.Id]
+		for _, tag := range tags {
+			name, ok := iNameMap[tag.ImageId]
 			if !ok {
-				klog.Warningf("未能找到镜像(%s)的tags", i.Name)
+				klog.Warningf("未能找到镜像(%s)的名称，忽略", tag.ImageId)
 				continue
 			}
-			var tagStr []string
-			for _, tt := range ts {
-				tagStr = append(tagStr, tt.Name)
-			}
 			img = append(img, rainbowconfig.Image{
-				Name: i.Name,
-				Id:   i.Id,
-				Path: i.Path,
-				Tags: tagStr,
+				Name: name,
+				Id:   tag.ImageId,
+				Path: tag.Path,
+				Tags: []string{tag.Name},
 			})
 		}
+
 		pluginTemplateConfig.Default.PushImages = true
 		pluginTemplateConfig.Images = img
 	case 1:

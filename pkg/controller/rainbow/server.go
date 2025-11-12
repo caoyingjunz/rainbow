@@ -337,7 +337,7 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 			}
 			now := time.Now()
 			if now.Sub(sub.LastNotifyTime) < sub.Interval*time.Second {
-				klog.Infof("订阅 (%s) 时间间隔 %v 暂时无需执行", sub.Path, sub.Interval*time.Second)
+				klog.V(1).Infof("订阅 (%s) 时间间隔 %v 暂时无需执行", sub.Path, sub.Interval*time.Second)
 				continue
 			}
 

@@ -220,7 +220,7 @@ type (
 		Name      string      `json:"name"`
 		Role      int         `json:"role"` // 1 管理员 0 普通用户
 		Enable    bool        `json:"enable"`
-		Type      string      `json:"type"` // 支持 dingtalk, qiwei, email, webhook
+		Type      string      `json:"type"` // 支持 webhook, dingtalk, wecom
 		PushCfg   *PushConfig `json:"push_cfg,omitempty"`
 		ShortDesc string      `json:"short_desc"`
 	}

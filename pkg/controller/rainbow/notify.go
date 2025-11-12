@@ -111,14 +111,37 @@ func (s *ServerController) makeSendTpl(req *types.SendNotificationRequest) strin
 	tpl := fmt.Sprintf("%s\n用户名: %s\n时间: %v\nEmail: %s", req.ShortDesc, req.UserName, time.Now().Format("2006-01-02 15:04:05"), req.Email)
 	if req.Role == types.UserNotifyRole {
 		tpl = fmt.Sprintf("PixiuHub 同步通知\n时间: %v\n: %s", time.Now().Format("2006-01-02 15:04:05"), req.Content)
-		if req.DryRun {
-			tpl = fmt.Sprintf("%s\nHello PixiuHub", req.ShortDesc)
-		}
 	}
+	if req.DryRun {
+		tpl = fmt.Sprintf("%s\nHello PixiuHub", "消息测试")
+	}
+
 	return tpl
 }
 
+func (s *ServerController) SendNotifyByType(ctx context.Context, req *types.SendNotificationRequest) error {
+	var err error
+	switch req.Type {
+	case types.DingtalkNotifyType: // 企微和钉钉的推送格式相同
+		err = s.send(ctx, req.PushCfg.Dingtalk.URL, PushMessage{Text: map[string]string{"content": s.makeSendTpl(req)}, Msgtype: "text"})
+	case types.QiWeiNotifyType:
+		err = s.send(ctx, req.PushCfg.QiWei.URL, PushMessage{Text: map[string]string{"content": s.makeSendTpl(req)}, Msgtype: "text"})
+	default:
+		return fmt.Errorf("unsupported message type %s", req.Type)
+	}
+	if err != nil {
+		klog.Errorf("notify(%s) 类型(%s) 推送失败 %v", req.Name, req.Type, err)
+		return err
+	}
+
+	return nil
+}
+
 func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotificationRequest) error {
+	if req.DryRun {
+		return s.SendNotifyByType(ctx, req)
+	}
+
 	opts := []db.Options{db.WithRole(req.Role), db.WithEnable(1)}
 	if req.Role == types.UserNotifyRole {
 		opts = append(opts, db.WithUser(req.UserId))
@@ -140,22 +163,19 @@ func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotifi
 		}
 
 		switch notify.Type {
-		case types.DingtalkNotifyType, types.QiWeiNotifyType: // 企微和钉钉的推送格式相同
-			// 1. 构造请求地址
-			url := pushCfg.Dingtalk.URL
-			if notify.Type == types.QiWeiNotifyType {
-				url = pushCfg.QiWei.URL
-			}
-			// 2. 发送推送请求
-			if err = s.send(ctx, url, PushMessage{Text: map[string]string{"content": s.makeSendTpl(req)}, Msgtype: "text"}); err != nil {
-				klog.Errorf("notify(%s) 推送失败 %v", notify.Name, err)
-				return err
-			}
+		case types.DingtalkNotifyType: // 企微和钉钉的推送格式相同
+			err = s.send(ctx, pushCfg.Dingtalk.URL, PushMessage{Text: map[string]string{"content": s.makeSendTpl(req)}, Msgtype: "text"})
+		case types.QiWeiNotifyType:
+			err = s.send(ctx, pushCfg.QiWei.URL, PushMessage{Text: map[string]string{"content": s.makeSendTpl(req)}, Msgtype: "text"})
 		default:
 			return fmt.Errorf("unsupported message type %s", notify.Type)
 		}
+		if err != nil {
+			klog.Errorf("notify(%s) 类型(%s) 推送失败 %v", notify.Name, notify.Type, err)
+			return err
+		}
 
-		klog.Infof("notify(%s) 推送成功", notify.Name)
+		klog.Infof("notify(%s) 类型(%s) 推送成功", notify.Name, notify.Type)
 	}
 	return nil
 }
@@ -251,5 +271,9 @@ func (s *ServerController) GetNotifyTypes(ctx context.Context) (interface{}, err
 			Name:  "企微",
 			Value: "qiwei",
 		},
+		//{
+		//	Name:  "邮箱",
+		//	Value: "email",
+		//},
 	}, nil
 }

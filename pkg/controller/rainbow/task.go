@@ -198,7 +198,7 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 
 		mirror := reg.Repository + "/" + reg.Namespace + "/" + name
 
-		oldImage, err := s.factory.Image().GetByPath(ctx, path, mirror, db.WithUser(req.UserId))
+		oldImage, err := s.factory.Image().GetBy(ctx, db.WithName(name), db.WithUser(req.UserId))
 		if err != nil {
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
@@ -209,7 +209,6 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 					Namespace:  namespace,
 					Logo:       req.Logo,
 					Name:       name,
-					Path:       path,
 					Mirror:     mirror,
 					IsPublic:   req.PublicImage,
 					IsOfficial: req.IsOfficial,
@@ -254,11 +253,15 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			} else {
 				// 已经存在则写入新关联的 taskId
 				newTaskIds := strings.Join([]string{oldTag.TaskIds, fmt.Sprintf("%d", taskId)}, ",")
-				update := map[string]interface{}{"task_ids": newTaskIds}
+				update := map[string]interface{}{"task_ids": newTaskIds, "status": types.SyncImageInitializing}
 				// 必要时更新 mirror
 				// 早期创建的 tag 不存在 mirror 字段，会在其他人任务推送时展示 null
 				if mirror != oldTag.Mirror {
 					update["mirror"] = mirror
+				}
+				// 来源修改时，同步调整
+				if path != oldTag.Path {
+					update["path"] = path
 				}
 				if err = s.factory.Image().UpdateTag(ctx, imageId, tag, update); err != nil {
 					klog.Errorf("更新镜像(%s)的版本(%s)任务Id失败 %v", path, tag, err)

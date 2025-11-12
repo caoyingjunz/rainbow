@@ -2,6 +2,7 @@ package model
 
 import (
 	"gorm.io/gorm"
+	"time"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
@@ -20,22 +21,21 @@ type Image struct {
 	UserName   string `json:"user_name"`
 	RegisterId int64  `json:"register_id"`
 
-	Logo      string `json:"logo"`
-	Label     string `json:"label" gorm:"index:idx"` // 标记镜像类型，比如 ai，k8s
-	Path      string `json:"path"`
-	Namespace string `json:"namespace"`
-	Mirror    string `json:"mirror"`
-	Size      int64  `json:"size"`
-	Pull      int64  `json:"pull"`
-	Tags      []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
-
-	IsPublic      bool `json:"is_public"`
-	IsOfficial    bool `json:"is_official"`
-	PublicUpdated bool `json:"public_updated"` // 是否已经同步过远端仓库状态
-
-	IsLocked bool `json:"is_locked"` // 锁字段，默认false表示未锁定
-
+	Logo        string `json:"logo"`
+	Label       string `json:"label" gorm:"index:idx"` // 标记镜像类型，比如 ai，k8s
+	Namespace   string `json:"namespace"`
+	Mirror      string `json:"mirror"`
+	Size        int64  `json:"size"`
+	Pull        int64  `json:"pull"`
+	Tags        []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
 	Description string `json:"description"`
+
+	IsPublic      bool      `json:"is_public"`
+	IsOfficial    bool      `json:"is_official"`
+	PublicUpdated bool      `json:"public_updated"` // 是否已经同步过远端仓库状态
+	ReadSize      string    `json:"read_size"`      // 转换之后的，方便人读的大小
+	LastSyncTime  time.Time `json:"last_sync_time"` // 上次同步时间，超过10分钟则同步一次
+	IsLocked      bool      `json:"is_locked"`      // 锁字段，默认 false 表示未锁定
 }
 
 func (t *Image) TableName() string {
@@ -58,6 +58,7 @@ type Tag struct {
 	Manifest     string `json:"manifest"`
 	Digest       string `json:"digest"`
 	Architecture string `json:"architecture"` // 版本对应的架构，默认是 arm64，也可以是 amd64
+	ReadSize     string `json:"read_size"`    // 转换之后的，方便人读的大小
 }
 
 func (t *Tag) TableName() string {

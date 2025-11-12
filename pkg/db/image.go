@@ -29,6 +29,8 @@ type ImageInterface interface {
 	Count(ctx context.Context, opts ...Options) (int64, error)
 
 	GetByPath(ctx context.Context, path string, mirror string, opts ...Options) (*model.Image, error)
+	GetBy(ctx context.Context, opts ...Options) (*model.Image, error)
+
 	ListImagesWithTag(ctx context.Context, opts ...Options) ([]model.Image, error)
 
 	CreateTag(ctx context.Context, object *model.Tag) (*model.Tag, error)
@@ -191,6 +193,19 @@ func (a *image) GetByPath(ctx context.Context, path string, mirror string, opts 
 	}
 
 	if err := tx.WithContext(ctx).Where("path = ? and mirror = ?", path, mirror).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
+func (a *image) GetBy(ctx context.Context, opts ...Options) (*model.Image, error) {
+	var audit model.Image
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.WithContext(ctx).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil

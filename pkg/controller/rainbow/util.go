@@ -4,34 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 
-	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
-
-func GetRpcClient(clientId string, m map[string]pb.Tunnel_ConnectServer) pb.Tunnel_ConnectServer {
-	if m == nil || len(m) == 0 {
-		return nil
-	}
-
-	// 指定
-	if len(clientId) != 0 {
-		return m[clientId]
-	}
-
-	// 随机
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-
-	rand.Seed(time.Now().UnixNano())
-	return m[keys[rand.Intn(len(keys))]]
-}
 
 func DoHttpRequest(url string) ([]byte, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
@@ -167,4 +145,22 @@ func ValidateArch(arch string) error {
 	}
 
 	return nil
+}
+
+func ByteSizeSimple(bytes int64) string {
+	if bytes <= 0 {
+		return "0 B"
+	}
+
+	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
+	base := 1024.0
+	exponent := 0
+	size := float64(bytes)
+
+	for size >= base && exponent < len(units)-1 {
+		size /= base
+		exponent++
+	}
+
+	return fmt.Sprintf("%.1f %s", size, units[exponent])
 }

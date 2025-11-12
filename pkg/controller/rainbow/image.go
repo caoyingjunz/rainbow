@@ -104,11 +104,54 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 
 	// 当状态已经变成完成时，更新镜像的修改时间
 	if req.Status == types.SyncImageComplete {
-		if err = s.factory.Image().Update(ctx, req.ImageId, old.ResourceVersion, map[string]interface{}{}); err != nil {
-			klog.Errorf("更新镜像(%d)的修改时间失败:%v", req.ImageId, err)
+		targetName := old.Name
+		if strings.Contains(targetName, "/") {
+			targetName = strings.ReplaceAll(targetName, "/", "$")
+		}
+		// 获取版本大小并同步
+		newTag, err := SwrClient.ShowRepoTag(&swrmodel.ShowRepoTagRequest{
+			Namespace:  HuaweiNamespace,
+			Repository: targetName,
+			Tag:        tag,
+		})
+		if err != nil {
+			klog.Warningf("获取远端新版本信息失败 %v", err)
+			return nil
+		}
+
+		updates := make(map[string]interface{})
+		updates["size"] = *newTag.Size
+		updates["read_size"] = ByteSizeSimple(*newTag.Size)
+		updates["digest"] = newTag.Digest
+		updates["manifest"] = newTag.Manifest
+		if err = s.factory.Image().UpdateTag(ctx, req.ImageId, tag, updates); err != nil {
+			klog.Warningf("更新镜像版本失败 %v", err)
+			return nil
+		}
+
+		// 重新镜像大小
+		if err = s.CalculateImageSize(ctx, req.ImageId); err != nil {
+			klog.Warningf("计算镜像大小失败 %v", err)
+			return nil
 		}
 	}
 	return nil
+}
+
+func (s *ServerController) CalculateImageSize(ctx context.Context, imageId int64) error {
+	imageInfo, err := s.factory.Image().Get(ctx, imageId, false)
+	if err != nil {
+		return err
+	}
+
+	var total int64
+	for _, tag := range imageInfo.Tags {
+		total = total + tag.Size
+	}
+	return s.factory.Image().Update(ctx, imageId, imageInfo.ResourceVersion, map[string]interface{}{
+		"size":      total,
+		"read_size": ByteSizeSimple(total),
+	})
 }
 
 // DeleteImage 删除镜像和对应的tags
@@ -209,65 +252,110 @@ func (s *ServerController) isDefaultRepo(regId int64) bool {
 	return regId == *RegistryId
 }
 
+func IsDurationExceeded(t time.Time, duration time.Duration) bool {
+	now := time.Now()
+	return now.Sub(t) > duration
+}
+
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {
 	object, err := s.factory.Image().Get(ctx, imageId, false)
 	if err != nil {
 		return nil, err
 	}
 
+	// 如果 10 分钟内已更新，则直接返回
+	if !IsDurationExceeded(object.LastSyncTime, 10*time.Minute) {
+		klog.Infof("镜像(%s/%s) 10分钟内进行过同步，无需重复执行", object.Namespace, object.Name)
+		return object, nil
+	}
+	// 非官方内置仓库，无需更新
 	if !s.isDefaultRepo(object.RegisterId) {
 		return object, nil
 	}
 
+	return s.GetAndUpdateByRemoteImage(ctx, object)
+}
+
+func (s *ServerController) UpdateTagFromRemote(ctx context.Context, newTag swrmodel.ShowReposTagResp, oldTag model.Tag) error {
+	updates := make(map[string]interface{})
+	if oldTag.Size != newTag.Size {
+		updates["size"] = newTag.Size
+		updates["read_size"] = ByteSizeSimple(newTag.Size)
+	}
+	if oldTag.Digest != newTag.Digest {
+		updates["digest"] = newTag.Digest
+	}
+	if oldTag.Manifest != newTag.Manifest {
+		updates["manifest"] = newTag.Manifest
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.factory.Image().UpdateTag(ctx, oldTag.ImageId, oldTag.Name, updates)
+}
+
+func (s *ServerController) UpdateImageInfoFromRemote(ctx context.Context, newImage *swrmodel.ShowRepositoryResponse, old *model.Image) error {
+	updates := make(map[string]interface{})
+	if old.Pull != *newImage.NumDownload {
+		updates["pull"] = *newImage.NumDownload
+	}
+	if old.Size != *newImage.Size {
+		updates["size"] = *newImage.Size
+		updates["read_size"] = ByteSizeSimple(*newImage.Size)
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	updates["last_sync_time"] = time.Now()
+	return s.factory.Image().Update(ctx, old.Id, old.ResourceVersion, updates)
+}
+
+// GetAndUpdateByRemoteImage 获取远端镜像属性且保存
+func (s *ServerController) GetAndUpdateByRemoteImage(ctx context.Context, object *model.Image) (interface{}, error) {
 	targetName := object.Name
 	if strings.Contains(targetName, "/") {
 		targetName = strings.ReplaceAll(targetName, "/", "$")
 	}
-
-	resp2, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{
-		Namespace:  HuaweiNamespace,
-		Repository: targetName,
-	})
-	if err != nil {
-		klog.Errorf("获取远端镜像详情失败 %v", err)
-		return object, nil
+	oldTagMap := make(map[string]model.Tag)
+	for _, t := range object.Tags {
+		oldTagMap[t.Name] = t
 	}
-	object.Pull = *resp2.NumDownload
 
-	resp, err := SwrClient.ListRepositoryTags(&swrmodel.ListRepositoryTagsRequest{
-		Namespace:  HuaweiNamespace,
-		Repository: targetName,
-	})
+	// 获取并更新版本
+	resp, err := SwrClient.ListRepositoryTags(&swrmodel.ListRepositoryTagsRequest{Namespace: HuaweiNamespace, Repository: targetName})
 	if err != nil {
 		klog.Errorf("获取远端镜像版本失败 %v", err)
 		return object, nil
 	}
-
 	tags := *resp.Body
-	tagMap := make(map[string]swrmodel.ShowReposTagResp)
-	for _, tag := range tags {
-		object.Size = object.Size + tag.Size
-		tagMap[tag.Tag] = tag
-	}
-
-	objTags := object.Tags
-	for i, oldTag := range objTags {
-		name := oldTag.Name
-		exists, ok := tagMap[name]
+	for _, t := range tags {
+		name := t.Tag
+		old, ok := oldTagMap[name]
 		if !ok {
+			klog.Infof("远端镜像(%s)的版本(%s)未收录，忽略", targetName, name)
 			continue
 		}
-		if oldTag.Status != types.SyncImageComplete {
-			continue
+		if err = s.UpdateTagFromRemote(ctx, t, old); err != nil {
+			klog.Errorf("更新远端镜像版本至本地失败", err)
+			return object, err
 		}
-
-		oldTag.Size = exists.Size
-		oldTag.Manifest = exists.Manifest
-		oldTag.Digest = exists.Digest
-		objTags[i] = oldTag
 	}
-	object.Tags = objTags
-	return object, nil
+
+	// 获取远端镜像属性
+	newImage, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{Namespace: HuaweiNamespace, Repository: targetName})
+	if err != nil {
+		klog.Errorf("获取远端镜像详情失败 %v", err)
+		return object, nil
+	}
+	if err = s.UpdateImageInfoFromRemote(ctx, newImage, object); err != nil {
+		return object, err
+	}
+
+	// 获取最新的属性
+	return s.factory.Image().Get(ctx, object.Id, false)
 }
 
 func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error) {
@@ -349,7 +437,7 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, ta
 		klog.Errorf("删除远程镜像 %s tag(%s) 失败 %v", image.Name, delTag.Name, err)
 	}
 
-	return nil
+	return s.CalculateImageSize(ctx, imageId)
 }
 
 func (s *ServerController) CreateNamespace(ctx context.Context, req *types.CreateNamespaceRequest) error {

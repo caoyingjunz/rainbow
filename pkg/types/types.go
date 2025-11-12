@@ -317,7 +317,7 @@ const (
 	SystemNotifyRole = 1
 
 	DingtalkNotifyType = "dingtalk"
-	QiWeiNotifyType    = "wecom"
+	QiWeiNotifyType    = "qiwei"
 	FeiShuNotifyType   = "feishu"
 	EmailNotifyType    = "email"
 	WebhookNotifyType  = "webhook"
@@ -345,7 +345,6 @@ type QiWeiConfig struct {
 }
 
 type EmailConfig struct {
-	Address string `json:"address,omitempty"`
 }
 
 func (pc *PushConfig) Marshal() (string, error) {
