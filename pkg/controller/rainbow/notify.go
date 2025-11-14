@@ -111,7 +111,7 @@ func (s *ServerController) makeSendTpl(req *types.SendNotificationRequest) strin
 	// 1. 构造推送内容模板
 	tpl := ""
 	if req.Role == types.SystemNotifyRole {
-		tpl = fmt.Sprintf("PixiuHub通知\n%s", req.Content)
+		tpl = fmt.Sprintf("PixiuHub通知\n同步时间: %v\n%s", time.Now().Format("2006-01-02 15:04:05"), req.Content)
 		if len(req.Email) != 0 {
 			tpl = fmt.Sprintf("%s\n用户名: %s\n时间: %v\nEmail: %s", req.ShortDesc, req.UserName, time.Now().Format("2006-01-02 15:04:05"), req.Email)
 		}
