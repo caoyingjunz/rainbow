@@ -408,6 +408,45 @@ func (s *ServerController) AfterUpdateTaskStatus(ctx context.Context, req *types
 		return nil
 	}
 
+	// 推送给管理员
+	_ = s.sendToAdmin(ctx, req)
+	// 推送给普通用户
+	_ = s.sendToUser(ctx, req)
+	return nil
+}
+
+func (s *ServerController) sendToAdmin(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
+	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(req.TaskId))
+	if err != nil {
+		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
+		return err
+	}
+	num := len(tags)
+
+	task, err := s.factory.Task().Get(ctx, req.TaskId)
+	if err != nil {
+		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
+		return err
+	}
+	taskType := "镜像组"
+	if task.Type == 1 {
+		taskType = "Kubernetes"
+	}
+	notifyContent := fmt.Sprintf("同步类型: %s\n执行用户: %s\n推送数量: %d", taskType, task.UserName, num)
+
+	return s.SendNotify(ctx, &types.SendNotificationRequest{
+		Content: notifyContent,
+		CreateNotificationRequest: types.CreateNotificationRequest{
+			Role: types.SystemNotifyRole,
+			UserMetaRequest: types.UserMetaRequest{
+				UserId:   task.UserId,
+				UserName: task.UserName,
+			},
+		},
+	})
+}
+
+func (s *ServerController) sendToUser(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
 	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(req.TaskId))
 	if err != nil {
 		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
@@ -434,19 +473,19 @@ func (s *ServerController) AfterUpdateTaskStatus(ctx context.Context, req *types
 	if task.Type == 1 {
 		taskType = "Kubernetes"
 	}
-	notifyContent := fmt.Sprintf("同步类型: %s", taskType)
+	notifyContent := fmt.Sprintf("同步类型: %s\n推送结果:", taskType)
 
 	if len(successImages) != 0 {
-		suc := "成功推送:"
+		suc := "  成功:"
 		for _, si := range successImages {
-			suc = suc + "\n  " + si
+			suc = suc + "\n    " + si
 		}
 		notifyContent = fmt.Sprintf("%s\n%s", notifyContent, suc)
 	}
 	if len(failedImages) != 0 {
-		failed := "失败推送:"
+		failed := "  失败:"
 		for _, si := range failedImages {
-			failed = failed + "\n  " + si
+			failed = failed + "\n    " + si
 		}
 		notifyContent = fmt.Sprintf("%s\n%s", notifyContent, failed)
 	}
@@ -464,6 +503,7 @@ func (s *ServerController) AfterUpdateTaskStatus(ctx context.Context, req *types
 }
 
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
+	// TODO: 从 tags 里移除任务id
 	return s.factory.Task().Delete(ctx, taskId)
 }
 
