@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -203,16 +204,17 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
 				newImage, err := s.factory.Image().Create(ctx, &model.Image{
-					UserId:     req.UserId,
-					UserName:   req.UserName,
-					RegisterId: req.RegisterId,
-					Namespace:  namespace,
-					Logo:       req.Logo,
-					Name:       name,
-					Mirror:     mirror,
-					IsPublic:   req.PublicImage,
-					IsOfficial: req.IsOfficial,
-					IsLocked:   true,
+					UserId:       req.UserId,
+					UserName:     req.UserName,
+					RegisterId:   req.RegisterId,
+					Namespace:    namespace,
+					Logo:         req.Logo,
+					Name:         name,
+					Mirror:       mirror,
+					IsPublic:     req.PublicImage,
+					IsOfficial:   req.IsOfficial,
+					LastSyncTime: time.Now(),
+					IsLocked:     true,
 				})
 				if err != nil {
 					klog.Errorf("创建镜像(%s)失败: %v", path, err)
@@ -391,7 +393,74 @@ func (s *ServerController) ListTasks(ctx context.Context, listOption types.ListO
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
-	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message, "process": req.Process})
+	if err := s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message, "process": req.Process}); err != nil {
+		klog.Errorf("更新任务状态失败 %v", err)
+		return err
+	}
+
+	_ = s.AfterUpdateTaskStatus(ctx, req)
+	return nil
+}
+
+func (s *ServerController) AfterUpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
+	if req.Process != 2 {
+		klog.V(1).Infof("任务未结束，暂无操作执行")
+		return nil
+	}
+
+	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(req.TaskId))
+	if err != nil {
+		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
+		return err
+	}
+
+	successImages, failedImages := make([]string, 0), make([]string, 0)
+	for _, tag := range tags {
+		repo := tag.Path + ":" + tag.Name
+		if tag.Status == "Error" {
+			failedImages = append(failedImages, repo)
+		} else if tag.Status == "Completed" {
+			successImages = append(successImages, repo)
+		}
+	}
+
+	task, err := s.factory.Task().Get(ctx, req.TaskId)
+	if err != nil {
+		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
+		return err
+	}
+
+	taskType := "镜像组"
+	if task.Type == 1 {
+		taskType = "Kubernetes"
+	}
+	notifyContent := fmt.Sprintf("同步类型: %s", taskType)
+
+	if len(successImages) != 0 {
+		suc := "成功推送:"
+		for _, si := range successImages {
+			suc = suc + "\n  " + si
+		}
+		notifyContent = fmt.Sprintf("%s\n%s", notifyContent, suc)
+	}
+	if len(failedImages) != 0 {
+		failed := "失败推送:"
+		for _, si := range failedImages {
+			failed = failed + "\n  " + si
+		}
+		notifyContent = fmt.Sprintf("%s\n%s", notifyContent, failed)
+	}
+	notifyContent = fmt.Sprintf("%s\n%s", notifyContent, "详情参考: https://hub.pixiuio.com")
+
+	return s.SendNotify(ctx, &types.SendNotificationRequest{
+		Content: notifyContent,
+		CreateNotificationRequest: types.CreateNotificationRequest{
+			UserMetaRequest: types.UserMetaRequest{
+				UserId:   task.UserId,
+				UserName: task.UserName,
+			},
+		},
+	})
 }
 
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
