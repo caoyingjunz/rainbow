@@ -503,8 +503,22 @@ func (s *ServerController) sendToUser(ctx context.Context, req *types.UpdateTask
 }
 
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
-	// TODO: 从 tags 里移除任务id
-	return s.factory.Task().Delete(ctx, taskId)
+	if err := s.factory.Task().Delete(ctx, taskId); err != nil {
+		klog.Errorf("删除任务失败 %v", taskId)
+		return err
+	}
+
+	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId))
+	if err != nil {
+		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
+		return err
+	}
+	for _, tag := range tags {
+		oldTaskIds := tag.TaskIds
+
+	}
+
+	return nil
 }
 
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
