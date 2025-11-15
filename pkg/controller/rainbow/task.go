@@ -588,7 +588,14 @@ func (s *ServerController) ListTasksByIds(ctx context.Context, ids []int64) (int
 }
 
 func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) error {
-	return s.factory.Task().DeleteInBatch(ctx, ids)
+	for _, taskId := range ids {
+		if err := s.DeleteTask(ctx, taskId); err != nil {
+			klog.Errorf("%v", err)
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *ServerController) preCreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
