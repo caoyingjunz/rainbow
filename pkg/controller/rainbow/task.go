@@ -502,6 +502,19 @@ func (s *ServerController) sendToUser(ctx context.Context, req *types.UpdateTask
 	})
 }
 
+func removeTaskID(taskIds string, taskIDToRemove string) string {
+	ids := strings.Split(taskIds, ",")
+	result := make([]string, 0, len(ids))
+
+	for _, id := range ids {
+		if id != taskIDToRemove {
+			result = append(result, id)
+		}
+	}
+
+	return strings.Join(result, ",")
+}
+
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
 	if err := s.factory.Task().Delete(ctx, taskId); err != nil {
 		klog.Errorf("删除任务失败 %v", taskId)
@@ -514,8 +527,11 @@ func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
 		return err
 	}
 	for _, tag := range tags {
-		oldTaskIds := tag.TaskIds
-
+		if err = s.factory.Image().UpdateTag(ctx, tag.ImageId, tag.Name, map[string]interface{}{
+			"task_ids": removeTaskID(tag.TaskIds, fmt.Sprintf("%d", taskId)),
+		}); err != nil {
+			klog.Warningf("移除任务(%s)关联的tag(%s)时失败 %v", taskId, tag.Name, err)
+		}
 	}
 
 	return nil
