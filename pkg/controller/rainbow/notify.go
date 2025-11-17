@@ -3,9 +3,8 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"k8s.io/klog/v2"
+	"time"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -109,15 +108,9 @@ func (s *ServerController) DeleteNotify(ctx context.Context, notifyId int64) err
 
 func (s *ServerController) makeSendTpl(req *types.SendNotificationRequest) string {
 	// 1. 构造推送内容模板
-	tpl := ""
-	if req.Role == types.SystemNotifyRole {
-		tpl = fmt.Sprintf("PixiuHub通知\n同步时间: %v\n%s", time.Now().Format("2006-01-02 15:04:05"), req.Content)
-		if len(req.Email) != 0 {
-			tpl = fmt.Sprintf("%s\n用户名: %s\n时间: %v\nEmail: %s", req.ShortDesc, req.UserName, time.Now().Format("2006-01-02 15:04:05"), req.Email)
-		}
-	}
+	tpl := fmt.Sprintf("%s\n用户名: %s\n时间: %v\nEmail: %s", req.ShortDesc, req.UserName, time.Now().Format("2006-01-02 15:04:05"), req.Email)
 	if req.Role == types.UserNotifyRole {
-		tpl = fmt.Sprintf("PixiuHub通知\n完成时间: %v\n%s", time.Now().Format("2006-01-02 15:04:05"), req.Content)
+		tpl = fmt.Sprintf("PixiuHub 同步通知\n时间: %v\n: %s", time.Now().Format("2006-01-02 15:04:05"), req.Content)
 	}
 	if req.DryRun {
 		tpl = fmt.Sprintf("%s\nHello PixiuHub", "消息测试")
@@ -159,7 +152,7 @@ func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotifi
 		return err
 	}
 	if len(notifies) == 0 {
-		klog.Warningf("未发现(%s)已开启的通知通道，忽略本次通知", req.UserName)
+		klog.Warningf("未发现(%s)已开启的通知通道，忽略本次通知", req.UserId)
 		return nil
 	}
 
@@ -170,7 +163,7 @@ func (s *ServerController) SendNotify(ctx context.Context, req *types.SendNotifi
 		}
 
 		switch notify.Type {
-		case types.DingtalkNotifyType:
+		case types.DingtalkNotifyType: // 企微和钉钉的推送格式相同
 			err = s.send(ctx, pushCfg.Dingtalk.URL, PushMessage{Text: map[string]string{"content": s.makeSendTpl(req)}, Msgtype: "text"})
 		case types.QiWeiNotifyType:
 			err = s.send(ctx, pushCfg.QiWei.URL, PushMessage{Text: map[string]string{"content": s.makeSendTpl(req)}, Msgtype: "text"})

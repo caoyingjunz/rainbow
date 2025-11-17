@@ -45,6 +45,7 @@ type ImageInterface interface {
 	UpdateNamespace(ctx context.Context, namespaceId int64, resourceVersion int64, updates map[string]interface{}) error
 	DeleteNamespace(ctx context.Context, namespaceId int64) error
 	ListNamespaces(ctx context.Context, opts ...Options) ([]model.Namespace, error)
+	GetNamespace(ctx context.Context, opts ...Options) (*model.Namespace, error)
 }
 
 func newImage(db *gorm.DB) ImageInterface {
@@ -345,6 +346,19 @@ func (a *image) ListNamespaces(ctx context.Context, opts ...Options) ([]model.Na
 		tx = opt(tx)
 	}
 
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+	return audits, nil
+}
+
+func (a *image) GetNamespace(ctx context.Context, opts ...Options) (*model.Namespace, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var audits *model.Namespace
 	if err := tx.Find(&audits).Error; err != nil {
 		return nil, err
 	}

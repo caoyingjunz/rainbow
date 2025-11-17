@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -204,17 +203,16 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			// 镜像不存在，则先创建镜像
 			if errors.IsNotFound(err) {
 				newImage, err := s.factory.Image().Create(ctx, &model.Image{
-					UserId:       req.UserId,
-					UserName:     req.UserName,
-					RegisterId:   req.RegisterId,
-					Namespace:    namespace,
-					Logo:         req.Logo,
-					Name:         name,
-					Mirror:       mirror,
-					IsPublic:     req.PublicImage,
-					IsOfficial:   req.IsOfficial,
-					LastSyncTime: time.Now(),
-					IsLocked:     true,
+					UserId:     req.UserId,
+					UserName:   req.UserName,
+					RegisterId: req.RegisterId,
+					Namespace:  namespace,
+					Logo:       req.Logo,
+					Name:       name,
+					Mirror:     mirror,
+					IsPublic:   req.PublicImage,
+					IsOfficial: req.IsOfficial,
+					IsLocked:   true,
 				})
 				if err != nil {
 					klog.Errorf("创建镜像(%s)失败: %v", path, err)
@@ -393,148 +391,11 @@ func (s *ServerController) ListTasks(ctx context.Context, listOption types.ListO
 }
 
 func (s *ServerController) UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
-	if err := s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message, "process": req.Process}); err != nil {
-		klog.Errorf("更新任务状态失败 %v", err)
-		return err
-	}
-
-	_ = s.AfterUpdateTaskStatus(ctx, req)
-	return nil
-}
-
-func (s *ServerController) AfterUpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
-	if req.Process != 2 {
-		klog.V(1).Infof("任务未结束，暂无操作执行")
-		return nil
-	}
-
-	// 推送给管理员
-	_ = s.sendToAdmin(ctx, req)
-	// 推送给普通用户
-	_ = s.sendToUser(ctx, req)
-	return nil
-}
-
-func (s *ServerController) sendToAdmin(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
-	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(req.TaskId))
-	if err != nil {
-		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
-		return err
-	}
-	num := len(tags)
-
-	task, err := s.factory.Task().Get(ctx, req.TaskId)
-	if err != nil {
-		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
-		return err
-	}
-	taskType := "镜像组"
-	if task.Type == 1 {
-		taskType = "Kubernetes"
-	}
-	notifyContent := fmt.Sprintf("同步类型: %s\n执行用户: %s\n推送数量: %d", taskType, task.UserName, num)
-
-	return s.SendNotify(ctx, &types.SendNotificationRequest{
-		Content: notifyContent,
-		CreateNotificationRequest: types.CreateNotificationRequest{
-			Role: types.SystemNotifyRole,
-			UserMetaRequest: types.UserMetaRequest{
-				UserId:   task.UserId,
-				UserName: task.UserName,
-			},
-		},
-	})
-}
-
-func (s *ServerController) sendToUser(ctx context.Context, req *types.UpdateTaskStatusRequest) error {
-	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(req.TaskId))
-	if err != nil {
-		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
-		return err
-	}
-
-	successImages, failedImages := make([]string, 0), make([]string, 0)
-	for _, tag := range tags {
-		repo := tag.Path + ":" + tag.Name
-		if tag.Status == "Error" {
-			failedImages = append(failedImages, repo)
-		} else if tag.Status == "Completed" {
-			successImages = append(successImages, repo)
-		}
-	}
-
-	task, err := s.factory.Task().Get(ctx, req.TaskId)
-	if err != nil {
-		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
-		return err
-	}
-
-	taskType := "镜像组"
-	if task.Type == 1 {
-		taskType = "Kubernetes"
-	}
-	notifyContent := fmt.Sprintf("同步类型: %s\n推送结果:", taskType)
-
-	if len(successImages) != 0 {
-		suc := "  成功:"
-		for _, si := range successImages {
-			suc = suc + "\n    " + si
-		}
-		notifyContent = fmt.Sprintf("%s\n%s", notifyContent, suc)
-	}
-	if len(failedImages) != 0 {
-		failed := "  失败:"
-		for _, si := range failedImages {
-			failed = failed + "\n    " + si
-		}
-		notifyContent = fmt.Sprintf("%s\n%s", notifyContent, failed)
-	}
-	notifyContent = fmt.Sprintf("%s\n%s", notifyContent, "详情参考: https://hub.pixiuio.com")
-
-	return s.SendNotify(ctx, &types.SendNotificationRequest{
-		Content: notifyContent,
-		CreateNotificationRequest: types.CreateNotificationRequest{
-			UserMetaRequest: types.UserMetaRequest{
-				UserId:   task.UserId,
-				UserName: task.UserName,
-			},
-		},
-	})
-}
-
-func removeTaskID(taskIds string, taskIDToRemove string) string {
-	ids := strings.Split(taskIds, ",")
-	result := make([]string, 0, len(ids))
-
-	for _, id := range ids {
-		if id != taskIDToRemove {
-			result = append(result, id)
-		}
-	}
-
-	return strings.Join(result, ",")
+	return s.factory.Task().UpdateDirectly(ctx, req.TaskId, map[string]interface{}{"status": req.Status, "message": req.Message, "process": req.Process})
 }
 
 func (s *ServerController) DeleteTask(ctx context.Context, taskId int64) error {
-	if err := s.factory.Task().Delete(ctx, taskId); err != nil {
-		klog.Errorf("删除任务失败 %v", taskId)
-		return err
-	}
-
-	tags, err := s.factory.Image().ListTags(ctx, db.WithTaskLike(taskId))
-	if err != nil {
-		klog.Errorf("获取本次任务的镜像tag失败 %v", err)
-		return err
-	}
-	for _, tag := range tags {
-		if err = s.factory.Image().UpdateTag(ctx, tag.ImageId, tag.Name, map[string]interface{}{
-			"task_ids": removeTaskID(tag.TaskIds, fmt.Sprintf("%d", taskId)),
-		}); err != nil {
-			klog.Warningf("移除任务(%s)关联的tag(%s)时失败 %v", taskId, tag.Name, err)
-		}
-	}
-
-	return nil
+	return s.factory.Task().Delete(ctx, taskId)
 }
 
 func (s *ServerController) DeleteTaskWithImages(ctx context.Context, taskId int64) error {
@@ -588,14 +449,7 @@ func (s *ServerController) ListTasksByIds(ctx context.Context, ids []int64) (int
 }
 
 func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) error {
-	for _, taskId := range ids {
-		if err := s.DeleteTask(ctx, taskId); err != nil {
-			klog.Errorf("%v", err)
-			return err
-		}
-	}
-
-	return nil
+	return s.factory.Task().DeleteInBatch(ctx, ids)
 }
 
 func (s *ServerController) preCreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
