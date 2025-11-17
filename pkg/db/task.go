@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
@@ -342,6 +343,13 @@ func (a *task) CreateUser(ctx context.Context, object *model.User) error {
 
 	err := a.db.WithContext(ctx).Create(object).Error
 	return err
+}
+
+func (a *task) CreateOrUpdateUser(ctx context.Context, object *model.User) error {
+	tx := a.db.Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(&object)
+	return tx.Error
 }
 
 func (a *task) UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error {
