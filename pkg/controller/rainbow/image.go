@@ -226,7 +226,8 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 		db.WithOffset(offset),
 		db.WithLimit(listOption.Limit),
 	}...)
-	pageResult.Items, err = s.factory.Image().ListImagesWithTag(ctx, opts...)
+	//pageResult.Items, err = s.factory.Image().ListImagesWithTag(ctx, opts...)
+	pageResult.Items, err = s.factory.Image().List(ctx, opts...) // 改成不带版本列表以加速显示
 	if err != nil {
 		klog.Errorf("获取镜像列表失败 %v", err)
 		pageResult.Message = err.Error()
@@ -392,7 +393,7 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 		imageIds = append(imageIds, tag.ImageId)
 	}
 
-	images, err := s.factory.Image().List(ctx, db.WithIDIn(imageIds...))
+	images, err := s.factory.Image().ListImagesWithTag(ctx, db.WithIDIn(imageIds...))
 	if err != nil {
 		klog.Errorf("获取已创建的k8s镜像列表失败 :%v", err)
 		return nil, fmt.Errorf("获取已创建的k8s镜像列表失败 :%v", err)
@@ -400,6 +401,13 @@ func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateIm
 	klog.Infof("创建 k8s 镜像成功, 镜像列表为 %v", images)
 
 	return images, nil
+}
+
+func (s *ServerController) makeRemoteImageName(imageName string) string {
+	if strings.Contains(imageName, "/") {
+		imageName = strings.ReplaceAll(imageName, "/", "$")
+	}
+	return imageName
 }
 
 func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, tagId int64) error {
@@ -423,15 +431,12 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, ta
 		return nil
 	}
 
-	imageName := image.Name
-	if strings.Contains(imageName, "/") {
-		imageName = strings.ReplaceAll(imageName, "/", "$")
-	}
 	request := &swrmodel.DeleteRepoTagRequest{
 		Namespace:  HuaweiNamespace,
-		Repository: imageName,
+		Repository: s.makeRemoteImageName(image.Name),
 		Tag:        delTag.Name,
 	}
+	klog.V(1).Infof("即将删除远端镜像 %v", request)
 	_, err = SwrClient.DeleteRepoTag(request)
 	if err != nil {
 		klog.Errorf("删除远程镜像 %s tag(%s) 失败 %v", image.Name, delTag.Name, err)
@@ -441,12 +446,20 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, ta
 }
 
 func (s *ServerController) CreateNamespace(ctx context.Context, req *types.CreateNamespaceRequest) error {
-	_, err := s.factory.Image().CreateNamespace(ctx, &model.Namespace{
+	// 全局只能有一个命名空间
+	_, err := s.factory.Image().GetNamespace(ctx, db.WithName(req.Name))
+	if err == nil {
+		return fmt.Errorf("命名空间(%s)已存在，不允许重复创建", req.Name)
+	}
+
+	// 执行创建
+	_, err = s.factory.Image().CreateNamespace(ctx, &model.Namespace{
 		Name:        req.Name,
 		Description: req.Description,
 	})
 	if err != nil {
-		klog.Errorf("创建镜像的命名空间失败 %v", err)
+		klog.Errorf("创建命名空间失败 %v", err)
+		return err
 	}
 	return nil
 }
