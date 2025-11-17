@@ -130,6 +130,8 @@ type ServerInterface interface {
 	GetUser(ctx context.Context, userId string) (*model.User, error)
 	DeleteUser(ctx context.Context, userId string) error
 
+	CreateOrUpdateUsers(ctx context.Context, req *types.CreateUsersRequest) error
+
 	CreateNotify(ctx context.Context, req *types.CreateNotificationRequest) error
 	UpdateNotify(ctx context.Context, req *types.UpdateNotificationRequest) error
 	GetNotify(ctx context.Context, notifyId int64) (interface{}, error)

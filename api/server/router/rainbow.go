@@ -156,6 +156,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		userRoute.DELETE("/:Id", cr.deleteUser)
 		userRoute.GET("/:Id", cr.getUser)
 		userRoute.GET("", cr.listUsers)
+		userRoute.POST("/sync", cr.createOrUpdateUsers)
 	}
 
 	// 镜像汇总

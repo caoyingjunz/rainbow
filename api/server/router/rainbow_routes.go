@@ -1407,6 +1407,25 @@ func (cr *rainbowRouter) createUser(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) createOrUpdateUsers(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateUsersRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateOrUpdateUsers(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) updateUser(c *gin.Context) {
 	resp := httputils.NewResponse()
 

@@ -3,6 +3,7 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -20,31 +21,43 @@ func parseTime(t string) (time.Time, error) {
 	return pt, nil
 }
 
-func (s *ServerController) preCreateUser(ctx context.Context, req *types.CreateUserRequest) error {
-	_, err := s.factory.Task().GetUser(ctx, req.UserId)
+func (s *ServerController) isUserExist(ctx context.Context, userId string) (bool, error) {
+	_, err := s.factory.Task().GetUser(ctx, userId)
 	if err == nil {
-		return fmt.Errorf("用户(%s)已经存在", req.UserId)
+		return true, nil
+	}
+	if errors.IsNotFound(err) {
+		return false, nil
+	}
+
+	return false, err
+}
+
+func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *model.User) error {
+	return nil
+}
+
+func (s *ServerController) CreateOrUpdateUsers(ctx context.Context, req *types.CreateUsersRequest) error {
+	for _, user := range req.Users {
+		if err := s.CreateOrUpdateUser(ctx, &model.User{
+			Name:       user.Name,
+			UserId:     user.UserId,
+			UserType:   user.UserType,
+			ExpireTime: user.ExpireTime,
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (s *ServerController) CreateUser(ctx context.Context, req *types.CreateUserRequest) error {
-	if err := s.preCreateUser(ctx, req); err != nil {
-		return err
-	}
-
-	t, err := parseTime(req.ExpireTime)
-	if err != nil {
-		klog.Errorf("%v", err)
-		return err
-	}
-
-	if err = s.factory.Task().CreateUser(ctx, &model.User{
+	if err := s.factory.Task().CreateUser(ctx, &model.User{
 		Name:       req.Name,
 		UserId:     req.UserId,
 		UserType:   req.UserType,
-		ExpireTime: t,
+		ExpireTime: req.ExpireTime,
 	}); err != nil {
 		klog.Errorf("创建用户 %s 失败 %v", req.Name, err)
 		return err
@@ -62,13 +75,7 @@ func (s *ServerController) GetUser(ctx context.Context, userId string) (*model.U
 }
 
 func (s *ServerController) UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error {
-	t, err := parseTime(req.ExpireTime)
-	if err != nil {
-		klog.Errorf("%v", err)
-		return err
-	}
-
-	return s.factory.Task().UpdateUser(ctx, req.UserId, req.ResourceVersion, map[string]interface{}{"name": req.Name, "user_type": req.UserType, "expire_time": t})
+	return s.factory.Task().UpdateUser(ctx, req.UserId, req.ResourceVersion, map[string]interface{}{"name": req.Name, "user_type": req.UserType, "expire_time": req.ExpireTime})
 }
 
 func (s *ServerController) DeleteUser(ctx context.Context, userId string) error {
