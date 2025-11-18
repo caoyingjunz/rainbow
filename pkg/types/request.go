@@ -246,6 +246,17 @@ type (
 		Content string `json:"content"` // 用户通知，用于存储镜像内容
 	}
 
+	FixRequest struct {
+		Type   string       `json:"type"` // 修复资源类型
+		UserId string       `json:"user_id"`
+		Image  FixImageSpec `json:"image"`
+	}
+
+	FixImageSpec struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+
 	// PageRequest 分页配置
 	PageRequest struct {
 		Page  int `form:"page" json:"page"`   // 页数，表示第几页

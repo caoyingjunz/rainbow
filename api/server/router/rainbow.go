@@ -195,4 +195,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	{
 		sendNotifyRoute.POST("", cr.sendNotification)
 	}
+
+	fixRoute := httpEngine.Group("/rainbow/fix")
+	{
+		fixRoute.POST("", cr.fix)
+	}
 }
