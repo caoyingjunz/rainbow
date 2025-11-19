@@ -147,7 +147,7 @@ type ServerInterface interface {
 
 	ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
-	Fix(ctx context.Context, req *types.FixRequest) error
+	Fix(ctx context.Context, req *types.FixRequest) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)
