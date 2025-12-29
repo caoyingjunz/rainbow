@@ -11,6 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
+	harbor "github.com/goharbor/go-client/pkg/sdk/v2.0/client"
+
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/api/server/router"
@@ -33,6 +37,16 @@ func main() {
 	if err = opts.Complete(); err != nil {
 		klog.Fatal(err)
 	}
+
+	harborCfg := opts.ComponentConfig.Server.Harbor
+
+	transport := httptransport.New(harborCfg.URL, harbor.DefaultBasePath, harbor.DefaultSchemes)
+	transport.DefaultAuthentication = httptransport.BasicAuth(harborCfg.Username, harborCfg.Password)
+
+	harborClient := harbor.New(harbor.Config{
+		URL:       harborCfg.URL,
+		Transport: transport,
+	})
 
 	// 安装 http 路由
 	router.InstallRouters(opts)
