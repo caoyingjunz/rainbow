@@ -4,17 +4,21 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/user"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/runtime/client"
+	harborv1 "github.com/goharbor/go-client/pkg/harbor"
 	harbor "github.com/goharbor/go-client/pkg/sdk/v2.0/client"
 
+	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/ping"
+	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/project"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/api/server/router"
@@ -24,6 +28,19 @@ import (
 var (
 	serverFilePath = flag.String("configFile", "./config.yaml", "config file")
 )
+
+// 自定义 Transport 确保 Accept 头正确
+type customTransport struct {
+	base http.RoundTripper
+}
+
+func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// 设置 Accept 头为 application/json
+	req.Header.Set("Accept", "application/json")
+	// 设置 Content-Type 如果需要的话
+	req.Header.Set("Content-Type", "application/json")
+	return t.base.RoundTrip(req)
+}
 
 func main() {
 	klog.InitFlags(nil)
@@ -40,13 +57,48 @@ func main() {
 
 	harborCfg := opts.ComponentConfig.Server.Harbor
 
-	transport := httptransport.New(harborCfg.URL, harbor.DefaultBasePath, harbor.DefaultSchemes)
-	transport.DefaultAuthentication = httptransport.BasicAuth(harborCfg.Username, harborCfg.Password)
+	URL, err := url.Parse(harborCfg.URL)
+	if err != nil {
+		klog.Fatal(err)
+	}
 
 	harborClient := harbor.New(harbor.Config{
-		URL:       harborCfg.URL,
-		Transport: transport,
+		URL: URL,
+		Transport: &customTransport{
+			base: http.DefaultTransport,
+		},
+		AuthInfo: client.BasicAuth(harborCfg.Username, harborCfg.Password),
 	})
+
+	status, err := harborClient.Ping.GetPing(context.TODO(), &ping.GetPingParams{})
+	if err != nil {
+		klog.Fatal(err)
+	}
+	fmt.Println("status", status.IsSuccess())
+
+	cs, err := harborv1.NewClientSet(&harborv1.ClientSetConfig{
+		URL:      harborCfg.URL,
+		Username: harborCfg.Username,
+		Password: harborCfg.Password,
+	})
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	users, err := harborClient.User.ListUsers(context.TODO(), &user.ListUsersParams{})
+	if err != nil {
+		klog.Fatal("dd", err)
+	}
+	fmt.Println(users)
+
+	projects, err := harborClient.Project.ListProjects(context.TODO(), &project.ListProjectsParams{})
+	if err != nil {
+		klog.Fatal("xxxxxxx", err)
+	}
+
+	fmt.Println("projects", *projects)
+
+	return
 
 	// 安装 http 路由
 	router.InstallRouters(opts)

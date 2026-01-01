@@ -6,7 +6,7 @@ default:
 
 server:
   harbor:
-    url: registry.pixiuio.com
+    url: https://registry.pixiuio.com
     username: admin
     password: Harbor12345
   auth:
