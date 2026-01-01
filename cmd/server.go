@@ -4,21 +4,19 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/go-openapi/runtime"
+	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/member"
+	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/project"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/user"
 	"math/rand"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/go-openapi/runtime/client"
 	harborv1 "github.com/goharbor/go-client/pkg/harbor"
-	harbor "github.com/goharbor/go-client/pkg/sdk/v2.0/client"
-
-	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/ping"
-	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/project"
+	"github.com/goharbor/go-client/pkg/sdk/v2.0/models"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/api/server/router"
@@ -28,19 +26,6 @@ import (
 var (
 	serverFilePath = flag.String("configFile", "./config.yaml", "config file")
 )
-
-// 自定义 Transport 确保 Accept 头正确
-type customTransport struct {
-	base http.RoundTripper
-}
-
-func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// 设置 Accept 头为 application/json
-	req.Header.Set("Accept", "application/json")
-	// 设置 Content-Type 如果需要的话
-	req.Header.Set("Content-Type", "application/json")
-	return t.base.RoundTrip(req)
-}
 
 func main() {
 	klog.InitFlags(nil)
@@ -57,25 +42,6 @@ func main() {
 
 	harborCfg := opts.ComponentConfig.Server.Harbor
 
-	URL, err := url.Parse(harborCfg.URL)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
-	harborClient := harbor.New(harbor.Config{
-		URL: URL,
-		Transport: &customTransport{
-			base: http.DefaultTransport,
-		},
-		AuthInfo: client.BasicAuth(harborCfg.Username, harborCfg.Password),
-	})
-
-	status, err := harborClient.Ping.GetPing(context.TODO(), &ping.GetPingParams{})
-	if err != nil {
-		klog.Fatal(err)
-	}
-	fmt.Println("status", status.IsSuccess())
-
 	cs, err := harborv1.NewClientSet(&harborv1.ClientSetConfig{
 		URL:      harborCfg.URL,
 		Username: harborCfg.Username,
@@ -84,19 +50,58 @@ func main() {
 	if err != nil {
 		klog.Fatal(err)
 	}
+	harborClient := cs.V2()
 
-	users, err := harborClient.User.ListUsers(context.TODO(), &user.ListUsersParams{})
+	name := "test7"
+	// 创建项目
+	_, err = harborClient.Project.CreateProject(context.TODO(), &project.CreateProjectParams{
+		Project: &models.ProjectReq{
+			Metadata: &models.ProjectMetadata{
+				Public: "true",
+			},
+			ProjectName: name,
+		},
+	})
 	if err != nil {
-		klog.Fatal("dd", err)
+		klog.Fatal("create", err.Error())
 	}
-	fmt.Println(users)
 
-	projects, err := harborClient.Project.ListProjects(context.TODO(), &project.ListProjectsParams{})
+	// 创建用户
+	_, err = harborClient.User.CreateUser(context.TODO(), &user.CreateUserParams{
+		UserReq: &models.UserCreationReq{
+			Username: name,
+			Password: "Test123456!",
+			Comment:  "pixiuhub",
+			Email:    fmt.Sprintf("%s@qq.com", name),
+			Realname: name,
+		},
+	})
+
 	if err != nil {
-		klog.Fatal("xxxxxxx", err)
+		if apiErr, ok := err.(*runtime.APIError); ok {
+			fmt.Printf("API Error: Code=%d, Response=%s\n", apiErr.Code, apiErr.Response)
+		} else {
+			fmt.Printf("Other Error: %v\n", err)
+		}
 	}
 
-	fmt.Println("projects", *projects)
+	// 关联用户到项目
+	_, err = harborClient.Member.CreateProjectMember(context.TODO(), &member.CreateProjectMemberParams{
+		ProjectNameOrID: name,
+		ProjectMember: &models.ProjectMember{
+			RoleID: 4,
+			MemberUser: &models.UserEntity{
+				Username: name,
+			},
+		},
+	})
+	if err != nil {
+		if apiErr, ok := err.(*runtime.APIError); ok {
+			fmt.Printf("API Error: Code=%d, Response=%s\n", apiErr.Code, apiErr.Response)
+		} else {
+			fmt.Printf("Other Error: %v\n", err)
+		}
+	}
 
 	return
 
