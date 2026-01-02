@@ -13,6 +13,12 @@ type (
 		ResourceVersion int64 `json:"resource_version"`
 	}
 
+	ChartMetaRequest struct {
+		Project string `uri:"project" binding:"required" form:"project"`
+		Chart   string `uri:"chart" form:"chart"`
+		Version string `uri:"version" form:"version"`
+	}
+
 	CreateDockerfileRequest struct {
 		Name       string `json:"name"`
 		Dockerfile string `json:"dockerfile"`
@@ -274,6 +280,7 @@ type (
 		Agent       string `form:"agent"`
 		OwnerRef    string `form:"ownerRef"`
 		SubscribeId int64  `form:"subscribe_id"`
+		Project     string `form:"project"`
 	}
 
 	RemoteSearchRequest struct {
@@ -359,6 +366,14 @@ type (
 		Arch      string        `json:"arch"`       // 支持的架构，默认不限制  linux/amd64
 		Rewrite   bool          `json:"rewrite"`    // 是否覆盖推送
 		Namespace string        `json:"namespace"`
+	}
+
+	EnableChartRepoRequest struct {
+		UserName    string `json:"user_name,omitempty"`
+		ProjectName string `json:"project_name,omitempty"`
+		Password    string `json:"password"`
+		Email       string `json:"email"`
+		Public      bool   `json:"public,omitempty"`
 	}
 )
 

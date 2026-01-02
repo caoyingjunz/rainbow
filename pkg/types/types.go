@@ -358,3 +358,92 @@ func (pc *PushConfig) Marshal() (string, error) {
 func (pc *PushConfig) Unmarshal(s string) error {
 	return json.Unmarshal([]byte(s), &pc)
 }
+
+type ChartInfo struct {
+	Name          string    `json:"name"`
+	TotalVersions int       `json:"total_versions"`
+	LatestVersion string    `json:"latest_version"`
+	Created       time.Time `json:"created"`
+	Updated       time.Time `json:"updated"`
+	Icon          string    `json:"icon"`
+	Home          string    `json:"home"`
+	Deprecated    bool      `json:"deprecated"`
+}
+
+// Maintainer 维护者信息
+type Maintainer struct {
+	Name  string `json:"name"`
+	Email string `json:"email,omitempty"` // omitempty 表示如果 email 为空则不包含在 JSON 中
+}
+
+// Dependency 依赖项
+type Dependency struct {
+	Name       string `json:"name"`
+	Version    string `json:"version"`
+	Repository string `json:"repository"`
+	Condition  string `json:"condition"`
+	Alias      string `json:"alias,omitempty"` // omitempty 表示别名可选
+}
+
+// ChartVersion 表示 Chart 的版本信息
+type ChartVersion struct {
+	Name         string            `json:"name"`
+	Sources      []string          `json:"sources"`
+	Version      string            `json:"version"`
+	Description  string            `json:"description"`
+	Maintainers  []Maintainer      `json:"maintainers"`
+	Icon         string            `json:"icon"`
+	APIVersion   string            `json:"apiVersion"`
+	AppVersion   string            `json:"appVersion"`
+	Annotations  map[string]string `json:"annotations"`
+	Dependencies []Dependency      `json:"dependencies"`
+	Type         string            `json:"type"`
+	URLs         []string          `json:"urls"`
+	Created      time.Time         `json:"created"`
+	Digest       string            `json:"digest"`
+	Labels       []string          `json:"labels"`
+}
+
+// ChartMetadata Chart 元数据
+type ChartMetadata struct {
+	Name         string            `json:"name"`
+	Sources      []string          `json:"sources"`
+	Version      string            `json:"version"`
+	Description  string            `json:"description"`
+	Maintainers  []Maintainer      `json:"maintainers"`
+	Icon         string            `json:"icon"`
+	APIVersion   string            `json:"apiVersion"`
+	AppVersion   string            `json:"appVersion"`
+	Annotations  map[string]string `json:"annotations"`
+	Dependencies []Dependency      `json:"dependencies"`
+	Type         string            `json:"type"`
+	URLs         []string          `json:"urls"`
+	Created      time.Time         `json:"created"`
+	Digest       string            `json:"digest"`
+}
+
+// ChartFiles Chart 文件
+type ChartFiles struct {
+	READMEMD   string `json:"README.md"`
+	ValuesYAML string `json:"values.yaml"`
+}
+
+type Security struct {
+	Signature SecuritySignature `json:"signature"`
+}
+
+// SecuritySignature 安全签名
+type SecuritySignature struct {
+	Signed   bool   `json:"signed"`
+	ProvFile string `json:"prov_file"`
+}
+
+// ChartDetail Chart 详情
+type ChartDetail struct {
+	Metadata     ChartMetadata `json:"metadata"`
+	Dependencies []Dependency  `json:"dependencies"`
+	Values       interface{}   `json:"values"`
+	Files        ChartFiles    `json:"files"`
+	Security     Security      `json:"security"`
+	Labels       []string      `json:"labels"`
+}

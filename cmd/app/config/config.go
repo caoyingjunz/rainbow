@@ -96,9 +96,10 @@ func (r *RainbowdOption) SetDefault() {
 }
 
 type Harbor struct {
-	URL      string `yaml:"url"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	URL       string `yaml:"url"`
+	Namespace string `yaml:"namespace"`
+	Username  string `yaml:"username"`
+	Password  string `yaml:"password"`
 }
 
 type Auth struct {
