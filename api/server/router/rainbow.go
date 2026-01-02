@@ -200,4 +200,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	{
 		fixRoute.POST("", cr.fix)
 	}
+
+	chartRoute := httpEngine.Group("/rainbow/charts")
+	{
+		chartRoute.POST("", cr.fix)
+	}
 }
