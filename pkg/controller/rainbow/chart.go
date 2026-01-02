@@ -195,6 +195,16 @@ func (s *ServerController) uploadChart(project string, filePath string) error {
 	repoCfg := s.cfg.Server.Harbor
 	url := fmt.Sprintf("%s/api/%s/%s/charts", repoCfg.URL, repoCfg.Namespace, project)
 
+	httpClient := util.NewHttpClient(5*time.Second, url)
+	httpClient.WithAuth(repoCfg.Username, repoCfg.Password)
+	httpClient.WithHeaders(map[string]string{
+		"Accept":       "application/json",
+		"Content-Type": writer.FormDataContentType(),
+		"User-Agent":   "Go-Harbor-Client/1.0",
+	})
+
+	httpClient.Post(url)
+
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %w", err)
