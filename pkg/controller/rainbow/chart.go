@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -189,6 +190,31 @@ func (s *ServerController) uploadChart(project string, filePath string) error {
 	klog.Infof("已读取文件大小: %d 字节\n", copied)
 	if err = writer.Close(); err != nil {
 		return fmt.Errorf("关闭表单写入器失败: %w", err)
+	}
+
+	repoCfg := s.cfg.Server.Harbor
+	url := fmt.Sprintf("%s/api/%s/%s/charts", repoCfg.URL, repoCfg.Namespace, project)
+
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	req.SetBasicAuth(repoCfg.Username, repoCfg.Password)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("User-Agent", "Go-Harbor-Client/1.0")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("发送请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("读取响应失败: %w", err)
 	}
 
 	return nil
