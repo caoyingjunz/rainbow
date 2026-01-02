@@ -13,6 +13,7 @@ import (
 
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	v2client "github.com/goharbor/go-client/pkg/sdk/v2.0/client"
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
@@ -157,6 +158,7 @@ type ServerInterface interface {
 	ListChartTags(ctx context.Context, req types.ChartMetaRequest, listOption types.ListOptions) (interface{}, error)
 	GetChartTag(ctx context.Context, req types.ChartMetaRequest) (interface{}, error)
 	DeleteChartTag(ctx context.Context, req types.ChartMetaRequest) error
+	UploadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) error
 
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)

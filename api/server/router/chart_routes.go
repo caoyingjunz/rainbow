@@ -120,3 +120,21 @@ func (cr *rainbowRouter) DeleteChartVersion(c *gin.Context) {
 	}
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) uploadChart(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err error
+		req types.ChartMetaRequest
+	)
+	if err = httputils.ShouldBindAny(c, nil, &req, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().UploadChart(c, req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	httputils.SetSuccess(c, resp)
+}

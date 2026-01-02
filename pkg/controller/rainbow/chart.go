@@ -1,14 +1,21 @@
 package rainbow
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/member"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/project"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/user"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/models"
+	"github.com/google/uuid"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/types"
@@ -135,5 +142,54 @@ func (s *ServerController) DeleteChartTag(ctx context.Context, chartReq types.Ch
 	if err := httpClient.Delete(url, nil); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *ServerController) UploadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) error {
+	f, err := ctx.FormFile("chart")
+	if err != nil {
+		return err
+	}
+
+	name := f.Filename
+	tmpFile := filepath.Join("/tmp", fmt.Sprintf("%s_%s_%s_%s", chartReq.Project, time.Now().Format("20060102_150405"), uuid.New().String()[:8], name))
+	if err = ctx.SaveUploadedFile(f, tmpFile); err != nil {
+		return err
+	}
+
+	// 清理临时文件
+	defer func() {
+		if err = os.RemoveAll(tmpFile); err != nil {
+			fmt.Printf("清理临时文件失败: %v\n", err)
+		}
+	}()
+
+	return s.uploadChart(chartReq.Project, tmpFile)
+}
+
+func (s *ServerController) uploadChart(project string, filePath string) error {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	filename := filepath.Base(filePath)
+	part, err := writer.CreateFormFile("chart", filename)
+	if err != nil {
+		return fmt.Errorf("创建表单文件字段失败: %w", err)
+	}
+
+	copied, err := io.Copy(part, f)
+	if err != nil {
+		return fmt.Errorf("复制文件内容失败: %w", err)
+	}
+	klog.Infof("已读取文件大小: %d 字节\n", copied)
+	if err = writer.Close(); err != nil {
+		return fmt.Errorf("关闭表单写入器失败: %w", err)
+	}
+
 	return nil
 }
