@@ -15,7 +15,7 @@ import (
 func parseTime(t string) (time.Time, error) {
 	pt, err := time.Parse("2006-01-02 15:04:05", t)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("解析超时时间(%s)失败: %v", t, err)
+		return time.Time{}, fmt.Errorf("解析时间(%s)失败: %v", t, err)
 	}
 
 	return pt, nil
@@ -33,18 +33,45 @@ func (s *ServerController) isUserExist(ctx context.Context, userId string) (bool
 	return false, err
 }
 
-func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *model.User) error {
+func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *types.CreateUserRequest) error {
+	old, err := s.factory.Task().GetUser(ctx, user.UserId)
+	if err == nil {
+		// 用户已存在，则更新
+		updates := make(map[string]interface{})
+		et, err := parseTime(user.ExpireTime)
+		if err != nil {
+			klog.Errorf("%v", err)
+			return err
+		}
+		if old.ExpireTime != et {
+			updates["expire_time"] = et
+		}
+		if old.Name != user.Name {
+			updates["name"] = user.Name
+		}
+		if old.UserType != user.UserType {
+			updates["user_type"] = user.UserType
+		}
+		if len(updates) == 0 {
+			return nil
+		}
+		return s.factory.Task().UpdateUser(ctx, user.UserId, old.ResourceVersion, updates)
+	} else {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		// 用户不存在，则创建
+		if err = s.CreateUser(ctx, user); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (s *ServerController) CreateOrUpdateUsers(ctx context.Context, req *types.CreateUsersRequest) error {
 	for _, user := range req.Users {
-		if err := s.CreateOrUpdateUser(ctx, &model.User{
-			Name:       user.Name,
-			UserId:     user.UserId,
-			UserType:   user.UserType,
-			ExpireTime: user.ExpireTime,
-		}); err != nil {
+		if err := s.CreateOrUpdateUser(ctx, &user); err != nil {
 			return err
 		}
 	}
@@ -53,11 +80,16 @@ func (s *ServerController) CreateOrUpdateUsers(ctx context.Context, req *types.C
 }
 
 func (s *ServerController) CreateUser(ctx context.Context, req *types.CreateUserRequest) error {
-	if err := s.factory.Task().CreateUser(ctx, &model.User{
+	et, err := parseTime(req.ExpireTime)
+	if err != nil {
+		klog.Errorf("%v", err)
+		return err
+	}
+	if err = s.factory.Task().CreateUser(ctx, &model.User{
 		Name:       req.Name,
 		UserId:     req.UserId,
 		UserType:   req.UserType,
-		ExpireTime: req.ExpireTime,
+		ExpireTime: et,
 	}); err != nil {
 		klog.Errorf("创建用户 %s 失败 %v", req.Name, err)
 		return err

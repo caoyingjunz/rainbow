@@ -49,6 +49,8 @@ type TaskInterface interface {
 	DeleteUser(ctx context.Context, userId string) error
 	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
 
+	CreateOrUpdateUser(ctx context.Context, object *model.User) error
+
 	ListKubernetesVersions(ctx context.Context, opts ...Options) ([]model.KubernetesVersion, error)
 	GetKubernetesVersionCount(ctx context.Context, opts ...Options) (int64, error)
 	GetKubernetesVersion(ctx context.Context, name string) (*model.KubernetesVersion, error)
@@ -347,8 +349,10 @@ func (a *task) CreateUser(ctx context.Context, object *model.User) error {
 
 func (a *task) CreateOrUpdateUser(ctx context.Context, object *model.User) error {
 	tx := a.db.Clauses(clause.OnConflict{
-		UpdateAll: true,
+		Columns:   []clause.Column{{Name: "user_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"gmt_modified", "name", "user_type", "expire_time"}),
 	}).Create(&object)
+
 	return tx.Error
 }
 
