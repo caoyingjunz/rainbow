@@ -15,8 +15,6 @@ type HttpInterface interface {
 	Put(url string, val interface{}, data map[string]interface{}) error
 	Delete(url string, val interface{}) error
 	Get(url string, val interface{}) error
-
-	PostV2(url string, val interface{}) error
 }
 
 type Auth struct {
@@ -40,10 +38,6 @@ func (c *httpClient) WithAuth(username, password string) {
 		Username: username,
 		Password: password,
 	}
-}
-
-func (c *httpClient) WithBody() {
-
 }
 
 func (c *httpClient) WithHeaders(headers map[string]string) {
@@ -138,10 +132,6 @@ func (c *httpClient) Post(url string, val interface{}, data interface{}, header 
 			return err
 		}
 	}
-	return nil
-}
-
-func (c *httpClient) PostV2(url string, val interface{}) error {
 	return nil
 }
 

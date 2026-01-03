@@ -447,3 +447,7 @@ type ChartDetail struct {
 	Security     Security      `json:"security"`
 	Labels       []string      `json:"labels"`
 }
+
+type ChartSaved struct {
+	Saved bool `json:"saved"`
+}
