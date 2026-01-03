@@ -211,6 +211,8 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		// 上传 chart 到指定项目
 		chartRoute.POST("/upload/:project", cr.uploadChart)
+		// 下载 chart
+		chartRoute.GET("/download/:project/charts/:chart/:version", cr.downloadChart)
 
 		chartRoute.GET("/:project/charts/:chart/:version", cr.GetChartVersion)
 		chartRoute.DELETE("/:project/charts/:chart/:version", cr.DeleteChartVersion)

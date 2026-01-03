@@ -159,6 +159,7 @@ type ServerInterface interface {
 	GetChartTag(ctx context.Context, req types.ChartMetaRequest) (interface{}, error)
 	DeleteChartTag(ctx context.Context, req types.ChartMetaRequest) error
 	UploadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) error
+	DownloadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) (string, string, error)
 
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -12,10 +13,11 @@ type HttpClientV2 struct {
 	URL    string
 	method string
 
-	auth    *Auth
-	body    io.Reader
-	headers map[string]string
-	timeout time.Duration
+	filename *string
+	auth     *Auth
+	body     io.Reader
+	headers  map[string]string
+	timeout  time.Duration
 }
 
 func (c *HttpClientV2) Method(method string) *HttpClientV2 {
@@ -31,6 +33,14 @@ func (c *HttpClientV2) WithTimeout(t time.Duration) *HttpClientV2 {
 		return nil
 	}
 	c.timeout = t
+	return c
+}
+
+func (c *HttpClientV2) WithBody(body io.Reader) *HttpClientV2 {
+	if c == nil {
+		return nil
+	}
+	c.body = body
 	return c
 }
 
@@ -53,6 +63,14 @@ func (c *HttpClientV2) WithHeader(headers map[string]string) *HttpClientV2 {
 	for k, v := range headers {
 		c.headers[k] = v
 	}
+	return c
+}
+
+func (c *HttpClientV2) WithFile(filename string) *HttpClientV2 {
+	if c == nil {
+		return nil
+	}
+	c.filename = &filename
 	return c
 }
 
@@ -81,10 +99,25 @@ func (c *HttpClientV2) Do(val interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("error resp %s", resp.Status)
 	}
 
+	// 结果存入文件
+	if c.filename != nil {
+		file, err := os.Create(*c.filename)
+		if err != nil {
+			return fmt.Errorf("创建文件失败: %w", err)
+		}
+		defer file.Close()
+
+		_, err = io.Copy(file, resp.Body)
+		if err != nil {
+			return fmt.Errorf("写入文件失败: %w", err)
+		}
+	}
+
+	// 结果存入结构体
 	if val != nil {
 		d, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -94,5 +127,14 @@ func (c *HttpClientV2) Do(val interface{}) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// Result TODO
+func (c *HttpClientV2) Result(val interface{}) *HttpClientV2 {
+	if c == nil {
+		return nil
+	}
+
 	return nil
 }

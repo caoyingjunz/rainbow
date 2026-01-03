@@ -1,9 +1,14 @@
 package router
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/caoyingjunz/pixiulib/httputils"
-	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/gin-gonic/gin"
+	"k8s.io/klog/v2"
+
+	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
 func (cr *rainbowRouter) enableChartRepo(c *gin.Context) {
@@ -137,4 +142,35 @@ func (cr *rainbowRouter) uploadChart(c *gin.Context) {
 		return
 	}
 	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) downloadChart(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err error
+		req types.ChartMetaRequest
+	)
+	if err = httputils.ShouldBindAny(c, nil, &req, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	chartName, filename, err := cr.c.Server().DownloadChart(c, req)
+	if err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	// 清理临时文件
+	defer func() {
+		if err = os.RemoveAll(filename); err != nil {
+			klog.Errorf("清理下载文件失败: %v\n", err)
+		}
+	}()
+
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", chartName))
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.File(filename)
 }

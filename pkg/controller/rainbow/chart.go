@@ -3,11 +3,9 @@ package rainbow
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -96,28 +94,37 @@ func (s *ServerController) ListCharts(ctx context.Context, listOption types.List
 
 func (s *ServerController) DeleteChart(ctx context.Context, chartReq types.ChartMetaRequest) error {
 	repoCfg := s.cfg.Server.Harbor
-	url := fmt.Sprintf("%s/api/%s/%s/charts/%s", repoCfg.URL, repoCfg.Namespace, chartReq.Project, chartReq.Chart)
 
-	httpClient := util.NewHttpClient(5*time.Second, url)
-	httpClient.WithAuth(repoCfg.Username, repoCfg.Password)
-
-	if err := httpClient.Delete(url, nil); err != nil {
+	httpClient := util.HttpClientV2{
+		URL: fmt.Sprintf("%s/api/%s/%s/charts/%s", repoCfg.URL, repoCfg.Namespace, chartReq.Project, chartReq.Chart),
+	}
+	err := httpClient.Method("DELETE").
+		WithTimeout(5*time.Second).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		Do(nil)
+	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func (s *ServerController) ListChartTags(ctx context.Context, chartReq types.ChartMetaRequest, listOption types.ListOptions) (interface{}, error) {
 	repoCfg := s.cfg.Server.Harbor
+
 	url := fmt.Sprintf("%s/api/%s/%s/charts/%s", repoCfg.URL, repoCfg.Namespace, chartReq.Project, chartReq.Chart)
-
-	httpClient := util.NewHttpClient(5*time.Second, url)
-	httpClient.WithAuth(repoCfg.Username, repoCfg.Password)
-
 	var cs []types.ChartVersion
-	if err := httpClient.Get(url, &cs); err != nil {
+	httpClient := util.HttpClientV2{
+		URL: url,
+	}
+	err := httpClient.Method("GET").
+		WithTimeout(5*time.Second).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		Do(&cs)
+	if err != nil {
 		return nil, err
 	}
+
 	return cs, nil
 }
 
@@ -125,27 +132,33 @@ func (s *ServerController) GetChartTag(ctx context.Context, chartReq types.Chart
 	repoCfg := s.cfg.Server.Harbor
 	url := fmt.Sprintf("%s/api/%s/%s/charts/%s/%s", repoCfg.URL, repoCfg.Namespace, chartReq.Project, chartReq.Chart, chartReq.Version)
 
-	httpClient := util.NewHttpClient(5*time.Second, url)
-	httpClient.WithAuth(repoCfg.Username, repoCfg.Password)
-	if err := httpClient.Get(url, nil); err != nil {
+	var cs types.ChartDetail
+	httpClient := util.HttpClientV2{
+		URL: url,
+	}
+	err := httpClient.Method("GET").
+		WithTimeout(5*time.Second).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		Do(&cs)
+	if err != nil {
 		return nil, err
 	}
 
-	var cs types.ChartDetail
-	if err := httpClient.Get(url, &cs); err != nil {
-		return nil, err
-	}
 	return cs, nil
 }
 
 func (s *ServerController) DeleteChartTag(ctx context.Context, chartReq types.ChartMetaRequest) error {
 	repoCfg := s.cfg.Server.Harbor
+
 	url := fmt.Sprintf("%s/api/%s/%s/charts/%s/%s", repoCfg.URL, repoCfg.Namespace, chartReq.Project, chartReq.Chart, chartReq.Version)
-
-	httpClient := util.NewHttpClient(5*time.Second, url)
-	httpClient.WithAuth(repoCfg.Username, repoCfg.Password)
-
-	if err := httpClient.Delete(url, nil); err != nil {
+	httpClient := util.HttpClientV2{
+		URL: url,
+	}
+	err := httpClient.Method("DELETE").
+		WithTimeout(5*time.Second).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		Do(nil)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -158,7 +171,7 @@ func (s *ServerController) UploadChart(ctx *gin.Context, chartReq types.ChartMet
 	}
 
 	name := f.Filename
-	tmpFile := filepath.Join("/tmp", fmt.Sprintf("%s_%s_%s_%s", chartReq.Project, time.Now().Format("20060102_150405"), uuid.New().String()[:8], name))
+	tmpFile := filepath.Join("/tmp", fmt.Sprintf("upload_%s_%s_%s_%s", chartReq.Project, time.Now().Format("20060102_150405"), uuid.New().String()[:8], name))
 	if err = ctx.SaveUploadedFile(f, tmpFile); err != nil {
 		return err
 	}
@@ -178,6 +191,7 @@ func (s *ServerController) uploadChart(project string, filePath string) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -199,43 +213,45 @@ func (s *ServerController) uploadChart(project string, filePath string) error {
 
 	repoCfg := s.cfg.Server.Harbor
 	url := fmt.Sprintf("%s/api/%s/%s/charts", repoCfg.URL, repoCfg.Namespace, project)
-
-	httpClient := util.NewHttpClient(5*time.Second, url)
-	httpClient.WithAuth(repoCfg.Username, repoCfg.Password)
-	httpClient.WithHeaders(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": writer.FormDataContentType(),
-		"User-Agent":   "Go-Harbor-Client/1.0",
-	})
-
-	req, err := http.NewRequest("POST", url, body)
-	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
+	httpClient := util.HttpClientV2{
+		URL: url,
 	}
-
-	req.SetBasicAuth(repoCfg.Username, repoCfg.Password)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("User-Agent", "Go-Harbor-Client/1.0")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("发送请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("读取响应失败: %w", err)
-	}
-
 	var cs types.ChartSaved
-	if err = json.Unmarshal(b, &cs); err != nil {
+	err = httpClient.Method("POST").
+		WithTimeout(30*time.Second).
+		WithHeader(map[string]string{"Accept": "application/json", "Content-Type": writer.FormDataContentType(), "User-Agent": "Go-Harbor-Client/1.0"}).
+		WithBody(body).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		Do(&cs)
+	if err != nil {
 		return err
 	}
+
+	// 判断是否已保存
 	if cs.Saved {
 		return nil
 	}
 	return fmt.Errorf("chart not saved")
+}
+
+func (s *ServerController) DownloadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) (string, string, error) {
+	repoCfg := s.cfg.Server.Harbor
+
+	chartName := fmt.Sprintf("%s-%s.tgz", chartReq.Chart, chartReq.Version)
+	url := fmt.Sprintf("%s/%s/%s/charts/%s", repoCfg.URL, "charts", chartReq.Project, chartName)
+
+	filename := filepath.Join("/tmp", fmt.Sprintf("donwload_%s_%s_%s_%s", chartReq.Project, time.Now().Format("20060102_150405"), uuid.New().String()[:8], chartName))
+	httpClient := util.HttpClientV2{
+		URL: url,
+	}
+	err := httpClient.Method("GET").
+		WithTimeout(30*time.Second).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		WithFile(filename).
+		Do(nil)
+	if err != nil {
+		return "", "", err
+	}
+
+	return chartName, filename, nil
 }
