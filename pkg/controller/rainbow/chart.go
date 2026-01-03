@@ -78,15 +78,19 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 
 func (s *ServerController) ListCharts(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	repoCfg := s.cfg.Server.Harbor
-	url := fmt.Sprintf("%s/api/%s/%s/charts", repoCfg.URL, repoCfg.Namespace, listOption.Project)
-
-	httpClient := util.NewHttpClient(5*time.Second, url)
-	httpClient.WithAuth(repoCfg.Username, repoCfg.Password)
 
 	var cs []types.ChartInfo
-	if err := httpClient.Get(url, &cs); err != nil {
+	httpClient := util.HttpClientV2{
+		URL: fmt.Sprintf("%s/api/%s/%s/charts", repoCfg.URL, repoCfg.Namespace, listOption.Project),
+	}
+	err := httpClient.Method("GET").
+		WithTimeout(5*time.Second).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		Do(&cs)
+	if err != nil {
 		return nil, err
 	}
+
 	return cs, nil
 }
 

@@ -9,8 +9,8 @@ import (
 )
 
 type HttpClientV2 struct {
+	URL    string
 	method string
-	url    string
 
 	auth    *Auth
 	body    io.Reader
@@ -23,6 +23,14 @@ func (c *HttpClientV2) Method(method string) *HttpClientV2 {
 		return nil
 	}
 	c.method = method
+	return c
+}
+
+func (c *HttpClientV2) WithTimeout(t time.Duration) *HttpClientV2 {
+	if c == nil {
+		return nil
+	}
+	c.timeout = t
 	return c
 }
 
@@ -53,7 +61,7 @@ func (c *HttpClientV2) Do(val interface{}) error {
 		return fmt.Errorf("httpClient is nil")
 	}
 
-	req, err := http.NewRequest(c.method, c.url, c.body)
+	req, err := http.NewRequest(c.method, c.URL, c.body)
 	if err != nil {
 		return err
 	}
