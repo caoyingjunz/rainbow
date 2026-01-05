@@ -13,10 +13,13 @@ func init() {
 type User struct {
 	rainbow.Model
 
-	UserId     string    `gorm:"type:varchar(255);uniqueIndex:idx_user" json:"user_id"` // 所属用户
-	Name       string    `json:"name"`
-	UserType   string    `json:"user_type"` // 个人版，专有版
-	ExpireTime time.Time `gorm:"column:expire_time;type:datetime;default:current_timestamp;not null" json:"expire_time"`
+	UserId string `gorm:"type:varchar(255);uniqueIndex:idx_user" json:"user_id"` // 用户ID
+	Name   string `json:"name"`                                                  // 用户名
+
+	UserType    int       `json:"user_type"`                                                                              // 0 个人版，1 专有版
+	PaymentType int       `json:"payment_type"`                                                                           // 付费模式 0 按量付费， 1 包年包月
+	ExpireTime  time.Time `gorm:"column:expire_time;type:datetime;default:current_timestamp;not null" json:"expire_time"` // 包年包月时到期时间
+	RemainCount int       `json:"remain_count"`                                                                           // 按量付费时剩余次数
 }
 
 func (t *User) TableName() string {

@@ -171,10 +171,12 @@ type (
 	}
 
 	CreateUserRequest struct {
-		Name       string `json:"name"`
-		UserId     string `json:"user_id"`
-		UserType   string `json:"user_type"` // 个人版，专有版
-		ExpireTime string `json:"expire_time"`
+		Name        string `json:"name"`
+		UserId      string `json:"user_id"`
+		UserType    int    `json:"user_type"` // 个人版，专有版
+		PaymentType int    `json:"payment_type"`
+		ExpireTime  string `json:"expire_time"`
+		RemainCount int    `json:"remain_count"`
 	}
 
 	UpdateUserRequest struct {

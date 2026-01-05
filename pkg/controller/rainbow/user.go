@@ -3,8 +3,9 @@ package rainbow
 import (
 	"context"
 	"fmt"
-	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 	"time"
+
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 
 	"k8s.io/klog/v2"
 
@@ -86,10 +87,12 @@ func (s *ServerController) CreateUser(ctx context.Context, req *types.CreateUser
 		return err
 	}
 	if err = s.factory.Task().CreateUser(ctx, &model.User{
-		Name:       req.Name,
-		UserId:     req.UserId,
-		UserType:   req.UserType,
-		ExpireTime: et,
+		Name:        req.Name,
+		UserId:      req.UserId,
+		UserType:    req.UserType,
+		PaymentType: req.PaymentType,
+		RemainCount: req.RemainCount,
+		ExpireTime:  et,
 	}); err != nil {
 		klog.Errorf("创建用户 %s 失败 %v", req.Name, err)
 		return err
