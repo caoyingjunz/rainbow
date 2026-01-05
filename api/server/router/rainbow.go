@@ -69,6 +69,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	kubernetesVersionRoute := httpEngine.Group("/rainbow/kubernetes/versions")
 	{
 		kubernetesVersionRoute.GET("", cr.listKubernetesVersions)
+		// 废弃
 		kubernetesVersionRoute.POST("/sync", cr.syncRemoteKubernetesVersions)
 	}
 
@@ -160,6 +161,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	syncRoute := httpEngine.Group("/rainbow/sync")
 	{
 		syncRoute.POST("/users", cr.createOrUpdateUsers)
+		syncRoute.POST("/kubernetes/versions", cr.syncRemoteKubernetesVersions)
 	}
 
 	// 镜像汇总
