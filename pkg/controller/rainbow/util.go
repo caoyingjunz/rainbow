@@ -108,15 +108,12 @@ func PaginateCommonTagSlice(s []types.CommonTag, page int, pageSize int) []types
 }
 
 func ParseImageItem(image string) (string, string, error) {
-	parts := strings.Split(image, ":")
-	if len(parts) > 2 || len(parts) == 0 {
-		return "", "", fmt.Errorf("不合规镜像名称 %s", image)
-	}
-
-	path := parts[0]
+	path := image
 	tag := "latest"
-	if len(parts) == 2 {
-		tag = parts[1]
+	lastIndex := strings.LastIndex(image, ":")
+	if lastIndex != -1 {
+		path = image[:lastIndex]
+		tag = image[lastIndex+1:]
 	}
 
 	// 如果镜像是以 docker.io 开关，则去除 docker.io
