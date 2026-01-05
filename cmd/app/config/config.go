@@ -66,7 +66,8 @@ type DefaultOption struct {
 }
 
 type ServerOption struct {
-	Auth Auth `yaml:"auth"`
+	Auth   Auth   `yaml:"auth"`
+	Harbor Harbor `yaml:"harbor"`
 }
 
 type RainbowdOption struct {
@@ -92,6 +93,13 @@ func (r *RainbowdOption) SetDefault() {
 	if len(r.TemplateDir) == 0 {
 		r.TemplateDir = defaultRainbowdTemplateDir
 	}
+}
+
+type Harbor struct {
+	URL       string `yaml:"url"`
+	Namespace string `yaml:"namespace"`
+	Username  string `yaml:"username"`
+	Password  string `yaml:"password"`
 }
 
 type Auth struct {

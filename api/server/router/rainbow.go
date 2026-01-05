@@ -195,4 +195,26 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	{
 		sendNotifyRoute.POST("", cr.sendNotification)
 	}
+
+	fixRoute := httpEngine.Group("/rainbow/fix")
+	{
+		fixRoute.POST("", cr.fix)
+	}
+
+	chartRoute := httpEngine.Group("/rainbow/chartrepo")
+	{
+		chartRoute.POST("/enable", cr.enableChartRepo) // 启用 helm chart repo
+
+		chartRoute.GET("/:project/charts", cr.ListCharts)
+		chartRoute.GET("/:project/charts/:chart", cr.ListChartVersions)
+		chartRoute.DELETE("/:project/charts/:chart", cr.DeleteChart)
+
+		// 上传 chart 到指定项目
+		chartRoute.POST("/upload/:project", cr.uploadChart)
+		// 下载 chart
+		chartRoute.GET("/download/:project/charts/:chart/:version", cr.downloadChart)
+
+		chartRoute.GET("/:project/charts/:chart/:version", cr.GetChartVersion)
+		chartRoute.DELETE("/:project/charts/:chart/:version", cr.DeleteChartVersion)
+	}
 }

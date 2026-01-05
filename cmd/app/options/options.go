@@ -2,15 +2,17 @@ package options
 
 import (
 	"fmt"
-	"github.com/apache/rocketmq-client-go/v2"
-	"github.com/apache/rocketmq-client-go/v2/primitive"
-	"github.com/apache/rocketmq-client-go/v2/producer"
 	"os"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/apache/rocketmq-client-go/v2/producer"
 	"github.com/caoyingjunz/pixiulib/config"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/goharbor/go-client/pkg/harbor"
+	v2client "github.com/goharbor/go-client/pkg/sdk/v2.0/client"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"k8s.io/klog/v2"
@@ -39,6 +41,7 @@ type Options struct {
 
 	RedisClient *redis.Client
 	Producer    rocketmq.Producer
+	ChartAPI    *v2client.HarborAPI
 
 	HttpEngine *gin.Engine
 	Controller controller.RainbowInterface
@@ -93,7 +96,12 @@ func (o *Options) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient, o.Producer)
+	// 注册 chart repo 客户端
+	if err := o.registerChartAPI(); err != nil {
+		return err
+	}
+
+	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient, o.Producer, o.ChartAPI)
 	return nil
 }
 
@@ -150,5 +158,18 @@ func (o *Options) registerRedis() error {
 		ReadTimeout: 10 * time.Second,
 	})
 
+	return nil
+}
+func (o *Options) registerChartAPI() error {
+	harborCfg := o.ComponentConfig.Server.Harbor
+	cs, err := harbor.NewClientSet(&harbor.ClientSetConfig{
+		URL:      harborCfg.URL,
+		Username: harborCfg.Username,
+		Password: harborCfg.Password,
+	})
+	if err != nil {
+		return err
+	}
+	o.ChartAPI = cs.V2()
 	return nil
 }

@@ -12,6 +12,8 @@ import (
 	"github.com/caoyingjunz/pixiulib/config"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/goharbor/go-client/pkg/harbor"
+	v2client "github.com/goharbor/go-client/pkg/sdk/v2.0/client"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"k8s.io/klog/v2"
@@ -30,6 +32,7 @@ type ServerOptions struct {
 
 	RedisClient *redis.Client
 	Producer    rocketmq.Producer
+	ChartAPI    *v2client.HarborAPI
 
 	HttpEngine *gin.Engine
 	Controller controller.RainbowInterface
@@ -77,7 +80,12 @@ func (o *ServerOptions) Complete() error {
 		return err
 	}
 
-	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient, o.Producer)
+	// 注册 chart repo 客户端
+	if err := o.registerChartAPI(); err != nil {
+		return err
+	}
+
+	o.Controller = controller.New(o.ComponentConfig, o.Factory, o.RedisClient, o.Producer, o.ChartAPI)
 	return nil
 }
 
@@ -135,5 +143,19 @@ func (o *ServerOptions) registerRedis() error {
 		ReadTimeout: 10 * time.Second,
 	})
 
+	return nil
+}
+
+func (o *ServerOptions) registerChartAPI() error {
+	harborCfg := o.ComponentConfig.Server.Harbor
+	cs, err := harbor.NewClientSet(&harbor.ClientSetConfig{
+		URL:      harborCfg.URL,
+		Username: harborCfg.Username,
+		Password: harborCfg.Password,
+	})
+	if err != nil {
+		return err
+	}
+	o.ChartAPI = cs.V2()
 	return nil
 }

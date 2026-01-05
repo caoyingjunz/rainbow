@@ -1690,3 +1690,20 @@ func (cr *rainbowRouter) syncRemoteKubernetesVersions(c *gin.Context) {
 	}
 	httputils.SetSuccess(c, resp)
 }
+
+func (cr *rainbowRouter) fix(c *gin.Context) {
+	resp := httputils.NewResponse()
+	var (
+		err error
+		req types.FixRequest
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().Fix(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	httputils.SetSuccess(c, resp)
+}

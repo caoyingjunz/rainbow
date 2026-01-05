@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/caoyingjunz/pixiulib/httputils"
@@ -14,7 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/juju/ratelimit"
 	"golang.org/x/time/rate"
-	"strings"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
 )

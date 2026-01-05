@@ -13,6 +13,12 @@ type (
 		ResourceVersion int64 `json:"resource_version"`
 	}
 
+	ChartMetaRequest struct {
+		Project string `uri:"project" binding:"required" form:"project"`
+		Chart   string `uri:"chart" form:"chart"`
+		Version string `uri:"version" form:"version"`
+	}
+
 	CreateDockerfileRequest struct {
 		Name       string `json:"name"`
 		Dockerfile string `json:"dockerfile"`
@@ -246,6 +252,17 @@ type (
 		Content string `json:"content"` // 用户通知，用于存储镜像内容
 	}
 
+	FixRequest struct {
+		Type   string       `json:"type"` // 修复资源类型
+		UserId string       `json:"user_id"`
+		Image  FixImageSpec `json:"image"`
+	}
+
+	FixImageSpec struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	}
+
 	// PageRequest 分页配置
 	PageRequest struct {
 		Page  int `form:"page" json:"page"`   // 页数，表示第几页
@@ -263,6 +280,7 @@ type (
 		Agent       string `form:"agent"`
 		OwnerRef    string `form:"ownerRef"`
 		SubscribeId int64  `form:"subscribe_id"`
+		Project     string `form:"project"`
 	}
 
 	RemoteSearchRequest struct {
@@ -348,6 +366,14 @@ type (
 		Arch      string        `json:"arch"`       // 支持的架构，默认不限制  linux/amd64
 		Rewrite   bool          `json:"rewrite"`    // 是否覆盖推送
 		Namespace string        `json:"namespace"`
+	}
+
+	EnableChartRepoRequest struct {
+		UserName    string `json:"user_name,omitempty"`
+		ProjectName string `json:"project_name,omitempty"`
+		Password    string `json:"password"`
+		Email       string `json:"email"`
+		Public      bool   `json:"public,omitempty"`
 	}
 )
 

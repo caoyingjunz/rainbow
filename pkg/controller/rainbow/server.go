@@ -13,7 +13,9 @@ import (
 
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	v2client "github.com/goharbor/go-client/pkg/sdk/v2.0/client"
 	swr "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2"
 	swrmodel "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/swr/v2/model"
 	"github.com/robfig/cron/v3"
@@ -147,6 +149,18 @@ type ServerInterface interface {
 
 	ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	Fix(ctx context.Context, req *types.FixRequest) (interface{}, error)
+
+	// EnableChartRepo Chart Repo API
+	EnableChartRepo(ctx context.Context, req *types.EnableChartRepoRequest) error
+	ListCharts(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	DeleteChart(ctx context.Context, req types.ChartMetaRequest) error
+	ListChartTags(ctx context.Context, req types.ChartMetaRequest, listOption types.ListOptions) (interface{}, error)
+	GetChartTag(ctx context.Context, req types.ChartMetaRequest) (interface{}, error)
+	DeleteChartTag(ctx context.Context, req types.ChartMetaRequest) error
+	UploadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) error
+	DownloadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) (string, string, error)
+
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)
 }
@@ -157,20 +171,22 @@ var (
 )
 
 type ServerController struct {
-	factory     db.ShareDaoFactory
-	cfg         rainbowconfig.Config
-	redisClient *redis.Client
-	Producer    rocketmq.Producer
+	factory      db.ShareDaoFactory
+	cfg          rainbowconfig.Config
+	redisClient  *redis.Client
+	Producer     rocketmq.Producer
+	chartRepoAPI *v2client.HarborAPI
 
 	lock sync.RWMutex
 }
 
-func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client, p rocketmq.Producer) *ServerController {
+func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client, p rocketmq.Producer, cr *v2client.HarborAPI) *ServerController {
 	sc := &ServerController{
-		factory:     f,
-		cfg:         cfg,
-		redisClient: redisClient,
-		Producer:    p,
+		factory:      f,
+		cfg:          cfg,
+		redisClient:  redisClient,
+		Producer:     p,
+		chartRepoAPI: cr,
 	}
 
 	if SwrClient == nil || RegistryId == nil {

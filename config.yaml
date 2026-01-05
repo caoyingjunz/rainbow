@@ -5,6 +5,11 @@ default:
   push_images: false
 
 server:
+  harbor:
+    url: https://registry.pixiuio.com
+    namespace: chartrepo
+    username: admin
+    password: Harbor12345
   auth:
     access_key: access_key
     secret_key: secret_key
