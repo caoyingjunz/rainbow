@@ -53,6 +53,12 @@ func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *types.C
 		if old.UserType != user.UserType {
 			updates["user_type"] = user.UserType
 		}
+		if old.PaymentType != user.PaymentType {
+			updates["payment_type"] = user.PaymentType
+		}
+		if old.RemainCount != user.RemainCount {
+			updates["remain_count"] = user.RemainCount
+		}
 		if len(updates) == 0 {
 			return nil
 		}
