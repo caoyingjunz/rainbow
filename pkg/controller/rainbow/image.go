@@ -132,10 +132,30 @@ func (s *ServerController) UpdateImageStatus(ctx context.Context, req *types.Upd
 		// 重新镜像大小
 		if err = s.CalculateImageSize(ctx, req.ImageId); err != nil {
 			klog.Warningf("计算镜像大小失败 %v", err)
-			return nil
+		}
+		// 更新用户限额
+		if err = s.CalculateUserQuota(ctx, req.ImageId); err != nil {
+			klog.Warningf("更新用户限额失败 %v", err)
 		}
 	}
 	return nil
+}
+
+func (s *ServerController) CalculateUserQuota(ctx context.Context, imageId int64) error {
+	image, err := s.factory.Image().Get(ctx, imageId, false)
+	if err != nil {
+		return err
+	}
+	userObj, err := s.factory.Task().GetUser(ctx, image.UserId)
+	if userObj.PaymentType == PackagePaymentType {
+		// 包年包月无限制
+		return nil
+	}
+	// 按量付费场景，目前仅有镜像个数，每次推送成功后，剩余次数 -1
+	newCount := userObj.RemainCount - 1
+	return s.factory.Task().UpdateUser(ctx, image.UserId, userObj.ResourceVersion, map[string]interface{}{
+		"remain_count": newCount,
+	})
 }
 
 func (s *ServerController) CalculateImageSize(ctx context.Context, imageId int64) error {

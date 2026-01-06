@@ -22,19 +22,26 @@ import (
 const (
 	TaskWaitStatus  = "调度中"
 	HuaweiNamespace = "pixiu-public" // pixiuHub 内置默认外部命名空间
+
+	DemandPaymentType  = 0 // 按需付费
+	PackagePaymentType = 1 // 包年包月
 )
 
 const (
 	defaultNamespace = "emptyNamespace" // pixiuHub 内置默认空命名空间
 	defaultArch      = "linux/amd64"
 	defaultDriver    = "skopeo"
+
+	defaultImageCount = 5 // 默认数量
 )
 
 func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
+	// 验证架构
 	if err := ValidateArch(req.Architecture); err != nil {
 		return err
 	}
 
+	// 验证镜像规格
 	if req.Type == 1 {
 		if !strings.HasPrefix(req.KubernetesVersion, "v1.") {
 			return fmt.Errorf("invaild kubernetes version (%s)", req.KubernetesVersion)
@@ -54,6 +61,40 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 		return utilerrors.NewAggregate(errs)
 	}
 
+	// 验证该用户是否还有余额
+	if err := s.validateUserQuota(ctx, req); err != nil {
+		klog.Errorf("valid user quota failed %v", err)
+		return err
+	}
+	return nil
+}
+
+func (s *ServerController) validateUserQuota(ctx context.Context, req *types.CreateTaskRequest) error {
+	userObj, err := s.factory.Task().GetUser(ctx, req.UserId)
+	if err != nil {
+		klog.Errorf("获取用户失败 %v", err)
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("用户不存在，请联系管理员")
+		}
+		return err
+	}
+
+	imageCount := defaultImageCount // k8s 镜像数是 5
+	if req.Type == 0 {
+		imageCount = len(req.Images)
+	}
+
+	switch userObj.PaymentType {
+	case DemandPaymentType: // 按量付费
+		if imageCount > userObj.RemainCount {
+			return fmt.Errorf("同步镜像数已超过剩余额度，请联系管理员")
+		}
+	case PackagePaymentType: // 包年包月
+		now := time.Now()
+		if now.After(userObj.ExpireTime) {
+			return fmt.Errorf("包年包月已过期，请联系管理员")
+		}
+	}
 	return nil
 }
 
