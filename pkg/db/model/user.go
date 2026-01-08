@@ -20,6 +20,7 @@ type User struct {
 	PaymentType int       `json:"payment_type"`                                                                           // 付费模式 0 按量付费， 1 包年包月
 	ExpireTime  time.Time `gorm:"column:expire_time;type:datetime;default:current_timestamp;not null" json:"expire_time"` // 包年包月时到期时间
 	RemainCount int       `json:"remain_count"`                                                                           // 按量付费时剩余次数
+	EnableChart bool      `json:"enable_chart"`                                                                           // 启用 chart 仓库
 }
 
 func (t *User) TableName() string {

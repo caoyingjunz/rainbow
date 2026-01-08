@@ -28,6 +28,24 @@ func (cr *rainbowRouter) enableChartRepo(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) getChartRepoStatus(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err error
+		req types.ChartMetaRequest
+	)
+	if err = httputils.ShouldBindAny(c, nil, &req, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().GetChartStatus(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) ListCharts(c *gin.Context) {
 	resp := httputils.NewResponse()
 

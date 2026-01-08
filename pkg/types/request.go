@@ -371,6 +371,7 @@ type (
 	}
 
 	EnableChartRepoRequest struct {
+		UserId      string `json:"user_id,omitempty"`
 		UserName    string `json:"user_name,omitempty"`
 		ProjectName string `json:"project_name,omitempty"`
 		Password    string `json:"password"`

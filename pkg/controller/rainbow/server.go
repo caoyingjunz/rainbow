@@ -161,6 +161,8 @@ type ServerInterface interface {
 	UploadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) error
 	DownloadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) (string, string, error)
 
+	GetChartStatus(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)
 }

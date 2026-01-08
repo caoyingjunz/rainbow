@@ -209,6 +209,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	chartRoute := httpEngine.Group("/rainbow/chartrepo")
 	{
 		chartRoute.POST("/enable", cr.enableChartRepo) // 启用 helm chart repo
+		chartRoute.GET("/:project/status", cr.getChartRepoStatus)
 
 		chartRoute.GET("/:project/charts", cr.ListCharts)
 		chartRoute.GET("/:project/charts/:chart", cr.ListChartVersions)

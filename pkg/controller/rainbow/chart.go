@@ -74,6 +74,12 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 	return nil
 }
 
+func (s *ServerController) GetChartStatus(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error) {
+	userId := req.Project
+
+	return nil, nil
+}
+
 func (s *ServerController) ListCharts(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	repoCfg := s.cfg.Server.Harbor
 
