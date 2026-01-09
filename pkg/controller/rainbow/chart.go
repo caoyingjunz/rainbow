@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
@@ -28,7 +30,7 @@ import (
 // 3. 关联用户到项目
 func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.EnableChartRepoRequest) error {
 	if len(req.ProjectName) == 0 {
-		req.ProjectName = req.UserName
+		req.ProjectName = strings.ToLower(req.UserName)
 	}
 
 	// 创建关联项目
@@ -71,13 +73,26 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 		klog.Errorf("关联用户到项目失败 %v", err)
 		return err
 	}
+
+	// 修改为启用状态
+	if err := s.factory.Task().UpdateUserBy(ctx, map[string]interface{}{"enable_chart": true}, db.WithUser(req.UserId)); err != nil {
+		klog.Errorf("更新用户启用状态失败 %v", err)
+		return err
+	}
 	return nil
 }
 
 func (s *ServerController) GetChartStatus(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error) {
-	userId := req.Project
+	// 项目名称和用户名相同
+	userName := req.Project
+	ojb, err := s.factory.Task().GetUserBy(ctx, db.WithName(userName))
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	return struct {
+		EnableChart bool `json:"enable_chart"`
+	}{EnableChart: ojb.EnableChart}, nil
 }
 
 func (s *ServerController) ListCharts(ctx context.Context, listOption types.ListOptions) (interface{}, error) {

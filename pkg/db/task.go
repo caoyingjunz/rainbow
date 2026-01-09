@@ -49,6 +49,9 @@ type TaskInterface interface {
 	DeleteUser(ctx context.Context, userId string) error
 	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
 
+	GetUserBy(ctx context.Context, opts ...Options) (*model.User, error)
+	UpdateUserBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error
+
 	CreateOrUpdateUser(ctx context.Context, object *model.User) error
 
 	ListKubernetesVersions(ctx context.Context, opts ...Options) ([]model.KubernetesVersion, error)
@@ -356,6 +359,22 @@ func (a *task) CreateOrUpdateUser(ctx context.Context, object *model.User) error
 	return tx.Error
 }
 
+func (a *task) UpdateUserBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error {
+	updates["gmt_modified"] = time.Now()
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	f := tx.Model(&model.User{}).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+	return nil
+}
+
 func (a *task) UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error {
 	updates["gmt_modified"] = time.Now()
 	updates["resource_version"] = resourceVersion + 1
@@ -374,6 +393,18 @@ func (a *task) UpdateUser(ctx context.Context, userId string, resourceVersion in
 func (a *task) GetUser(ctx context.Context, userId string) (*model.User, error) {
 	var audit model.User
 	if err := a.db.WithContext(ctx).Where("user_id = ?", userId).First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
+func (a *task) GetUserBy(ctx context.Context, opts ...Options) (*model.User, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	var audit model.User
+	if err := tx.First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
