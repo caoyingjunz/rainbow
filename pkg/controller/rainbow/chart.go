@@ -24,15 +24,27 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
+func (s *ServerController) preEnableChartRepo(ctx context.Context, req *types.EnableChartRepoRequest) error {
+	_, err := s.factory.Task().GetUserBy(ctx, db.WithUser(req.UserId))
+	if err == nil {
+		return nil
+	}
+	klog.Errorf("获取用户失败 %v", err)
+	return fmt.Errorf("获取用户属性失败，请联系管理员同步用户信息")
+}
+
 // EnableChartRepo
 // 1. 初始化项目
 // 2. 创建用户
 // 3. 关联用户到项目
 func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.EnableChartRepoRequest) error {
+	if err := s.preEnableChartRepo(ctx, req); err != nil {
+		return err
+	}
+
 	if len(req.ProjectName) == 0 {
 		req.ProjectName = strings.ToLower(req.UserName)
 	}
-
 	// 创建关联项目
 	if _, err := s.chartRepoAPI.Project.CreateProject(ctx, &project.CreateProjectParams{
 		Project: &models.ProjectReq{
@@ -42,8 +54,10 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 			ProjectName: req.ProjectName,
 		},
 	}); err != nil {
-		klog.Errorf("创建 harbor 项目失败 %v", err)
-		return err
+		if !strings.Contains(err.Error(), "createProjectConflict") {
+			klog.Errorf("创建 harbor 项目失败 %v", err)
+			return err
+		}
 	}
 
 	// 创建用户
@@ -56,8 +70,10 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 			Realname: req.UserName,
 		},
 	}); err != nil {
-		klog.Errorf("创建 harbor 用户失败 %v", err)
-		return err
+		if !strings.Contains(err.Error(), "createUserConflict") {
+			klog.Errorf("创建 harbor 用户失败 %v", err)
+			return err
+		}
 	}
 
 	// 关联用户到项目
@@ -70,8 +86,10 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 			},
 		},
 	}); err != nil {
-		klog.Errorf("关联用户到项目失败 %v", err)
-		return err
+		if !strings.Contains(err.Error(), "createProjectMemberConflict") {
+			klog.Errorf("创建 harbor 用户失败 %v", err)
+			return err
+		}
 	}
 
 	// 修改为启用状态
