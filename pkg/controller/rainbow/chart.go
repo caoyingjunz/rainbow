@@ -58,6 +58,7 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 			klog.Errorf("创建 harbor 项目失败 %v", err)
 			return err
 		}
+		klog.Warningf("项目 %s 已经存在", req.ProjectName)
 	}
 
 	// 创建用户
@@ -74,6 +75,7 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 			klog.Errorf("创建 harbor 用户失败 %v", err)
 			return err
 		}
+		klog.Warningf("用户 %s 已经存在", req.UserName)
 	}
 
 	// 关联用户到项目
@@ -90,6 +92,7 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 			klog.Errorf("创建 harbor 用户失败 %v", err)
 			return err
 		}
+		klog.Warningf("用户关系关联 %s 已经存在", req.UserName)
 	}
 
 	// 修改为启用状态
