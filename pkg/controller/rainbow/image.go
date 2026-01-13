@@ -499,5 +499,38 @@ func (s *ServerController) UpdateNamespace(ctx context.Context, req *types.Updat
 }
 
 func (s *ServerController) ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Image().ListNamespaces(ctx)
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+	opts := []db.Options{
+		db.WithNameLike(listOption.NameSelector),
+	}
+
+	var err error
+	pageResult.Total, err = s.factory.Image().GetNamespaceCount(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取命名空间总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+
+	pageResult.Items, err = s.factory.Image().ListNamespaces(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取命名空间失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }

@@ -171,12 +171,12 @@ type (
 	}
 
 	CreateUserRequest struct {
-		Name        string `json:"name"`
-		UserId      string `json:"user_id"`
-		UserType    int    `json:"user_type"` // 个人版，专有版
-		PaymentType int    `json:"payment_type"`
-		ExpireTime  string `json:"expire_time"`
-		RemainCount int    `json:"remain_count"`
+		Name        string  `json:"name"`
+		UserId      string  `json:"user_id"`
+		UserType    int     `json:"user_type"` // 个人版，专有版
+		PaymentType int     `json:"payment_type"`
+		ExpireTime  *string `json:"expire_time"` // payment_type为 0 时无需设置
+		RemainCount int     `json:"remain_count"`
 	}
 
 	UpdateUserRequest struct {

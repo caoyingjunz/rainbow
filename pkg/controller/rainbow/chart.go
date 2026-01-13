@@ -22,6 +22,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 func (s *ServerController) preEnableChartRepo(ctx context.Context, req *types.EnableChartRepoRequest) error {
@@ -108,6 +109,12 @@ func (s *ServerController) GetChartStatus(ctx context.Context, req *types.ChartM
 	userName := req.Project
 	ojb, err := s.factory.Task().GetUserBy(ctx, db.WithName(userName))
 	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.Warningf("用户信息未同步，返回默认值")
+			return struct {
+				EnableChart bool `json:"enable_chart"`
+			}{EnableChart: false}, nil
+		}
 		return nil, err
 	}
 
