@@ -36,7 +36,7 @@ func (s *ServerController) isUserExist(ctx context.Context, userId string) (bool
 func (s *ServerController) preCreateOrUpdateUser(ctx context.Context, user *types.CreateUserRequest) error {
 	if user.PaymentType == PackagePaymentType {
 		if user.ExpireTime == nil {
-			return fmt.Errorf("包年包月类型时，超时时间为必填")
+			return fmt.Errorf("包年包月类型时，结束时间为必填项")
 		}
 	}
 	return nil
