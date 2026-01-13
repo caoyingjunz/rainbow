@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/caoyingjunz/rainbow/pkg/util/errors"
-
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 func parseTime(t string) (time.Time, error) {
-	pt, err := time.Parse("2006-01-02 15:04:05", t)
+	pt, err := time.Parse(time.RFC3339, t)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("解析时间(%s)失败: %v", t, err)
 	}
@@ -34,19 +33,25 @@ func (s *ServerController) isUserExist(ctx context.Context, userId string) (bool
 	return false, err
 }
 
+func (s *ServerController) preCreateOrUpdateUser(ctx context.Context, user *types.CreateUserRequest) error {
+	if user.PaymentType == PackagePaymentType {
+		if user.ExpireTime == nil {
+			return fmt.Errorf("包年包月类型时，超时时间为必填")
+		}
+	}
+	return nil
+}
+
 func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *types.CreateUserRequest) error {
+	if err := s.preCreateOrUpdateUser(ctx, user); err != nil {
+		return err
+	}
+
 	old, err := s.factory.Task().GetUser(ctx, user.UserId)
 	if err == nil {
 		// 用户已存在，则更新
 		updates := make(map[string]interface{})
-		et, err := parseTime(user.ExpireTime)
-		if err != nil {
-			klog.Errorf("%v", err)
-			return err
-		}
-		if old.ExpireTime != et {
-			updates["expire_time"] = et
-		}
+
 		if old.Name != user.Name {
 			updates["name"] = user.Name
 		}
@@ -56,9 +61,22 @@ func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *types.C
 		if old.PaymentType != user.PaymentType {
 			updates["payment_type"] = user.PaymentType
 		}
-		if old.RemainCount != user.RemainCount {
-			updates["remain_count"] = user.RemainCount
+
+		if user.PaymentType == PackagePaymentType {
+			et, err := parseTime(*user.ExpireTime)
+			if err != nil {
+				klog.Errorf("%v", err)
+				return err
+			}
+			if old.ExpireTime != et {
+				updates["expire_time"] = et
+			}
+		} else {
+			if old.RemainCount != user.RemainCount {
+				updates["remain_count"] = user.RemainCount
+			}
 		}
+		// 无变更时，直接退出
 		if len(updates) == 0 {
 			return nil
 		}
@@ -87,19 +105,25 @@ func (s *ServerController) CreateOrUpdateUsers(ctx context.Context, req *types.C
 }
 
 func (s *ServerController) CreateUser(ctx context.Context, req *types.CreateUserRequest) error {
-	et, err := parseTime(req.ExpireTime)
-	if err != nil {
-		klog.Errorf("%v", err)
-		return err
-	}
-	if err = s.factory.Task().CreateUser(ctx, &model.User{
+	obj := &model.User{
 		Name:        req.Name,
 		UserId:      req.UserId,
 		UserType:    req.UserType,
 		PaymentType: req.PaymentType,
-		RemainCount: req.RemainCount,
-		ExpireTime:  et,
-	}); err != nil {
+	}
+
+	if req.PaymentType == PackagePaymentType {
+		et, err := parseTime(*req.ExpireTime)
+		if err != nil {
+			klog.Errorf("%v", err)
+			return err
+		}
+		obj.ExpireTime = et
+	} else {
+		obj.RemainCount = req.RemainCount
+	}
+
+	if err := s.factory.Task().CreateUser(ctx, obj); err != nil {
 		klog.Errorf("创建用户 %s 失败 %v", req.Name, err)
 		return err
 	}
