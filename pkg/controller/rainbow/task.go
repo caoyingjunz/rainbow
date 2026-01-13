@@ -32,7 +32,8 @@ const (
 	defaultArch      = "linux/amd64"
 	defaultDriver    = "skopeo"
 
-	defaultImageCount = 5 // 默认数量
+	k8sImageCount      = 5 // 默认数量
+	defaultRemainCount = 20
 )
 
 func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
@@ -79,7 +80,7 @@ func (s *ServerController) validateUserQuota(ctx context.Context, req *types.Cre
 		return err
 	}
 
-	imageCount := defaultImageCount // k8s 镜像数是 5
+	imageCount := k8sImageCount // k8s 镜像数是 5
 	if req.Type == 0 {
 		imageCount = len(req.Images)
 	}

@@ -49,6 +49,11 @@ func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *types.C
 
 	old, err := s.factory.Task().GetUser(ctx, user.UserId)
 	if err == nil {
+		// 同步用户时，忽略已存在用户
+		if user.Sync {
+			return nil
+		}
+
 		// 用户已存在，则更新
 		updates := make(map[string]interface{})
 
@@ -112,15 +117,20 @@ func (s *ServerController) CreateUser(ctx context.Context, req *types.CreateUser
 		PaymentType: req.PaymentType,
 	}
 
-	if req.PaymentType == PackagePaymentType {
-		et, err := parseTime(*req.ExpireTime)
-		if err != nil {
-			klog.Errorf("%v", err)
-			return err
-		}
-		obj.ExpireTime = et
+	if req.Sync {
+		obj.PaymentType = DemandPaymentType
+		obj.RemainCount = defaultRemainCount
 	} else {
-		obj.RemainCount = req.RemainCount
+		if req.PaymentType == PackagePaymentType {
+			et, err := parseTime(*req.ExpireTime)
+			if err != nil {
+				klog.Errorf("%v", err)
+				return err
+			}
+			obj.ExpireTime = et
+		} else {
+			obj.RemainCount = req.RemainCount
+		}
 	}
 
 	if err := s.factory.Task().CreateUser(ctx, obj); err != nil {

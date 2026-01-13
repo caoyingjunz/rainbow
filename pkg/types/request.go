@@ -177,6 +177,7 @@ type (
 		PaymentType int     `json:"payment_type"`
 		ExpireTime  *string `json:"expire_time"` // payment_type为 0 时无需设置
 		RemainCount int     `json:"remain_count"`
+		Sync        bool    `json:"sync"`
 	}
 
 	UpdateUserRequest struct {
