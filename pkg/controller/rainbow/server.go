@@ -233,8 +233,8 @@ func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interfa
 	return s.factory.Agent().Get(ctx, agentId)
 }
 
-func (s *ServerController) updateRemoteAgent(ctx context.Context, sshConfig sshutil.SSHConfig, agentName string) error {
-	fmt.Println("sshConfig", sshConfig, agentName)
+func (s *ServerController) updateRemoteAgent(ctx context.Context, sshConfig sshutil.SSHConfig, req *types.UpdateAgentStatusRequest) error {
+	fmt.Println("sshConfig", sshConfig, req)
 	return nil
 }
 
@@ -256,7 +256,7 @@ func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.Upd
 	//if err := s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)}); err != nil {
 	//	return err
 	//}
-	go func() { _ = s.updateRemoteAgent(ctx, sshConfig, req.AgentName) }()
+	go func() { _ = s.updateRemoteAgent(ctx, sshConfig, req) }()
 	return nil
 }
 
