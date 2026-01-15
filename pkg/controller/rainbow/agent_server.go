@@ -81,6 +81,13 @@ func (s *ServerController) ReconcileAgent(ctx context.Context, sshConfig *sshuti
 }
 
 func (s *ServerController) IsAgentRunningStatus(status string) bool {
+	runningStatus := model.GetAgentRunningStatus()
+	for _, rs := range runningStatus {
+		if rs == status {
+			return true
+		}
+	}
+
 	return false
 }
 
