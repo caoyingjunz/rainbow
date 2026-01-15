@@ -15,9 +15,9 @@ const (
 	UnRunAgentType   string = "离线"
 	UnknownAgentType string = "未知"
 	ErrorAgentType   string = "异常"
+	UnStartType      string = "未启动"
 
-	// Agent 的中间处理状态
-	UnStartType         string = "未启动"
+	// agent 的中间处理状态
 	DeletingAgentType   string = "删除中"
 	StartingAgentType   string = "启动中"
 	StoppingAgentType   string = "停止中"

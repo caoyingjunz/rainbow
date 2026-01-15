@@ -20,6 +20,9 @@ rainbowd:
   template_dir: /tmp/plugin
   data_dir: /tmp
   agent_image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/rainbow-agent:v1.1
+  nodes:
+    - name: test-name
+      host: kirin
 
 agent:
   name: agent-dev

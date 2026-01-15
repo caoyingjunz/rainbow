@@ -71,10 +71,17 @@ type ServerOption struct {
 }
 
 type RainbowdOption struct {
-	Name        string `yaml:"name"`
-	TemplateDir string `yaml:"template_dir"`
-	DataDir     string `yaml:"data_dir"`
-	AgentImage  string `yaml:"agent_image"`
+	Name        string     `yaml:"name"`
+	TemplateDir string     `yaml:"template_dir"`
+	DataDir     string     `yaml:"data_dir"`
+	AgentImage  string     `yaml:"agent_image"`
+	Nodes       []NodeSpec `yaml:"nodes,omitempty"`
+}
+
+type NodeSpec struct {
+	Name string `yaml:"name,omitempty"`
+	Host string `yaml:"host,omitempty"`
+	Port int    `yaml:"port,omitempty"`
 }
 
 type RocketmqOption struct {

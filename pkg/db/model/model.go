@@ -9,3 +9,14 @@ func register(model ...interface{}) {
 func GetMigrationModels() []interface{} {
 	return models
 }
+
+func GetAgentRunningStatus() []string {
+	return []string{
+		DeletingAgentType,
+		StartingAgentType,
+		StoppingAgentType,
+		RestartingAgentType,
+		UpgradeAgentType,
+		OfflineAgentType,
+	}
+}
