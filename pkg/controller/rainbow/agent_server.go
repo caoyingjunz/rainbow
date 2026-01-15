@@ -1,20 +1,23 @@
 package rainbow
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
-	"github.com/caoyingjunz/rainbow/pkg/util"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"gopkg.in/yaml.v3"
 	"k8s.io/klog/v2"
 
+	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/sshutil"
 )
 
@@ -63,7 +66,7 @@ func (s *ServerController) ReconcileAgent(ctx context.Context, sshConfig *sshuti
 				return fmt.Errorf("卸载 agent(%s) 失败 %v", agentName, err1)
 			}
 		}
-		if err = s.ResetAgentMetadata(sshConfig, agentName); err != nil {
+		if err = s.ResetAgentMetadata(sshConfig, agent); err != nil {
 			return err
 		}
 	}
@@ -81,13 +84,14 @@ func (s *ServerController) IsAgentRunningStatus(status string) bool {
 	return false
 }
 
-func (s *ServerController) ResetAgentMetadata(sshConfig *sshutil.SSHConfig, containerName string) error {
+func (s *ServerController) ResetAgentMetadata(sshConfig *sshutil.SSHConfig, agent *model.Agent) error {
 	sshClient, err := sshutil.NewSSHClient(sshConfig)
 	if err != nil {
 		return err
 	}
 	defer sshClient.Close()
 
+	containerName := agent.Name
 	destDir := filepath.Join(s.cfg.Rainbowd.DataDir, containerName)
 
 	result, err := sshClient.RunCommand(fmt.Sprintf("mkdir -p %s", destDir))
@@ -118,16 +122,36 @@ func (s *ServerController) ResetAgentMetadata(sshConfig *sshutil.SSHConfig, cont
 	}
 	// 拷贝配置文件
 	if err = sshClient.UploadFile(s.cfg.Rainbowd.TemplateDir+fmt.Sprintf("/%s-config.yaml", containerName), destDir+"/config.yaml", "0644"); err != nil {
-		klog.Errorf("传输 yaml 配置文件失败", err)
+		klog.Errorf("传输 yaml 配置文件失败 %v", err)
+		return err
 	}
 
 	// 拷贝 agent 每次都重置最新
 	if err = sshClient.UploadFile(s.cfg.Rainbowd.TemplateDir+"/agent", destDir+"/agent", "0755"); err != nil {
-		klog.Errorf("传输 agent 二进制文件失败", err)
+		klog.Errorf("传输 agent 二进制文件失败 %v", err)
+		return err
 	}
+
 	// 拷贝 plugin 项目
 	if err = sshClient.UploadDir(s.cfg.Rainbowd.TemplateDir+"/plugin", destDir+"/plugin"); err != nil {
-		klog.Errorf("传输 plugin 文件失败", err)
+		klog.Errorf("传输 plugin 文件失败 %v", err)
+		return err
+	}
+
+	gc := struct{ URL string }{URL: fmt.Sprintf("https://%s:%s@github.com/%s/plugin.git", agent.GithubUser, agent.GithubToken, agent.GithubUser)}
+	tpl := template.New(containerName)
+	t := template.Must(tpl.Parse(GitConfig))
+	var buf bytes.Buffer
+	if err = t.Execute(&buf, gc); err != nil {
+		return err
+	}
+	if err = ioutil.WriteFile(s.cfg.Rainbowd.TemplateDir+fmt.Sprintf("/%s-git-config", containerName), buf.Bytes(), 0644); err != nil {
+		klog.Errorf("生成 git config 文件失败 %v", err)
+		return err
+	}
+	if err = sshClient.UploadFile(s.cfg.Rainbowd.TemplateDir+fmt.Sprintf("/%s-git-config", containerName), destDir+"/plugin/.git/config", "0755"); err != nil {
+		klog.Errorf("传输 /plugin/.git/config 失败 %v", err)
+		return err
 	}
 
 	return nil
