@@ -229,56 +229,6 @@ func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redi
 	return sc
 }
 
-func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interface{}, error) {
-	return s.factory.Agent().Get(ctx, agentId)
-}
-
-func (s *ServerController) updateRemoteAgent(ctx context.Context, sshConfig sshutil.SSHConfig, req *types.UpdateAgentStatusRequest) error {
-	fmt.Println("sshConfig", sshConfig, req)
-	return nil
-}
-
-func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error {
-	if req.Status == "强制在线" || req.Status == "强制离线" {
-		realStatus := strings.Replace(req.Status, "强制", "", -1)
-		return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": realStatus, "message": fmt.Sprintf("Agent has been set to %s", realStatus)})
-	}
-
-	old, err := s.factory.Agent().GetByName(ctx, req.AgentName)
-	if err != nil {
-		return err
-	}
-	sshConfig, ok := s.sshConfigMap[old.RainbowdName]
-	if !ok {
-		return fmt.Errorf("未加载 rainbow node(%s)", old.RainbowdName)
-	}
-
-	//if err := s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)}); err != nil {
-	//	return err
-	//}
-	go func() { _ = s.updateRemoteAgent(ctx, sshConfig, req) }()
-	return nil
-}
-
-func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAgentRequest) error {
-	repo := req.GithubRepository
-	if len(repo) == 0 {
-		repo = fmt.Sprintf("https://github.com/%s/plugin.git", req.GithubUser)
-	}
-
-	updates := make(map[string]interface{})
-	updates["github_user"] = req.GithubUser
-	updates["github_repository"] = repo
-	updates["github_token"] = req.GithubToken
-	updates["github_email"] = req.GithubEmail
-	updates["rainbowd_name"] = req.RainbowdName
-	return s.factory.Agent().UpdateByName(ctx, req.AgentName, updates)
-}
-
-func (s *ServerController) ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Agent().List(ctx, db.WithNameLike(listOption.NameSelector))
-}
-
 func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.schedule(ctx)
 	go s.sync(ctx)

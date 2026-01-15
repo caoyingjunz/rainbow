@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -53,12 +55,27 @@ func (s *SSHClient) connect() error {
 	if s.config.Password != "" {
 		authMethods = append(authMethods, ssh.Password(s.config.Password))
 	}
+	if s.config.PrivateKey != "" {
+		keyAuth, err := s.privateKeyAuthFromFile(s.config.PrivateKey)
+		if err == nil {
+			authMethods = append(authMethods, keyAuth)
+		}
+	}
+
+	// 尝试获取私钥
+	if len(authMethods) == 0 {
+		keyAuth, err := s.tryDefaultPrivateKeys()
+		if err == nil {
+			authMethods = append(authMethods, keyAuth)
+		}
+	}
+
 	if len(authMethods) == 0 {
 		return fmt.Errorf("必须提供密码或私钥")
 	}
 
 	sshConfig := &ssh.ClientConfig{
-		User:            s.config.Username,
+		User:            "root",
 		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 生产环境应该验证主机密钥
 		Timeout:         s.config.Timeout,
@@ -88,6 +105,7 @@ func (s *SSHClient) RunCommand(cmd string) (*CommandResult, error) {
 	var stdout, stderr bytes.Buffer
 	session.Stdout = &stdout
 	session.Stderr = &stderr
+
 	err = session.Run(cmd)
 	result := &CommandResult{
 		Stdout:   stdout.String(),
@@ -120,6 +138,41 @@ func (s *SSHClient) RunCommands(commands []string) ([]*CommandResult, error) {
 	}
 
 	return results, nil
+}
+
+// UploadDir 上传文件夹到远程服务器
+func (s *SSHClient) UploadDir(localDir, remoteDir string) error {
+	var tarBuffer bytes.Buffer
+	cmd := exec.Command("tar", "-czf", "-", "-C", localDir, ".")
+	cmd.Stdout = &tarBuffer
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("打包目录失败: %w", err)
+	}
+
+	// 创建远程会话
+	session, err := s.client.NewSession()
+	if err != nil {
+		return fmt.Errorf("创建会话失败: %w", err)
+	}
+	defer session.Close()
+
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("获取输入管道失败: %w", err)
+	}
+
+	// 在远程解压
+	remoteCmd := fmt.Sprintf("mkdir -p %s && tar -xzf - -C %s", remoteDir, remoteDir)
+	if err := session.Start(remoteCmd); err != nil {
+		return fmt.Errorf("启动远程命令失败: %w", err)
+	}
+	// 发送tar数据
+	if _, err := io.Copy(stdin, &tarBuffer); err != nil {
+		return fmt.Errorf("发送压缩数据失败: %w", err)
+	}
+
+	stdin.Close()
+	return session.Wait()
 }
 
 // UploadFile 上传文件到远程服务器
@@ -168,13 +221,52 @@ func (s *SSHClient) Close() error {
 	return nil
 }
 
-// Execute 简单执行接口（一步完成连接、执行、关闭）
-func Execute(config *SSHConfig, command string) (*CommandResult, error) {
-	client, err := NewSSHClient(config)
+func (s *SSHClient) tryDefaultPrivateKeys() (ssh.AuthMethod, error) {
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("获取用户主目录失败: %w", err)
 	}
-	defer client.Close()
 
-	return client.RunCommand(command)
+	sshDir := filepath.Join(homeDir, ".ssh")
+	defaultKeys := []string{
+		filepath.Join(sshDir, "id_rsa"),
+		filepath.Join(sshDir, "id_dsa"),
+	}
+	for _, keyPath := range defaultKeys {
+		if _, err := os.Stat(keyPath); err == nil {
+			auth, err := s.privateKeyAuthFromFile(keyPath)
+			if err == nil {
+				return auth, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("没有找到默认私钥文件")
+}
+
+func (s *SSHClient) privateKeyAuthFromFile(privateKeyPath string) (ssh.AuthMethod, error) {
+	key, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("读取私钥文件失败: %w", err)
+	}
+
+	return s.privateKeyAuthFromBytes(key)
+}
+
+func (s *SSHClient) privateKeyAuthFromBytes(key []byte) (ssh.AuthMethod, error) {
+	// 首先尝试解析为普通私钥
+	signer, err := ssh.ParsePrivateKey(key)
+	if err == nil {
+		return ssh.PublicKeys(signer), nil
+	}
+
+	// 如果失败，尝试解析为带密码的私钥
+	if s.config.Password != "" {
+		signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(s.config.Password))
+		if err == nil {
+			return ssh.PublicKeys(signer), nil
+		}
+	}
+
+	return nil, fmt.Errorf("解析私钥失败: %w", err)
 }
