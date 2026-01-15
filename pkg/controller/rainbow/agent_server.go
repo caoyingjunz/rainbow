@@ -36,46 +36,49 @@ func (s *ServerController) GetAgent(ctx context.Context, agentId int64) (interfa
 }
 
 func (s *ServerController) ReconcileAgent(ctx context.Context, sshConfig *sshutil.SSHConfig, agent *model.Agent) error {
-	// TODO 测试，后续删除
-	agent.Name = "harbor-jobservice"
 	agentName := agent.Name
-
 	old, err := s.GetAgentContainer(sshConfig, agentName)
 	if err != nil {
 		klog.Errorf("获取 agent 容器失败 %v", err)
 		return err
 	}
 	if old == nil {
-		klog.Errorf("agent 容器(%s)不存在", agentName)
+		klog.Infof("agent 容器(%s)不存在", agentName)
 	}
 
 	var (
 		needUpdated bool
 	)
+	destStatus := model.RunAgentType
 
 	switch agent.Status {
 	case model.RestartingAgentType:
 		klog.Infof("agent(%s)重启中", agentName)
 		err = s.RestartAgentContainer(sshConfig, agent)
 		needUpdated = true
-	case model.UpgradeAgentType:
-		klog.Infof("agent(%s)升级中", agentName)
+	case model.UpgradeAgentType, model.StartingAgentType, model.RunAgentType:
+		klog.Infof("agent(%s)正在%s", agentName, agent.Status)
 		if old != nil {
 			// 先卸载原有容器，然后刷新配置，重新启动
 			if err1 := s.UninstallAgentContainer(sshConfig, agent); err1 != nil {
 				return fmt.Errorf("卸载 agent(%s) 失败 %v", agentName, err1)
 			}
 		}
-		if err = s.ResetAgentMetadata(sshConfig, agent); err != nil {
-			return err
-		}
+		err = s.InstallAgentContainer(sshConfig, agent)
+		needUpdated = true
+	case model.StoppingAgentType, model.OfflineAgentType, model.DeletingAgentType:
+		klog.Infof("agent(%s)正在%s", agentName, agent.Status)
+		err = s.UninstallAgentContainer(sshConfig, agent)
+		destStatus = model.UnRunAgentType
 	}
 	if err != nil {
 		return err
 	}
 
 	if needUpdated {
-		fmt.Println("需要更新状态")
+		if err = s.factory.Agent().Update(context.TODO(), agent.Id, agent.ResourceVersion, map[string]interface{}{"status": destStatus}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -145,22 +148,6 @@ func (s *ServerController) ResetAgentMetadata(sshConfig *sshutil.SSHConfig, agen
 		return err
 	}
 
-	gc := struct{ URL string }{URL: fmt.Sprintf("https://%s:%s@github.com/%s/plugin.git", agent.GithubUser, agent.GithubToken, agent.GithubUser)}
-	tpl := template.New(containerName)
-	t := template.Must(tpl.Parse(GitConfig))
-	var buf bytes.Buffer
-	if err = t.Execute(&buf, gc); err != nil {
-		return err
-	}
-	if err = ioutil.WriteFile(s.cfg.Rainbowd.TemplateDir+fmt.Sprintf("/%s-git-config", containerName), buf.Bytes(), 0644); err != nil {
-		klog.Errorf("生成 git config 文件失败 %v", err)
-		return err
-	}
-	if err = sshClient.UploadFile(s.cfg.Rainbowd.TemplateDir+fmt.Sprintf("/%s-git-config", containerName), destDir+"/plugin/.git/config", "0755"); err != nil {
-		klog.Errorf("传输 /plugin/.git/config 失败 %v", err)
-		return err
-	}
-
 	return nil
 }
 
@@ -187,8 +174,14 @@ func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.Upd
 	if err := s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": req.Status, "message": fmt.Sprintf("Agent has been set to %s", req.Status)}); err != nil {
 		return err
 	}
+	newAgent, err := s.factory.Agent().GetByName(ctx, req.AgentName)
+	if err != nil {
+		klog.Errorf("获取最新的agent失败 %v", err)
+		return err
+	}
+
 	go func() {
-		if err = s.ReconcileAgent(ctx, &sshConfig, old); err != nil {
+		if err = s.ReconcileAgent(ctx, &sshConfig, newAgent); err != nil {
 			klog.Errorf("远程更新agent失败 %v", err)
 		}
 	}()
@@ -243,7 +236,114 @@ func (s *ServerController) GetAgentContainer(sshConfig *sshutil.SSHConfig, conta
 	return nil, nil
 }
 
-func (s *ServerController) InstallAgentContainer() error {
+func (s *ServerController) InstallAgentContainer(sshConfig *sshutil.SSHConfig, agent *model.Agent) error {
+	if err := s.ResetAgentMetadata(sshConfig, agent); err != nil {
+		return err
+	}
+
+	if err := s.BootstrapAgentContainer(sshConfig, agent); err != nil {
+		return err
+	}
+
+	return s.StartAgentContainer(sshConfig, agent)
+}
+
+func (s *ServerController) StartAgentContainer(sshConfig *sshutil.SSHConfig, agent *model.Agent) error {
+	sshClient, err := sshutil.NewSSHClient(sshConfig)
+	if err != nil {
+		return err
+	}
+	defer sshClient.Close()
+
+	cmd1 := []string{"docker", "run", "-d", "--name", agent.Name,
+		"-v", fmt.Sprintf("%s:/data", s.cfg.Rainbowd.DataDir+"/"+agent.Name),
+		"-v", "/etc/localtime:/etc/localtime:ro",
+		"--network", "host", s.cfg.Rainbowd.AgentImage, "/data/agent", "--configFile", "/data/config.yaml"}
+	// 输入 github 的配置
+	cmd2 := []string{"docker", "exec", agent.Name, "git", "config", "--global", "user.name", agent.GithubUser}
+	cmd3 := []string{"docker", "exec", agent.Name, "git", "config", "--global", "user.email", agent.GithubEmail}
+
+	results, err := sshClient.RunCommands([]string{
+		strings.Join(cmd1, " "),
+		strings.Join(cmd2, " "),
+		strings.Join(cmd3, " "),
+	})
+	if err != nil {
+		return err
+	}
+	for _, result := range results {
+		if result.ExitCode != 0 {
+			return fmt.Errorf("远程执行失败: %s", result.Stderr)
+		}
+	}
+	return nil
+}
+
+func (s *ServerController) BootstrapAgentContainer(sshConfig *sshutil.SSHConfig, agent *model.Agent) error {
+	sshClient, err := sshutil.NewSSHClient(sshConfig)
+	if err != nil {
+		return err
+	}
+	defer sshClient.Close()
+
+	containerName := "upgrade-" + agent.Name
+	pluginDir := "/data/plugin/"
+
+	cmd1 := []string{"docker", "run", "-d", "--name", containerName, "-v", fmt.Sprintf("%s:/data", s.cfg.Rainbowd.DataDir+"/"+agent.Name), "-v", "/etc/localtime:/etc/localtime:ro", "--network", "host", s.cfg.Rainbowd.AgentImage, "sleep", "infinity"}
+	cmd2 := []string{"docker", "exec", containerName, "git", "init", pluginDir}
+	cmd3 := []string{"docker", "exec", containerName, "git", "config", "--global", "user.name", agent.GithubUser}
+	cmd4 := []string{"docker", "exec", containerName, "git", "config", "--global", "user.email", agent.GithubEmail}
+
+	results, err := sshClient.RunCommands([]string{
+		strings.Join(cmd1, " "),
+		strings.Join(cmd2, " "),
+		strings.Join(cmd3, " "),
+		strings.Join(cmd4, " "),
+	})
+	if err != nil {
+		return err
+	}
+	for _, result := range results {
+		if result.ExitCode != 0 {
+			return fmt.Errorf("远程执行失败: %s", result.Stderr)
+		}
+	}
+
+	gc := struct{ URL string }{URL: fmt.Sprintf("https://%s:%s@github.com/%s/plugin.git", agent.GithubUser, agent.GithubToken, agent.GithubUser)}
+	tpl := template.New(containerName)
+	t := template.Must(tpl.Parse(GitConfig))
+	var buf bytes.Buffer
+	if err = t.Execute(&buf, gc); err != nil {
+		return err
+	}
+
+	destDir := filepath.Join(s.cfg.Rainbowd.DataDir, containerName)
+	if err = ioutil.WriteFile(s.cfg.Rainbowd.TemplateDir+fmt.Sprintf("/%s-git-config", containerName), buf.Bytes(), 0644); err != nil {
+		klog.Errorf("生成 git config 文件失败 %v", err)
+		return err
+	}
+	if err = sshClient.UploadFile(s.cfg.Rainbowd.TemplateDir+fmt.Sprintf("/%s-git-config", containerName), destDir+"/plugin/.git/config", "0755"); err != nil {
+		klog.Errorf("传输 /plugin/.git/config 失败 %v", err)
+		return err
+	}
+
+	cmd5 := []string{"docker", "exec", "-w", pluginDir, containerName, "git", "add", "."}
+	cmd6 := []string{"docker", "exec", "-w", pluginDir, containerName, "git", "commit", "-m", "init"}
+	cmd7 := []string{"docker", "exec", "-w", pluginDir, containerName, "git", "push", "--set-upstream", "origin", "master", "--force"}
+	results, err = sshClient.RunCommands([]string{
+		strings.Join(cmd5, " "),
+		strings.Join(cmd6, " "),
+		strings.Join(cmd7, " "),
+	})
+	if err != nil {
+		return err
+	}
+	for _, result := range results {
+		if result.ExitCode != 0 {
+			return fmt.Errorf("远程执行失败: %s", result.Stderr)
+		}
+	}
+
 	return nil
 }
 
@@ -271,7 +371,7 @@ func (s *ServerController) UninstallAgentContainer(sshConfig *sshutil.SSHConfig,
 	}
 	for _, result := range results {
 		if result.ExitCode != 0 {
-			return fmt.Errorf("docker 命令执行失败: %s", result.Stderr)
+			return fmt.Errorf("远程命令执行失败: %s", result.Stderr)
 		}
 	}
 
