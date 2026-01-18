@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"k8s.io/klog/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -96,6 +97,7 @@ func (s *SSHClient) RunCommand(cmd string) (*CommandResult, error) {
 		return nil, fmt.Errorf("SSH连接未建立")
 	}
 
+	klog.V(1).Infof("执行命令(%s)", cmd)
 	session, err := s.client.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("创建会话失败: %w", err)
@@ -119,7 +121,7 @@ func (s *SSHClient) RunCommand(cmd string) (*CommandResult, error) {
 			result.ExitCode = exitErr.ExitStatus()
 		} else {
 			result.Error = err
-			return result, fmt.Errorf("执行命令失败: %w", err)
+			return result, fmt.Errorf("执行命令失败: %v", err)
 		}
 	}
 
@@ -132,8 +134,13 @@ func (s *SSHClient) RunCommands(commands []string) ([]*CommandResult, error) {
 	for _, cmd := range commands {
 		result, err := s.RunCommand(cmd)
 		if err != nil {
-			return results, fmt.Errorf("执行命令'%s'失败: %w", cmd, err)
+			klog.Errorf("执行命令(%s)失败: %v", cmd, err)
+			return results, fmt.Errorf("执行命令(%s)失败: %v", cmd, err)
 		}
+		if result.ExitCode != 0 {
+			return results, fmt.Errorf("执行命令(%s) exitCode %d", cmd, result.ExitCode)
+		}
+
 		results = append(results, result)
 	}
 
@@ -141,8 +148,9 @@ func (s *SSHClient) RunCommands(commands []string) ([]*CommandResult, error) {
 }
 
 // UploadDir 上传文件夹到远程服务器
-func (s *SSHClient) UploadDir(localDir, remoteDir string) error {
+func (s *SSHClient) UploadDir(localDir, remoteDir string, ug string) error {
 	var tarBuffer bytes.Buffer
+
 	cmd := exec.Command("tar", "-czf", "-", "-C", localDir, ".")
 	cmd.Stdout = &tarBuffer
 	if err := cmd.Run(); err != nil {
@@ -163,6 +171,9 @@ func (s *SSHClient) UploadDir(localDir, remoteDir string) error {
 
 	// 在远程解压
 	remoteCmd := fmt.Sprintf("mkdir -p %s && tar -xzf - -C %s", remoteDir, remoteDir)
+	if len(ug) != 0 {
+		remoteCmd = remoteCmd + fmt.Sprintf(" && chown %s -R %s ", ug, remoteDir)
+	}
 	if err := session.Start(remoteCmd); err != nil {
 		return fmt.Errorf("启动远程命令失败: %w", err)
 	}
