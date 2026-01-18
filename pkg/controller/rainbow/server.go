@@ -229,6 +229,30 @@ func NewServer(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redi
 	return sc
 }
 
+func (s *ServerController) RegisterRainbowd(ctx context.Context) error {
+	if len(s.cfg.Rainbowd.Nodes) == 0 {
+		return fmt.Errorf("rainbowd not found")
+	}
+
+	for _, node := range s.cfg.Rainbowd.Nodes {
+		var err error
+		_, err = s.factory.Rainbowd().GetByName(ctx, node.Name)
+		if err == nil {
+			return nil
+		}
+		_, err = s.factory.Rainbowd().Create(ctx, &model.Rainbowd{
+			Name:   node.Name,
+			Host:   node.Host,
+			Status: model.RunAgentType,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.schedule(ctx)
 	go s.sync(ctx)
@@ -242,6 +266,11 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 		return err
 	}
 
+	// 初始化 agent 属性
+	klog.Infof("starting register rainbowd")
+	if err := s.RegisterRainbowd(ctx); err != nil {
+		return err
+	}
 	return nil
 }
 

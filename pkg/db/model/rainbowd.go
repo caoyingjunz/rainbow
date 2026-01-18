@@ -14,6 +14,7 @@ type Rainbowd struct {
 	rainbow.Model
 
 	Name               string    `json:"name"`
+	Host               string    `json:"host"`
 	Status             string    `gorm:"column:status;" json:"status"`
 	LastTransitionTime time.Time `gorm:"column:last_transition_time;type:datetime;default:current_timestamp;not null" json:"last_transition_time"`
 }
