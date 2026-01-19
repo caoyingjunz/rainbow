@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"k8s.io/klog/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"k8s.io/klog/v2"
 )
 
 type SSHConfig struct {
@@ -222,6 +222,14 @@ func (s *SSHClient) UploadFile(localPath, remotePath string, mode string) error 
 	w.Close()
 
 	return session.Wait()
+}
+
+func (s *SSHClient) Ping() error {
+	_, err := s.RunCommand("echo pong")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Close 关闭SSH连接

@@ -265,13 +265,38 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	if err := s.Producer.Start(); err != nil {
 		return err
 	}
-
 	// 初始化 agent 属性
 	klog.Infof("starting register rainbowd")
 	if err := s.RegisterRainbowd(ctx); err != nil {
 		return err
 	}
+	go s.startRainbowdHeartbeat(ctx)
+
 	return nil
+}
+
+func (s *ServerController) startRainbowdHeartbeat(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		for nodeName, sshConfig := range s.sshConfigMap {
+			old, err := s.factory.Rainbowd().GetByName(ctx, nodeName)
+			if err != nil {
+				klog.Errorf("获取rainbow %s 失败 %v", nodeName, err)
+				continue
+			}
+
+			sshClient, err := sshutil.NewSSHClient(&sshConfig)
+			if err != nil {
+				klog.Errorf("创建 %s ssh client失败 %v", nodeName, err)
+				continue
+			}
+
+			fmt.Println("nodeName", nodeName)
+			fmt.Println(sshConfig)
+		}
+	}
 }
 
 func (s *ServerController) Stop(ctx context.Context) {
