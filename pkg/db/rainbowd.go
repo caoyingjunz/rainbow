@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ import (
 
 type RainbowdInterface interface {
 	Create(ctx context.Context, object *model.Rainbowd) (*model.Rainbowd, error)
-	Update(ctx context.Context, rainbowdId int64, resourceVersion int64, updates map[string]interface{}) error
+	Update(ctx context.Context, rainbowdId int64, updates map[string]interface{}) error
 	Delete(ctx context.Context, rainbowdId int64) error
 	Get(ctx context.Context, rainbowdId int64) (*model.Rainbowd, error)
 	List(ctx context.Context, opts ...Options) ([]model.Rainbowd, error)
@@ -42,7 +43,15 @@ func (rain *rainbowd) Create(ctx context.Context, object *model.Rainbowd) (*mode
 	return object, nil
 }
 
-func (rain *rainbowd) Update(ctx context.Context, rainbowdId int64, resourceVersion int64, updates map[string]interface{}) error {
+func (rain *rainbowd) Update(ctx context.Context, rainbowdId int64, updates map[string]interface{}) error {
+	f := rain.db.WithContext(ctx).Model(&model.Rainbowd{}).Where("id = ?", rainbowdId).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
 	return nil
 }
 

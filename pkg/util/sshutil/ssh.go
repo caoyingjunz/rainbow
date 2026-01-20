@@ -225,10 +225,12 @@ func (s *SSHClient) UploadFile(localPath, remotePath string, mode string) error 
 }
 
 func (s *SSHClient) Ping() error {
-	_, err := s.RunCommand("echo pong")
+	result, err := s.RunCommand("echo pong")
 	if err != nil {
 		return err
 	}
+	klog.V(1).Infof("ping 结果 %+v", result)
+
 	return nil
 }
 
