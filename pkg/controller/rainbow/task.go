@@ -42,6 +42,12 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 		return err
 	}
 
+	// 验证该用户是否还有余额
+	if err := s.validateUserQuota(ctx, req); err != nil {
+		klog.Errorf("valid user quota failed %v", err)
+		return err
+	}
+
 	// 验证镜像规格
 	if req.Type == 1 {
 		if !strings.HasPrefix(req.KubernetesVersion, "v1.") {
@@ -60,12 +66,6 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 		//	}
 		//}
 		return utilerrors.NewAggregate(errs)
-	}
-
-	// 验证该用户是否还有余额
-	if err := s.validateUserQuota(ctx, req); err != nil {
-		klog.Errorf("valid user quota failed %v", err)
-		return err
 	}
 	return nil
 }
