@@ -214,11 +214,13 @@ func (s *ServerController) DeleteChartTag(ctx context.Context, chartReq types.Ch
 }
 
 func (s *ServerController) UploadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) error {
-	f, err := ctx.FormFile("chart")
+	f, err := ctx.FormFile("file")
 	if err != nil {
+		klog.Errorf("获取chart文件失败 %v", err)
 		return err
 	}
 
+	klog.Infof("已成功获取chart文件")
 	name := f.Filename
 	tmpFile := filepath.Join("/tmp", fmt.Sprintf("upload_%s_%s_%s_%s", chartReq.Project, time.Now().Format("20060102_150405"), uuid.New().String()[:8], name))
 	if err = ctx.SaveUploadedFile(f, tmpFile); err != nil {
@@ -253,6 +255,7 @@ func (s *ServerController) uploadChart(project string, filePath string) error {
 
 	copied, err := io.Copy(part, f)
 	if err != nil {
+		klog.Infof("读取文件大小失败: %v", err)
 		return fmt.Errorf("复制文件内容失败: %w", err)
 	}
 	klog.Infof("已读取文件大小: %d 字节\n", copied)
@@ -276,6 +279,7 @@ func (s *ServerController) uploadChart(project string, filePath string) error {
 		return err
 	}
 
+	klog.Infof("chart %s 上传完成", filename)
 	// 判断是否已保存
 	if cs.Saved {
 		return nil
