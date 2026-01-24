@@ -360,7 +360,7 @@ func (a *image) GetNamespace(ctx context.Context, opts ...Options) (*model.Names
 	}
 
 	var audits *model.Namespace
-	if err := tx.Find(&audits).Error; err != nil {
+	if err := tx.First(&audits).Error; err != nil {
 		return nil, err
 	}
 	return audits, nil

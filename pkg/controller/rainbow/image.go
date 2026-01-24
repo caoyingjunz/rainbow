@@ -469,7 +469,7 @@ func (s *ServerController) CreateNamespace(ctx context.Context, req *types.Creat
 	// 全局只能有一个命名空间
 	_, err := s.factory.Image().GetNamespace(ctx, db.WithName(req.Name))
 	if err == nil {
-		return fmt.Errorf("命名空间(%s)已存在，不允许重复创建", req.Name)
+		return fmt.Errorf("命名空间(%s)已存在，无法重复创建", req.Name)
 	}
 
 	// 执行创建
