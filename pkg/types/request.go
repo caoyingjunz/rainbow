@@ -25,6 +25,7 @@ type (
 		Dockerfile string `json:"dockerfile"`  // 镜像构建 dockerfile
 		RegistryId int64  `json:"registry_id"` // 推送镜像仓库
 		AgentName  string `json:"agent_name"`  // 执行代理
+		Namespace  string `json:"namespace"`
 	}
 
 	UpdateBuildRequest struct {
