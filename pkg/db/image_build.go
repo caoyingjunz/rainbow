@@ -13,12 +13,10 @@ import (
 
 type BuildInterface interface {
 	Create(ctx context.Context, object *model.Build) (*model.Build, error)
-	Delete(ctx context.Context, buildId int64) error
-	Update(ctx context.Context, buildId int64, resourceVersion int64, updates map[string]interface{}) error
+	Delete(ctx context.Context, dockerfileId int64) error
+	Update(ctx context.Context, DockerfileId int64, resourceVersion int64, updates map[string]interface{}) error
 	List(ctx context.Context, opts ...Options) ([]model.Build, error)
-	Get(ctx context.Context, buildId int64) (*model.Build, error)
-
-	UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error
+	Get(ctx context.Context, dockerfileId int64) (*model.Build, error)
 }
 
 func newBuild(db *gorm.DB) BuildInterface {
@@ -40,17 +38,17 @@ func (d *build) Create(ctx context.Context, object *model.Build) (*model.Build, 
 	return object, nil
 }
 
-func (d *build) Get(ctx context.Context, buildId int64) (*model.Build, error) {
+func (d *build) Get(ctx context.Context, dockerfileId int64) (*model.Build, error) {
 	var audit model.Build
-	if err := d.db.WithContext(ctx).Where("id = ?", buildId).First(&audit).Error; err != nil {
+	if err := d.db.WithContext(ctx).Where("id = ?", dockerfileId).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
 }
 
-func (d *build) Delete(ctx context.Context, buildId int64) error {
+func (d *build) Delete(ctx context.Context, dockerfileId int64) error {
 	var audit model.Build
-	if err := d.db.WithContext(ctx).Clauses(clause.Returning{}).Where("id = ?", buildId).Delete(&audit).Error; err != nil {
+	if err := d.db.WithContext(ctx).Clauses(clause.Returning{}).Where("id = ?", dockerfileId).Delete(&audit).Error; err != nil {
 		return err
 	}
 
@@ -84,22 +82,4 @@ func (d *build) List(ctx context.Context, opts ...Options) ([]model.Build, error
 	}
 
 	return audits, nil
-}
-
-func (d *build) UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error {
-	updates["gmt_modified"] = time.Now()
-
-	tx := d.db.WithContext(ctx)
-	for _, opt := range opts {
-		tx = opt(tx)
-	}
-	f := tx.Model(&model.Build{}).Updates(updates)
-	if f.Error != nil {
-		return f.Error
-	}
-	if f.RowsAffected == 0 {
-		return fmt.Errorf("record not updated")
-	}
-
-	return nil
 }
