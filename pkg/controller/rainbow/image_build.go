@@ -37,11 +37,41 @@ func (s *ServerController) UpdateBuild(ctx context.Context, req *types.UpdateBui
 }
 
 func (s *ServerController) ListBuilds(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	list, err := s.factory.Build().List(ctx, db.WithNameLike(listOption.NameSelector))
-	if err != nil {
-		return nil, err
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
 	}
-	return list, nil
+	opts := []db.Options{
+		db.WithUser(listOption.UserId),
+		db.WithNameLike(listOption.NameSelector),
+		db.WithNamespace(listOption.Namespace),
+		db.WithAgent(listOption.Agent),
+	}
+	var err error
+	pageResult.Total, err = s.factory.Build().Count(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取构建总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+
+	pageResult.Items, err = s.factory.Build().List(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取构建列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
 
 func (s *ServerController) GetBuild(ctx context.Context, buildId int64) (interface{}, error) {

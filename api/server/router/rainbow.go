@@ -216,7 +216,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	}
 
 	// 构建镜像 API
-	buildRoute := httpEngine.Group("/rainbow/build")
+	buildRoute := httpEngine.Group("/rainbow/builds")
 	{
 		buildRoute.POST("", cr.createBuild)
 		buildRoute.DELETE("/:Id", cr.deleteBuild)

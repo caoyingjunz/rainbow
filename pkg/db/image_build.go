@@ -17,6 +17,8 @@ type BuildInterface interface {
 	Update(ctx context.Context, DockerfileId int64, resourceVersion int64, updates map[string]interface{}) error
 	List(ctx context.Context, opts ...Options) ([]model.Build, error)
 	Get(ctx context.Context, dockerfileId int64) (*model.Build, error)
+	UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error
+	Count(ctx context.Context, opts ...Options) (int64, error)
 }
 
 func newBuild(db *gorm.DB) BuildInterface {
@@ -82,4 +84,36 @@ func (d *build) List(ctx context.Context, opts ...Options) ([]model.Build, error
 	}
 
 	return audits, nil
+}
+
+func (d *build) UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error {
+	updates["gmt_modified"] = time.Now()
+
+	tx := d.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	f := tx.Model(&model.Build{}).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
+}
+
+func (d *build) Count(ctx context.Context, opts ...Options) (int64, error) {
+	tx := d.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.Build{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }

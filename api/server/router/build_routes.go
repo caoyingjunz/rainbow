@@ -81,7 +81,6 @@ func (cr *rainbowRouter) listBuilds(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if resp.Result, err = cr.c.Server().ListBuilds(c, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -101,7 +100,6 @@ func (cr *rainbowRouter) getBuild(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if resp.Result, err = cr.c.Server().GetBuild(c, idMeta.ID); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
