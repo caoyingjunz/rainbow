@@ -159,10 +159,10 @@ type ServerInterface interface {
 
 	// CreateBuild 镜像构建 API
 	CreateBuild(ctx context.Context, req *types.CreateBuildRequest) error
-	DeleteBuild(ctx context.Context, dockerfileId int64) error
+	DeleteBuild(ctx context.Context, buildId int64) error
 	UpdateBuild(ctx context.Context, req *types.UpdateBuildRequest) error
 	ListBuilds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
-	GetBuild(ctx context.Context, dockerfileId int64) (interface{}, error)
+	GetBuild(ctx context.Context, buildId int64) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)

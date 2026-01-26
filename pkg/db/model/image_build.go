@@ -5,19 +5,7 @@ import (
 )
 
 func init() {
-	register(&Dockerfile{}, &Build{})
-}
-
-type Dockerfile struct {
-	rainbow.Model
-
-	Name       string `json:"name"`
-	Dockerfile string `json:"dockerfile"`
-	UserId     string `json:"user_id"`
-}
-
-func (d *Dockerfile) TableName() string {
-	return "dockerfiles"
+	register(&Build{})
 }
 
 type Build struct {

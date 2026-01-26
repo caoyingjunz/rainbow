@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
@@ -43,6 +44,6 @@ func (s *ServerController) ListBuilds(ctx context.Context, listOption types.List
 	return list, nil
 }
 
-func (s *ServerController) GetBuild(ctx context.Context, BuildId int64) (interface{}, error) {
-	return s.factory.Build().Get(ctx, BuildId)
+func (s *ServerController) GetBuild(ctx context.Context, buildId int64) (interface{}, error) {
+	return s.factory.Build().Get(ctx, buildId)
 }
