@@ -100,6 +100,11 @@ type (
 		Process int    `json:"process"`
 	}
 
+	UpdateBuildStatusRequest struct {
+		BuildId int64  `json:"build_id"`
+		Status  string `json:"status"`
+	}
+
 	CreateRegistryRequest struct {
 		Name       string `json:"name"`
 		UserId     string `json:"user_id"`

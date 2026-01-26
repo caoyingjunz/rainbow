@@ -47,3 +47,7 @@ func (s *ServerController) ListBuilds(ctx context.Context, listOption types.List
 func (s *ServerController) GetBuild(ctx context.Context, buildId int64) (interface{}, error) {
 	return s.factory.Build().Get(ctx, buildId)
 }
+
+func (s *ServerController) UpdateBuildStatus(ctx context.Context, req *types.UpdateBuildStatusRequest) error {
+	return s.factory.Build().UpdateBy(ctx, map[string]interface{}{"status": req.Status}, db.WithId(req.BuildId))
+}

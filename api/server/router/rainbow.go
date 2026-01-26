@@ -224,4 +224,10 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		buildRoute.GET("", cr.listBuilds)
 		buildRoute.GET("/:Id", cr.getBuild)
 	}
+
+	// 设置资源状态API
+	setStatus := httpEngine.Group("/rainbow/set")
+	{
+		setStatus.PUT("/build/:Id/status", cr.setBuildStatus)
+	}
 }
