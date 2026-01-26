@@ -19,15 +19,19 @@ type (
 		Version string `uri:"version" form:"version"`
 	}
 
-	CreateDockerfileRequest struct {
+	CreateBuildRequest struct {
 		Name       string `json:"name"`
-		Dockerfile string `json:"dockerfile"`
+		Arch       string `json:"arch"`        // 架构
+		Dockerfile string `json:"dockerfile"`  // 镜像构建 dockerfile
+		RegistryId int64  `json:"registry_id"` // 推送镜像仓库
+		AgentName  string `json:"agent_name"`  // 执行代理
 	}
 
-	UpdateDockerfileRequest struct {
-		Id              int64  `json:"id"`
-		ResourceVersion int64  `json:"resource_version"`
-		Dockerfile      string `json:"dockerfile"`
+	UpdateBuildRequest struct {
+		Id              int64 `json:"id"`
+		ResourceVersion int64 `json:"resource_version"`
+
+		CreateBuildRequest `json:",inline"`
 	}
 
 	CreateLabelRequest struct {

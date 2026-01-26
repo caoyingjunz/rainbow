@@ -36,12 +36,6 @@ type ServerGetter interface {
 }
 
 type ServerInterface interface {
-	CreateDockerfile(ctx context.Context, req *types.CreateDockerfileRequest) error
-	DeleteDockerfile(ctx context.Context, dockerfileId int64) error
-	UpdateDockerfile(ctx context.Context, req *types.UpdateDockerfileRequest) error
-	ListDockerfile(ctx context.Context, listOption types.ListOptions) (interface{}, error)
-	GetDockerfile(ctx context.Context, dockerfileId int64) (interface{}, error)
-
 	CreateRegistry(ctx context.Context, req *types.CreateRegistryRequest) error
 	UpdateRegistry(ctx context.Context, req *types.UpdateRegistryRequest) error
 	DeleteRegistry(ctx context.Context, registryId int64) error
@@ -162,6 +156,13 @@ type ServerInterface interface {
 	DownloadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) (string, string, error)
 
 	GetChartStatus(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error)
+
+	// CreateBuild 镜像构建 API
+	CreateBuild(ctx context.Context, req *types.CreateBuildRequest) error
+	DeleteBuild(ctx context.Context, dockerfileId int64) error
+	UpdateBuild(ctx context.Context, req *types.UpdateBuildRequest) error
+	ListBuilds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	GetBuild(ctx context.Context, dockerfileId int64) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)

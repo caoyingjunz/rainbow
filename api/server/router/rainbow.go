@@ -20,15 +20,6 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
-	DockerfileRoute := httpEngine.Group("/rainbow/dockerfiles")
-	{
-		DockerfileRoute.POST("", cr.createDockerfile)
-		DockerfileRoute.DELETE("/:Id", cr.deleteDockerfile)
-		DockerfileRoute.PUT("/:Id", cr.updateDockerfile)
-		DockerfileRoute.GET("", cr.listDockerfile)
-		DockerfileRoute.GET("/:Id", cr.getDockerfile)
-	}
-
 	rainbowdRoute := httpEngine.Group("/rainbow/rainbowds")
 	{
 		rainbowdRoute.GET("", cr.listRainbowds)
@@ -222,5 +213,15 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		chartRoute.GET("/:project/charts/:chart/:version", cr.GetChartVersion)
 		chartRoute.DELETE("/:project/charts/:chart/:version", cr.DeleteChartVersion)
+	}
+
+	// 构建镜像 API
+	buildRoute := httpEngine.Group("/rainbow/build")
+	{
+		buildRoute.POST("", cr.createBuild)
+		buildRoute.DELETE("/:Id", cr.deleteBuild)
+		buildRoute.PUT("/:Id", cr.updateBuild)
+		buildRoute.GET("", cr.listBuilds)
+		buildRoute.GET("/:Id", cr.getBuild)
 	}
 }
