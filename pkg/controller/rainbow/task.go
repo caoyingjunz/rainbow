@@ -415,9 +415,13 @@ func (s *ServerController) AfterUpdateTaskStatus(ctx context.Context, req *types
 	}
 
 	// 推送给管理员
-	_ = s.sendToAdmin(ctx, req)
+	if err := s.sendToAdmin(ctx, req); err != nil {
+		klog.Errorf("管理推送失败 %v", err)
+	}
 	// 推送给普通用户
-	_ = s.sendToUser(ctx, req)
+	if err := s.sendToUser(ctx, req); err != nil {
+		klog.Errorf("普通用户推送失败 %v", err)
+	}
 	return nil
 }
 

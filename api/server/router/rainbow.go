@@ -33,7 +33,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		taskRoute.GET("/:Id", cr.getTask)
 		taskRoute.GET("", cr.listTasks)
 
-		taskRoute.PUT("/:Id/status", cr.UpdateTaskStatus)
+		taskRoute.PUT("/:Id/status", cr.UpdateTaskStatus) // DEPRECATED
 		taskRoute.GET(":Id/images", cr.listTaskImages)
 		taskRoute.POST("/rerun", cr.reRunTask)
 
@@ -229,5 +229,6 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	setStatus := httpEngine.Group("/rainbow/set")
 	{
 		setStatus.PUT("/build/:Id/status", cr.setBuildStatus)
+		setStatus.PUT("/task/:Id/status", cr.UpdateTaskStatus)
 	}
 }
