@@ -154,6 +154,8 @@ type ServerInterface interface {
 
 	GetChartStatus(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error)
 
+	GetToken(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error)
+
 	// CreateBuild 镜像构建 API
 	CreateBuild(ctx context.Context, req *types.CreateBuildRequest) error
 	DeleteBuild(ctx context.Context, buildId int64) error

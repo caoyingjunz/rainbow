@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caoyingjunz/rainbow/pkg/util/tokenutil"
 	"github.com/gin-gonic/gin"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/member"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/project"
@@ -288,6 +289,11 @@ func (s *ServerController) uploadChart(project string, filePath string) error {
 }
 
 func (s *ServerController) DownloadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) (string, string, error) {
+	if err := s.ValidateToken(ctx); err != nil {
+		klog.Errorf("验证token失败 %v", err)
+		return "", "", err
+	}
+
 	repoCfg := s.cfg.Server.Harbor
 
 	chartName := fmt.Sprintf("%s-%s.tgz", chartReq.Chart, chartReq.Version)
@@ -307,4 +313,46 @@ func (s *ServerController) DownloadChart(ctx *gin.Context, chartReq types.ChartM
 	}
 
 	return chartName, filename, nil
+}
+
+const JWTKey = "pixiuHub"
+
+func (s *ServerController) GetToken(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error) {
+	token, err := tokenutil.GenerateToken("", req.Project, []byte(JWTKey))
+	if err != nil {
+		klog.Errorf("生成token失败 %v", err)
+		return nil, err
+	}
+	return token, nil
+}
+
+func (s *ServerController) ValidateToken(ctx *gin.Context) error {
+	token, err := s.extractToken(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = tokenutil.ParseToken(token, []byte(JWTKey))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ServerController) extractToken(c *gin.Context) (string, error) {
+	emptyFunc := func(t string) bool { return len(t) == 0 }
+
+	token := c.GetHeader("Authorization")
+	if emptyFunc(token) {
+		return "", fmt.Errorf("authorization header is not provided")
+	}
+	fields := strings.Fields(token)
+	if len(fields) != 2 {
+		return "", fmt.Errorf("invalid authorization header format")
+	}
+	if fields[0] != "Bearer" {
+		return "", fmt.Errorf("unsupported authorization type")
+	}
+
+	return fields[1], nil
 }
