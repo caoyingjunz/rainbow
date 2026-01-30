@@ -3,6 +3,7 @@ package rainbow
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -122,6 +123,34 @@ func (s *ServerController) GetChartStatus(ctx context.Context, req *types.ChartM
 	return struct {
 		EnableChart bool `json:"enable_chart"`
 	}{EnableChart: ojb.EnableChart}, nil
+}
+
+func (s *ServerController) CreateRepoProject(ctx context.Context, projectName string, public bool) error {
+	repoCfg := s.cfg.Server.Harbor
+
+	data, _ := json.Marshal(map[string]interface{}{
+		"project_name": projectName,
+		"public":       public,
+	})
+
+	httpClient := util.HttpClientV2{URL: fmt.Sprintf("%s/projects", repoCfg.URL)}
+	err := httpClient.Method("POST").
+		WithTimeout(5*time.Second).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		WithBody(bytes.NewBuffer(data)).
+		Do(nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ServerController) CreateRepoUser(ctx context.Context) error {
+	return nil
+}
+
+func (s *ServerController) CreateProjectMember(ctx context.Context) error {
+	return nil
 }
 
 func (s *ServerController) ListCharts(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
