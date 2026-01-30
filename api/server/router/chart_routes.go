@@ -57,7 +57,7 @@ func (cr *rainbowRouter) getToken(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	if resp.Result, err = cr.c.Server().GetChartStatus(c, &req); err != nil {
+	if resp.Result, err = cr.c.Server().GetToken(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
