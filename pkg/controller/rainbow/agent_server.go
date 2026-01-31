@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/template"
 
+	guuid "github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 	"k8s.io/klog/v2"
 
@@ -439,6 +440,15 @@ func (s *ServerController) parseDockerJSONOutput(output string) ([]ContainerInfo
 }
 
 func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types.CallGithubRequest) error {
-	fmt.Println("req", req)
+	key := guuid.NewString()
+	data, err := json.Marshal(types.CallMetaRequest{
+		Type:              types.CallGithubType,
+		Uid:               key,
+		CallGithubRequest: req,
+	})
+
+	fmt.Println("err", err)
+	fmt.Println("data", string(data))
+
 	return nil
 }
