@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/caoyingjunz/rainbow/pkg/util/tokenutil"
 	"github.com/gin-gonic/gin"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/member"
 	"github.com/goharbor/go-client/pkg/sdk/v2.0/client/project"
@@ -25,6 +25,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
+	"github.com/caoyingjunz/rainbow/pkg/util/tokenutil"
 )
 
 func (s *ServerController) preEnableChartRepo(ctx context.Context, req *types.EnableChartRepoRequest) error {
@@ -44,11 +45,37 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 	if err := s.preEnableChartRepo(ctx, req); err != nil {
 		return err
 	}
+	if len(req.ProjectName) == 0 {
+		req.ProjectName = strings.ToLower(req.UserName)
+	}
+
+	// 创建项目
+	if err := s.CreateRepoProject(ctx, req.ProjectName, req.Public); err != nil {
+		klog.Errorf("创建项目(%s)失败 %v", req.ProjectName, err)
+		return err
+	}
+	// 创建用户
+	if err := s.CreateRepoUser(ctx, req); err != nil {
+		klog.Errorf("创建用户(%s)失败 %v", req.UserName, err)
+		return err
+	}
+	// 创建用户关联
+	if err := s.CreateProjectMember(ctx, req); err != nil {
+		klog.Errorf("关联项目用户(%s)失败 %v", req.UserName, err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *ServerController) EnableChartRepo2(ctx context.Context, req *types.EnableChartRepoRequest) error {
+	if err := s.preEnableChartRepo(ctx, req); err != nil {
+		return err
+	}
 
 	if len(req.ProjectName) == 0 {
 		req.ProjectName = strings.ToLower(req.UserName)
 	}
-	// 创建关联项目
 	if _, err := s.chartRepoAPI.Project.CreateProject(ctx, &project.CreateProjectParams{
 		Project: &models.ProjectReq{
 			Metadata: &models.ProjectMetadata{
@@ -106,6 +133,23 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 	return nil
 }
 
+func (s *ServerController) DisableAndDeleteChartRepo(ctx context.Context, req *types.EnableChartRepoRequest) error {
+	if len(req.ProjectName) == 0 {
+		req.ProjectName = strings.ToLower(req.UserName)
+	}
+
+	if err := s.factory.Task().UpdateUserBy(ctx, map[string]interface{}{"enable_chart": false}, db.WithUser(req.UserId)); err != nil {
+		klog.Errorf("更新用户启用状态失败 %v", err)
+		return err
+	}
+
+	if _, err := s.chartRepoAPI.Member.DeleteProjectMember(ctx, &member.DeleteProjectMemberParams{ProjectNameOrID: req.ProjectName}); err != nil {
+		klog.Warningf("接触项目(%s)关联失败 %v", req.ProjectName, err)
+	}
+
+	return nil
+}
+
 func (s *ServerController) GetChartStatus(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error) {
 	// 项目名称和用户名相同
 	userName := req.Project
@@ -132,24 +176,80 @@ func (s *ServerController) CreateRepoProject(ctx context.Context, projectName st
 		"project_name": projectName,
 		"public":       public,
 	})
-
-	httpClient := util.HttpClientV2{URL: fmt.Sprintf("%s/projects", repoCfg.URL)}
+	httpClient := util.HttpClientV2{URL: fmt.Sprintf("%s/api/v2.0/projects", repoCfg.URL)}
 	err := httpClient.Method("POST").
 		WithTimeout(5*time.Second).
+		WithHeader(map[string]string{"Content-Type": "application/json"}).
 		WithAuth(repoCfg.Username, repoCfg.Password).
 		WithBody(bytes.NewBuffer(data)).
 		Do(nil)
 	if err != nil {
+		switch err.StatusCode {
+		case http.StatusConflict:
+			klog.Infof("项目(%s)已存在", projectName)
+			return nil
+			//return fmt.Errorf("项目(%s)已存在", projectName)
+		}
 		return err
 	}
+
 	return nil
 }
 
-func (s *ServerController) CreateRepoUser(ctx context.Context) error {
+func (s *ServerController) CreateRepoUser(ctx context.Context, req *types.EnableChartRepoRequest) error {
+	repoCfg := s.cfg.Server.Harbor
+
+	data, _ := json.Marshal(map[string]interface{}{
+		"username": req.UserName,
+		"password": req.Password,
+		"email":    req.Email,
+		"realname": req.UserName,
+		"comment":  "PixiuHub",
+	})
+	httpClient := util.HttpClientV2{URL: fmt.Sprintf("%s/api/v2.0/users", repoCfg.URL)}
+	err := httpClient.Method("POST").
+		WithTimeout(5*time.Second).
+		WithHeader(map[string]string{"Content-Type": "application/json"}).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		WithBody(bytes.NewBuffer(data)).
+		Do(nil)
+	if err != nil {
+		switch err.StatusCode {
+		case http.StatusConflict:
+			klog.Infof("用户(%s)或邮箱(%s)已存在", req.UserName, req.Email)
+			return nil
+		}
+		return err
+	}
+
 	return nil
 }
 
-func (s *ServerController) CreateProjectMember(ctx context.Context) error {
+func (s *ServerController) CreateProjectMember(ctx context.Context, req *types.EnableChartRepoRequest) error {
+	repoCfg := s.cfg.Server.Harbor
+
+	data, _ := json.Marshal(&models.ProjectMember{
+		RoleID: 4,
+		MemberUser: &models.UserEntity{
+			Username: req.UserName,
+		},
+	})
+	httpClient := util.HttpClientV2{URL: fmt.Sprintf("%s/api/v2.0/projects/%s/members", repoCfg.URL, req.ProjectName)}
+	err := httpClient.Method("POST").
+		WithTimeout(5*time.Second).
+		WithHeader(map[string]string{"Content-Type": "application/json"}).
+		WithAuth(repoCfg.Username, repoCfg.Password).
+		WithBody(bytes.NewBuffer(data)).
+		Do(nil)
+	if err != nil {
+		switch err.StatusCode {
+		case http.StatusConflict:
+			klog.Infof("项目(%s)关联用户已存在", req.UserName)
+			return nil
+		}
+		return err
+	}
+
 	return nil
 }
 
