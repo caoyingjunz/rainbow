@@ -437,3 +437,8 @@ func (s *ServerController) parseDockerJSONOutput(output string) ([]ContainerInfo
 
 	return containers, nil
 }
+
+func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types.CallGithubRequest) error {
+	fmt.Println("req", req)
+	return nil
+}

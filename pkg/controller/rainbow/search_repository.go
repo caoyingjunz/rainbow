@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"io"
 	"strings"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"k8s.io/klog/v2"

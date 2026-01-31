@@ -42,7 +42,7 @@ type Interface interface {
 	// Search DEPRECATED
 	Search(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 
-	Call(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
+	Receive(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 }
 
 type AgentController struct {
@@ -81,17 +81,17 @@ func (s *AgentController) Search(ctx context.Context, msgs ...*primitive.Message
 	return consumer.ConsumeSuccess, nil
 }
 
-func (s *AgentController) Call(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+func (s *AgentController) Receive(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range msgs {
 		klog.V(0).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
-		if err := s.doCall(ctx, msg.Body); err != nil {
-			klog.Errorf("处理搜索失败 %v", err)
+		if err := s.doReceive(ctx, msg.Body); err != nil {
+			klog.Errorf("处理接受失败 %v", err)
 		}
 	}
 	return consumer.ConsumeSuccess, nil
 }
 
-func (s *AgentController) doCall(ctx context.Context, date []byte) error {
+func (s *AgentController) doReceive(ctx context.Context, date []byte) error {
 	var reqMeta types.CallMetaRequest
 	if err := json.Unmarshal(date, &reqMeta); err != nil {
 		klog.Errorf("failed to unmarshal remote meta request %v", err)
@@ -131,7 +131,7 @@ func (s *AgentController) doCall(ctx context.Context, date []byte) error {
 		return err
 	}
 
-	klog.Infof("调用(%s)结果已暂存, key(%s)", reqMeta.CallGithubRequest.ProjectName, reqMeta.Uid)
+	klog.Infof("调用(%s)结果已暂存, key(%s)", reqMeta.CallGithubRequest.Repo, reqMeta.Uid)
 	return nil
 }
 

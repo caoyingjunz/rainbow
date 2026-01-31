@@ -82,6 +82,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		agentRoute.GET("/:Id", cr.getAgent)
 		agentRoute.GET("", cr.listAgents)
 		agentRoute.PUT("/status", cr.updateAgentStatus)
+
+		// 指定 agent 创建 repo
+		agentRoute.POST("/:Name/repos", cr.createAgentRepo)
 	}
 
 	imageRoute := httpEngine.Group("/rainbow/images")

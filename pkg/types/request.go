@@ -344,8 +344,8 @@ type (
 	CallGithubRequest struct {
 		ClientId string `json:"client_id,omitempty"`
 
-		Op          string `json:"op,omitempty"` // 操作
-		ProjectName string `json:"project_name,omitempty"`
+		Op   string `json:"op,omitempty"` // 操作
+		Repo string `json:"repo,omitempty"`
 	}
 
 	RemoteMetaRequest struct {

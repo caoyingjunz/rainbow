@@ -70,6 +70,8 @@ type ServerInterface interface {
 	ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
 
+	CreateAgentGithubRepo(ctx context.Context, req *types.CallGithubRequest) error
+
 	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
 	UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error
 	DeleteImage(ctx context.Context, imageId int64) error

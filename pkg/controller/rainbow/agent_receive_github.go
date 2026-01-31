@@ -25,7 +25,7 @@ func (s *AgentController) CallGithub(ctx context.Context, req *types.CallGithubR
 		return nil, fmt.Errorf("agent(%s) 的 token 为空", s.name)
 	}
 
-	body, err := util.BuildHttpBody(map[string]interface{}{"name": req.ProjectName, "private": true})
+	body, err := util.BuildHttpBody(map[string]interface{}{"name": req.Repo, "private": true})
 	if err != nil {
 		return nil, err
 	}
