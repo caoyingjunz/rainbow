@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -159,4 +160,13 @@ func (c *HttpClientV2) Do(val interface{}) *HttpError {
 		}
 	}
 	return nil
+}
+
+func BuildHttpBody(b interface{}) (*bytes.Buffer, error) {
+	data, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewBuffer(data), nil
 }
