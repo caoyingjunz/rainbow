@@ -10,35 +10,16 @@ import (
 )
 
 type HttpError struct {
-	Message    string
-	StatusCode int
-	Code       string
-	Err        error
+	Message string
+	Code    int
+	Err     error
 }
 
 func (h HttpError) Error() string {
 	if h.Err != nil {
-		return fmt.Sprintf("%d %v", h.StatusCode, h.Err)
+		return fmt.Sprintf("%d %v", h.Code, h.Err)
 	}
 	return h.Message
-}
-
-type HttpErrors struct {
-	Errors []HttpError `json:"errors"`
-}
-
-func (hs *HttpErrors) PopError() *HttpError {
-	if len(hs.Errors) == 0 {
-		return nil
-	}
-	return &hs.Errors[0]
-}
-
-func (hs *HttpErrors) Error() string {
-	if len(hs.Errors) == 0 {
-		return ""
-	}
-	return hs.Errors[0].Message
 }
 
 type HttpClientV2 struct {
@@ -142,19 +123,7 @@ func (c *HttpClientV2) Do(val interface{}) *HttpError {
 		if err != nil {
 			return &HttpError{Err: err}
 		}
-
-		var errs HttpErrors
-		if err = json.Unmarshal(d, &errs); err != nil {
-			return &HttpError{
-				Err: err,
-			}
-		}
-		err1 := errs.PopError()
-		if err1 == nil {
-			return nil
-		}
-		err1.StatusCode = resp.StatusCode
-		return err1
+		return &HttpError{Message: string(d), Code: resp.StatusCode}
 	}
 
 	// 结果存入文件

@@ -184,7 +184,7 @@ func (s *ServerController) CreateRepoProject(ctx context.Context, projectName st
 		WithBody(bytes.NewBuffer(data)).
 		Do(nil)
 	if err != nil {
-		switch err.StatusCode {
+		switch err.Code {
 		case http.StatusConflict:
 			klog.Infof("项目(%s)已存在", projectName)
 			return nil
@@ -214,7 +214,7 @@ func (s *ServerController) CreateRepoUser(ctx context.Context, req *types.Enable
 		WithBody(bytes.NewBuffer(data)).
 		Do(nil)
 	if err != nil {
-		switch err.StatusCode {
+		switch err.Code {
 		case http.StatusConflict:
 			klog.Infof("用户(%s)或邮箱(%s)已存在", req.UserName, req.Email)
 			return nil
@@ -242,7 +242,7 @@ func (s *ServerController) CreateProjectMember(ctx context.Context, req *types.E
 		WithBody(bytes.NewBuffer(data)).
 		Do(nil)
 	if err != nil {
-		switch err.StatusCode {
+		switch err.Code {
 		case http.StatusConflict:
 			klog.Infof("项目(%s)关联用户已存在", req.UserName)
 			return nil
