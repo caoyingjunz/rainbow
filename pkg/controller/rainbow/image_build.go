@@ -96,6 +96,17 @@ func (s *ServerController) GetBuild(ctx context.Context, buildId int64) (interfa
 	return s.factory.Build().Get(ctx, buildId)
 }
 
+func (s *ServerController) CreateBuildMessage(ctx context.Context, req types.CreateBuildMessageRequest) error {
+	return s.factory.Build().CreateBuildMessage(ctx, &model.BuildMessage{
+		Message: req.Message,
+		BuildId: req.Id,
+	})
+}
+
+func (s *ServerController) ListBuildMessages(ctx context.Context, buildId int64) (interface{}, error) {
+	return s.factory.Build().ListBuildMessages(ctx, db.WithBuild(buildId))
+}
+
 func (s *ServerController) UpdateBuildStatus(ctx context.Context, req *types.UpdateBuildStatusRequest) error {
 	return s.factory.Build().UpdateBy(ctx, map[string]interface{}{"status": req.Status}, db.WithId(req.BuildId))
 }

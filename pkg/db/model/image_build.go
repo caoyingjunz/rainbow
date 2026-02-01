@@ -5,7 +5,7 @@ import (
 )
 
 func init() {
-	register(&Build{})
+	register(&Build{}, &BuildMessage{})
 }
 
 type Build struct {
@@ -24,4 +24,15 @@ type Build struct {
 
 func (b *Build) TableName() string {
 	return "builds"
+}
+
+type BuildMessage struct {
+	rainbow.Model
+
+	BuildId int64  `json:"build_id" gorm:"index:idx"`
+	Message string `json:"message"`
+}
+
+func (b *BuildMessage) TableName() string {
+	return "build_messages"
 }

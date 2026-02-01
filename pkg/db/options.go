@@ -194,6 +194,15 @@ func WithTask(taskId int64) Options {
 	}
 }
 
+func WithBuild(buildId int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if buildId == 0 {
+			return tx
+		}
+		return tx.Where("build_id = ?", buildId)
+	}
+}
+
 func WithSubscribe(subId int64) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if subId == 1 { // 默认获取全部, 否则按 subscribe_id 获取列表

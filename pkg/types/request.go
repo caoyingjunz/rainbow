@@ -375,6 +375,11 @@ type (
 		Message string `json:"message"`
 	}
 
+	CreateBuildMessageRequest struct {
+		Id      int64  `json:"id"`
+		Message string `json:"message"`
+	}
+
 	CreateSubscribeRequest struct {
 		UserMetaRequest `json:",inline"`
 

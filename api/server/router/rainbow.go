@@ -228,7 +228,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		buildRoute.PUT("/:Id", cr.updateBuild)
 		buildRoute.GET("", cr.listBuilds)
 		buildRoute.GET("/:Id", cr.getBuild)
-		buildRoute.POST("/:Id/status", cr.setBuildStatus)
+
+		buildRoute.POST("/:Id/messages", cr.createBuildMessage)
+		buildRoute.GET("/:Id/messages", cr.listBuildMessages)
 	}
 
 	// 设置资源状态API

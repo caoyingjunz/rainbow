@@ -19,6 +19,9 @@ type BuildInterface interface {
 	Get(ctx context.Context, dockerfileId int64) (*model.Build, error)
 	UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error
 	Count(ctx context.Context, opts ...Options) (int64, error)
+
+	CreateBuildMessage(ctx context.Context, object *model.BuildMessage) error
+	ListBuildMessages(ctx context.Context, opts ...Options) ([]model.BuildMessage, error)
 }
 
 func newBuild(db *gorm.DB) BuildInterface {
@@ -116,4 +119,26 @@ func (d *build) Count(ctx context.Context, opts ...Options) (int64, error) {
 	}
 
 	return total, nil
+}
+
+func (d *build) CreateBuildMessage(ctx context.Context, object *model.BuildMessage) error {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	err := d.db.WithContext(ctx).Create(object).Error
+	return err
+}
+
+func (d *build) ListBuildMessages(ctx context.Context, opts ...Options) ([]model.BuildMessage, error) {
+	var audits []model.BuildMessage
+	tx := d.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+	return audits, nil
 }

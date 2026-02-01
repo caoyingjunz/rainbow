@@ -164,6 +164,8 @@ type ServerInterface interface {
 	UpdateBuild(ctx context.Context, req *types.UpdateBuildRequest) error
 	ListBuilds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	GetBuild(ctx context.Context, buildId int64) (interface{}, error)
+	CreateBuildMessage(ctx context.Context, req types.CreateBuildMessageRequest) error
+	ListBuildMessages(ctx context.Context, buildId int64) (interface{}, error)
 	UpdateBuildStatus(ctx context.Context, req *types.UpdateBuildStatusRequest) error
 
 	Run(ctx context.Context, workers int) error
