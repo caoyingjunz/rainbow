@@ -107,6 +107,8 @@ func (s *AgentController) process(ctx context.Context, date []byte) error {
 		result, err = s.ProcessGithub(ctx, reqMeta.CallGithubRequest)
 	case types.CallKubernetesTagType:
 		result, err = s.ProcessKubernetesTags(ctx, reqMeta.CallKubernetesTagRequest)
+	case types.CallSearchType:
+		result, err = s.ProcessKubernetesTags(ctx, reqMeta.CallKubernetesTagRequest)
 	default:
 
 		return fmt.Errorf("unsupported req call type %d", reqMeta.Type)
@@ -855,10 +857,6 @@ func (s *AgentController) ProcessKubernetesTags(ctx context.Context, req *types.
 	return allData, nil
 }
 
-func (s *AgentController) CreateGithubProject() error {
-	return nil
-}
-
 func appendData(allData, newData []byte) []byte {
 	// 情况1: 原始二进制直接拼接
 	// return append(allData, newData...)
@@ -947,7 +945,7 @@ func (s *AgentController) startSyncActionUsage(ctx context.Context) {
 	rand.Seed(time.Now().UnixNano())
 
 	// 15分钟同步一次
-	ticker := time.NewTicker(900 * time.Second)
+	ticker := time.NewTicker(1800 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {

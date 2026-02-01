@@ -83,6 +83,7 @@ const (
 const (
 	CallGithubType        = 5
 	CallKubernetesTagType = 6
+	CallSearchType        = 7
 )
 
 const (
