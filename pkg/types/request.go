@@ -353,13 +353,6 @@ type (
 		Repo string `json:"repo,omitempty"`
 	}
 
-	CallGithubRequest2 struct {
-		ClientId string `json:"client_id"`
-
-		Op   string `json:"op"` // 操作
-		Repo string `json:"repo"`
-	}
-
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
