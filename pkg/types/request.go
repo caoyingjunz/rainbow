@@ -348,6 +348,19 @@ type (
 		Repo string `json:"repo,omitempty"`
 	}
 
+	CallSearchRequest struct {
+		ClientId string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
+
+		Hub        string `json:"hub" form:"hub"`
+		SearchType int    `json:"search_type" form:"search_type"` // 0 模糊搜索 1 精准查询
+		TargetType string `json:"target_type"`
+
+		Namespace string `json:"namespace" form:"namespace"`
+		Query     string `json:"query" form:"query"`
+		Page      string `json:"page" form:"page"`
+		PageSize  string `json:"page_size" form:"page_size"`
+	}
+
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
@@ -362,6 +375,7 @@ type (
 
 		CallGithubRequest        *CallGithubRequest        `json:"callGithubRequest,omitempty"`
 		CallKubernetesTagRequest *CallKubernetesTagRequest `json:"callKubernetesTagRequest,omitempty"`
+		CallSearchRequest        *CallSearchRequest        `json:"callSearchRequest,omitempty"`
 	}
 
 	CreateTaskMessageRequest struct {

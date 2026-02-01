@@ -108,7 +108,7 @@ func (s *AgentController) process(ctx context.Context, date []byte) error {
 	case types.CallKubernetesTagType:
 		result, err = s.ProcessKubernetesTags(ctx, reqMeta.CallKubernetesTagRequest)
 	case types.CallSearchType:
-		result, err = s.ProcessKubernetesTags(ctx, reqMeta.CallKubernetesTagRequest)
+		result, err = s.ProcessSearch(ctx, reqMeta.CallSearchRequest)
 	default:
 
 		return fmt.Errorf("unsupported req call type %d", reqMeta.Type)
@@ -828,6 +828,10 @@ func (s *AgentController) SearchTagInfo(ctx context.Context, req types.RemoteTag
 	case types.ImageHubGCR:
 		return s.SearchGCRagInfo(ctx, req)
 	}
+	return nil, nil
+}
+
+func (s *AgentController) ProcessSearch(ctx context.Context, req *types.CallSearchRequest) ([]byte, error) {
 	return nil, nil
 }
 
