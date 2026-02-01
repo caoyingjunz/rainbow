@@ -121,7 +121,7 @@ type ServerInterface interface {
 
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
 	UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error
-	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
+	ListUsers(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	GetUser(ctx context.Context, userId string) (*model.User, error)
 	DeleteUser(ctx context.Context, userId string) error
 

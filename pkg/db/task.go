@@ -45,6 +45,7 @@ type TaskInterface interface {
 
 	CreateUser(ctx context.Context, object *model.User) error
 	ListUsers(ctx context.Context, opts ...Options) ([]model.User, error)
+	CountUsers(ctx context.Context, opts ...Options) (int64, error)
 	GetUser(ctx context.Context, userId string) (*model.User, error)
 	DeleteUser(ctx context.Context, userId string) error
 	UpdateUser(ctx context.Context, userId string, resourceVersion int64, updates map[string]interface{}) error
@@ -422,6 +423,20 @@ func (a *task) ListUsers(ctx context.Context, opts ...Options) ([]model.User, er
 	}
 
 	return audits, nil
+}
+
+func (a *task) CountUsers(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.User{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
 
 func (a *task) DeleteUser(ctx context.Context, userId string) error {
