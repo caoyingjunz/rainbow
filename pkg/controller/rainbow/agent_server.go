@@ -439,7 +439,7 @@ func (s *ServerController) parseDockerJSONOutput(output string) ([]ContainerInfo
 	return containers, nil
 }
 
-func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types.CallGithubRequest) error {
+func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types.CallGithubRequest) (interface{}, error) {
 	key := guuid.NewString()
 	data, err := json.Marshal(types.CallMetaRequest{
 		Type:              types.CallGithubType,
@@ -447,8 +447,9 @@ func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types
 		CallGithubRequest: req,
 	})
 
-	fmt.Println("err", err)
-	fmt.Println("data", string(data))
-
-	return nil
+	_, err = s.Call(ctx, req.ClientId, key, data)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }

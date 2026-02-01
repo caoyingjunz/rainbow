@@ -542,7 +542,7 @@ func (cr *rainbowRouter) createAgentRepo(c *gin.Context) {
 		return
 	}
 	githubReq.ClientId = idMeta.Name
-	if err = cr.c.Server().CreateAgentGithubRepo(c, &githubReq); err != nil {
+	if resp.Result, err = cr.c.Server().CreateAgentGithubRepo(c, &githubReq); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

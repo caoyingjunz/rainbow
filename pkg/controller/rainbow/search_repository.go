@@ -207,7 +207,7 @@ func (s *ServerController) Call(ctx context.Context, clientId string, key string
 	if err != nil {
 		return nil, err
 	}
-	var sr types.SearchResult
+	var sr types.CallResult
 	if err = json.Unmarshal([]byte(val), &sr); err != nil {
 		klog.Errorf("反序列化（%v）失败 %v", val, err)
 		return nil, err
@@ -260,7 +260,7 @@ func (s *ServerController) GetResult(ctx context.Context, key string) (string, e
 				}
 			}
 		case <-waitCtx.Done():
-			return "", fmt.Errorf("wait timeout for search(%s)", key)
+			return "", fmt.Errorf("wait timeout for call(%s)", key)
 		}
 	}
 }

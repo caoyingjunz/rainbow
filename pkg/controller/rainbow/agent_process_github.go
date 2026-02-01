@@ -12,8 +12,8 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
-func (s *AgentController) CallGithub(ctx context.Context, req *types.CallGithubRequest) ([]byte, error) {
-	// op 作为预留字段，后续用于操作更多行为
+func (s *AgentController) ProcessGithub(ctx context.Context, req *types.CallGithubRequest) ([]byte, error) {
+	// op 作为预留字段，后续用于操作更多行为, 默认创建
 	// 目前仅支持创建 github 项目
 	agent, err := s.factory.Agent().GetByName(ctx, s.name)
 	if err != nil {

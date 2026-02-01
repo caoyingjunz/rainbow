@@ -52,7 +52,8 @@ func main() {
 		Type:       consumer.TAG,
 		Expression: fmt.Sprintf("%s || all", opts.ComponentConfig.Agent.Name), // 只订阅指定自身或者未指定的agent
 	},
-		opts.Controller.Agent().Search)
+		opts.Controller.Agent().Subscribe,
+	)
 	if err != nil {
 		klog.Fatalf("订阅主题失败: %v", err)
 	}

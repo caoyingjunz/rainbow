@@ -94,6 +94,12 @@ type SearchResult struct {
 	StatusCode int
 }
 
+type CallResult struct {
+	Result     []byte
+	ErrMessage string
+	StatusCode int
+}
+
 type ImageTag struct {
 	Features     string    `json:"features"`
 	Variant      *string   `json:"variant"` // 可能是 null

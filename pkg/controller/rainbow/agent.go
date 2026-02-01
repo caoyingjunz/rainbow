@@ -104,7 +104,7 @@ func (s *AgentController) process(ctx context.Context, date []byte) error {
 	)
 	switch reqMeta.Type {
 	case types.CallGithubType:
-		result, err = s.CallGithub(ctx, reqMeta.CallGithubRequest)
+		result, err = s.ProcessGithub(ctx, reqMeta.CallGithubRequest)
 	default:
 
 		return fmt.Errorf("unsupported req call type %d", reqMeta.Type)
