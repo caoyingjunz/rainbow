@@ -82,6 +82,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		agentRoute.GET("/:Id", cr.getAgent)
 		agentRoute.GET("", cr.listAgents)
 		agentRoute.PUT("/status", cr.updateAgentStatus)
+
+		// 指定 agent 创建 repo
+		agentRoute.POST("/:Name/repos", cr.createAgentRepo)
 	}
 
 	imageRoute := httpEngine.Group("/rainbow/images")
@@ -206,6 +209,8 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		chartRoute.GET("/:project/charts/:chart", cr.ListChartVersions)
 		chartRoute.DELETE("/:project/charts/:chart", cr.DeleteChart)
 
+		chartRoute.GET("/:project/token", cr.getToken)
+
 		// 上传 chart 到指定项目
 		chartRoute.POST("/upload/:project", cr.uploadChart)
 		// 下载 chart
@@ -223,6 +228,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		buildRoute.PUT("/:Id", cr.updateBuild)
 		buildRoute.GET("", cr.listBuilds)
 		buildRoute.GET("/:Id", cr.getBuild)
+		buildRoute.POST("/:Id/status", cr.setBuildStatus)
 	}
 
 	// 设置资源状态API

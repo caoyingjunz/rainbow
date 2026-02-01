@@ -80,7 +80,21 @@ const (
 	SearchTypeTagInfo
 )
 
+const (
+	CallGithubType = 5
+)
+
+const (
+	GithubAPIBase = "https://api.github.com"
+)
+
 type SearchResult struct {
+	Result     []byte
+	ErrMessage string
+	StatusCode int
+}
+
+type CallResult struct {
 	Result     []byte
 	ErrMessage string
 	StatusCode int

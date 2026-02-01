@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +9,19 @@ import (
 	"os"
 	"time"
 )
+
+type HttpError struct {
+	Message string
+	Code    int
+	Err     error
+}
+
+func (h HttpError) Error() string {
+	if h.Err != nil {
+		return fmt.Sprintf("%d %v", h.Code, h.Err)
+	}
+	return h.Message
+}
 
 type HttpClientV2 struct {
 	URL    string
@@ -74,14 +88,18 @@ func (c *HttpClientV2) WithFile(filename string) *HttpClientV2 {
 	return c
 }
 
-func (c *HttpClientV2) Do(val interface{}) error {
+func (c *HttpClientV2) Do(val interface{}) *HttpError {
 	if c == nil {
-		return fmt.Errorf("httpClient is nil")
+		return &HttpError{
+			Message: "httpClient is nil",
+		}
 	}
 
 	req, err := http.NewRequest(c.method, c.URL, c.body)
 	if err != nil {
-		return err
+		return &HttpError{
+			Err: err,
+		}
 	}
 	if c.auth != nil {
 		req.SetBasicAuth(c.auth.Username, c.auth.Password)
@@ -95,25 +113,35 @@ func (c *HttpClientV2) Do(val interface{}) error {
 	client := &http.Client{Timeout: c.timeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return &HttpError{
+			Err: err,
+		}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("error resp %s", resp.Status)
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return &HttpError{Err: err}
+		}
+		return &HttpError{Message: string(d), Code: resp.StatusCode}
 	}
 
 	// 结果存入文件
 	if c.filename != nil {
 		file, err := os.Create(*c.filename)
 		if err != nil {
-			return fmt.Errorf("创建文件失败: %w", err)
+			return &HttpError{
+				Err: fmt.Errorf("创建文件失败: %w", err),
+			}
 		}
 		defer file.Close()
 
 		_, err = io.Copy(file, resp.Body)
 		if err != nil {
-			return fmt.Errorf("写入文件失败: %w", err)
+			return &HttpError{
+				Err: fmt.Errorf("写入文件失败: %w", err),
+			}
 		}
 	}
 
@@ -121,20 +149,24 @@ func (c *HttpClientV2) Do(val interface{}) error {
 	if val != nil {
 		d, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return err
+			return &HttpError{
+				Err: err,
+			}
 		}
 		if err = json.Unmarshal(d, val); err != nil {
-			return err
+			return &HttpError{
+				Err: err,
+			}
 		}
 	}
 	return nil
 }
 
-// Result TODO
-func (c *HttpClientV2) Result(val interface{}) *HttpClientV2 {
-	if c == nil {
-		return nil
+func BuildHttpBody(b interface{}) (*bytes.Buffer, error) {
+	data, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	return bytes.NewBuffer(data), nil
 }

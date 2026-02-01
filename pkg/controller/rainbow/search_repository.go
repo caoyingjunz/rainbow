@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"io"
 	"strings"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"k8s.io/klog/v2"
@@ -198,6 +198,28 @@ func (s *ServerController) doSearch(ctx context.Context, clientId string, key st
 	return sr.Result, nil
 }
 
+func (s *ServerController) Call(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
+	if err := s.sendMessage(ctx, clientId, data); err != nil {
+		return nil, err
+	}
+
+	val, err := s.GetResult(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	var sr types.CallResult
+	if err = json.Unmarshal([]byte(val), &sr); err != nil {
+		klog.Errorf("反序列化（%v）失败 %v", val, err)
+		return nil, err
+	}
+	if sr.StatusCode != 0 {
+		klog.Errorf("远程调用失败 %v", err)
+		return nil, fmt.Errorf(sr.ErrMessage)
+	}
+
+	return sr.Result, nil
+}
+
 func (s *ServerController) GetResult(ctx context.Context, key string) (string, error) {
 	// 先尝试直接获取
 	val, err := s.redisClient.Get(ctx, key).Result()
@@ -238,7 +260,7 @@ func (s *ServerController) GetResult(ctx context.Context, key string) (string, e
 				}
 			}
 		case <-waitCtx.Done():
-			return "", fmt.Errorf("wait timeout for search(%s)", key)
+			return "", fmt.Errorf("wait timeout for call(%s)", key)
 		}
 	}
 }

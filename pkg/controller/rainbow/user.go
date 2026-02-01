@@ -7,6 +7,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
@@ -141,8 +142,40 @@ func (s *ServerController) CreateUser(ctx context.Context, req *types.CreateUser
 	return nil
 }
 
-func (s *ServerController) ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error) {
-	return s.factory.Task().ListUsers(ctx)
+func (s *ServerController) ListUsers(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+	opts := []db.Options{
+		db.WithUser(listOption.UserId),
+	}
+
+	var err error
+	pageResult.Total, err = s.factory.Task().CountUsers(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取用户总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+	pageResult.Items, err = s.factory.Task().ListUsers(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取用户列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
 
 func (s *ServerController) GetUser(ctx context.Context, userId string) (*model.User, error) {

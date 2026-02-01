@@ -341,6 +341,18 @@ type (
 		SyncAll  bool   `json:"sync_all"`
 	}
 
+	CallKubernetesTagRequest struct {
+		ClientId string `json:"client_id"`
+		SyncAll  bool   `json:"sync_all"`
+	}
+
+	CallGithubRequest struct {
+		ClientId string `json:"client_id,omitempty"`
+
+		Op   string `json:"op,omitempty"` // 操作
+		Repo string `json:"repo,omitempty"`
+	}
+
 	RemoteMetaRequest struct {
 		Type                    int
 		Uid                     string `json:"uid"`
@@ -348,6 +360,14 @@ type (
 		TagSearchRequest        RemoteTagSearchRequest
 		TagInfoSearchRequest    RemoteTagInfoSearchRequest
 		KubernetesTagRequest    KubernetesTagRequest
+	}
+
+	CallMetaRequest struct {
+		Type int    `json:"type"` // 操作类型，必填
+		Uid  string `json:"uid"`
+
+		CallGithubRequest        *CallGithubRequest        `json:"callGithubRequest,omitempty"`
+		CallKubernetesTagRequest *CallKubernetesTagRequest `json:"callKubernetesTagRequest,omitempty"`
 	}
 
 	CreateTaskMessageRequest struct {

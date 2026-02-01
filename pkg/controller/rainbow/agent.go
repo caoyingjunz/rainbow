@@ -39,7 +39,10 @@ type AgentGetter interface {
 }
 type Interface interface {
 	Run(ctx context.Context, workers int) error
+	// Search DEPRECATED
 	Search(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
+
+	Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error)
 }
 
 type AgentController struct {
@@ -76,6 +79,60 @@ func (s *AgentController) Search(ctx context.Context, msgs ...*primitive.Message
 		}
 	}
 	return consumer.ConsumeSuccess, nil
+}
+
+func (s *AgentController) Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+	for _, msg := range msgs {
+		klog.V(0).Infof("收到消息: Topic=%s, MessageID=%s, Body=%s", msg.Topic, msg.MsgId, string(msg.Body))
+		if err := s.process(ctx, msg.Body); err != nil {
+			klog.Errorf("处理接受失败 %v", err)
+		}
+	}
+	return consumer.ConsumeSuccess, nil
+}
+
+func (s *AgentController) process(ctx context.Context, date []byte) error {
+	var reqMeta types.CallMetaRequest
+	if err := json.Unmarshal(date, &reqMeta); err != nil {
+		klog.Errorf("failed to unmarshal remote meta request %v", err)
+		return err
+	}
+
+	var (
+		result []byte
+		err    error
+	)
+	switch reqMeta.Type {
+	case types.CallGithubType:
+		result, err = s.ProcessGithub(ctx, reqMeta.CallGithubRequest)
+	default:
+
+		return fmt.Errorf("unsupported req call type %d", reqMeta.Type)
+	}
+
+	statusCode, errMessage := 0, ""
+	if err != nil {
+		statusCode, errMessage = 1, err.Error()
+		klog.Errorf("远程调用失败 %v", err)
+	}
+	data, err := json.Marshal(types.SearchResult{Result: result, ErrMessage: errMessage, StatusCode: statusCode})
+	if err != nil {
+		klog.Errorf("序列化调用结果失败 %v", err)
+		return fmt.Errorf("序列化调用结果失败 %v", err)
+	}
+
+	// 保存 30s
+	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Set(ctx, reqMeta.Uid, data, 30*time.Second)
+		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", reqMeta.Uid), "set")
+		return nil
+	}); err != nil {
+		klog.Errorf("临时存储失败 %v", err)
+		return err
+	}
+
+	klog.Infof("调用(%s)结果已暂存, key(%s)", reqMeta.CallGithubRequest.Repo, reqMeta.Uid)
+	return nil
 }
 
 func (s *AgentController) search(ctx context.Context, date []byte) error {
@@ -796,6 +853,10 @@ func (s *AgentController) SyncKubernetesTags(ctx context.Context, req types.Kube
 	}
 
 	return allData, nil
+}
+
+func (s *AgentController) CreateGithubProject() error {
+	return nil
 }
 
 func appendData(allData, newData []byte) []byte {

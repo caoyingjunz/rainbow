@@ -70,6 +70,8 @@ type ServerInterface interface {
 	ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	UpdateAgentStatus(ctx context.Context, req *types.UpdateAgentStatusRequest) error
 
+	CreateAgentGithubRepo(ctx context.Context, req *types.CallGithubRequest) (interface{}, error)
+
 	CreateImage(ctx context.Context, req *types.CreateImageRequest) error
 	UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error
 	DeleteImage(ctx context.Context, imageId int64) error
@@ -119,7 +121,7 @@ type ServerInterface interface {
 
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) error
 	UpdateUser(ctx context.Context, req *types.UpdateUserRequest) error
-	ListUsers(ctx context.Context, listOption types.ListOptions) ([]model.User, error)
+	ListUsers(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	GetUser(ctx context.Context, userId string) (*model.User, error)
 	DeleteUser(ctx context.Context, userId string) error
 
@@ -153,6 +155,8 @@ type ServerInterface interface {
 	DownloadChart(ctx *gin.Context, chartReq types.ChartMetaRequest) (string, string, error)
 
 	GetChartStatus(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error)
+
+	GetToken(ctx context.Context, req *types.ChartMetaRequest) (interface{}, error)
 
 	// CreateBuild 镜像构建 API
 	CreateBuild(ctx context.Context, req *types.CreateBuildRequest) error

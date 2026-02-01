@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-
 	"github.com/caoyingjunz/pixiulib/config"
+	"github.com/caoyingjunz/rainbow/pkg/controller/builder"
 	"k8s.io/klog/v2"
 
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
@@ -23,6 +23,17 @@ func main() {
 
 	var cfg rainbowconfig.Config
 	if err := c.Binding(&cfg); err != nil {
+		klog.Fatal(err)
+	}
+
+	bc := builder.NewBuilderController(cfg)
+	if err := bc.Complete(); err != nil {
+		klog.Fatal(err)
+	}
+
+	defer bc.Close()
+
+	if err := bc.Run(); err != nil {
 		klog.Fatal(err)
 	}
 

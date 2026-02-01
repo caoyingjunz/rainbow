@@ -527,6 +527,29 @@ func (cr *rainbowRouter) updateAgentStatus(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) createAgentRepo(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		githubReq types.CallGithubRequest
+		idMeta    struct {
+			Name string `uri:"Name" binding:"required"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &githubReq, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	githubReq.ClientId = idMeta.Name
+	if resp.Result, err = cr.c.Server().CreateAgentGithubRepo(c, &githubReq); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) listAgents(c *gin.Context) {
 	resp := httputils.NewResponse()
 

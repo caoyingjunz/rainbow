@@ -46,6 +46,24 @@ func (cr *rainbowRouter) getChartRepoStatus(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) getToken(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err error
+		req types.ChartMetaRequest
+	)
+	if err = httputils.ShouldBindAny(c, nil, &req, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().GetToken(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) ListCharts(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -173,7 +191,6 @@ func (cr *rainbowRouter) downloadChart(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	chartName, filename, err := cr.c.Server().DownloadChart(c, req)
 	if err != nil {
 		httputils.SetFailed(c, resp, err)
@@ -183,7 +200,9 @@ func (cr *rainbowRouter) downloadChart(c *gin.Context) {
 	// 清理临时文件
 	defer func() {
 		if err = os.RemoveAll(filename); err != nil {
-			klog.Errorf("清理下载文件失败: %v\n", err)
+			klog.Errorf("清理下载文件失败: %v", err)
+		} else {
+			klog.Infof("清理临时文件(%s)已清理完成", filename)
 		}
 	}()
 
