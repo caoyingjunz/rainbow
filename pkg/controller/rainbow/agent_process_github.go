@@ -30,7 +30,7 @@ func (s *AgentController) ProcessGithub(ctx context.Context, req *types.CallGith
 		return nil, err
 	}
 	httpClient := util.HttpClientV2{URL: types.GithubAPIBase + "/user/repos"}
-	err = httpClient.Method(http.MethodPost).
+	err1 := httpClient.Method(http.MethodPost).
 		WithTimeout(30 * time.Second).
 		WithHeader(map[string]string{
 			"Content-Type":         "application/json",
@@ -40,9 +40,9 @@ func (s *AgentController) ProcessGithub(ctx context.Context, req *types.CallGith
 		}).
 		WithBody(body).
 		Do(nil)
-	if err != nil {
-		klog.Errorf("创建 repo(%s) 失败 %v", s.name, err)
-		return nil, err
+	if err1 != nil {
+		klog.Errorf("创建 repo(%s) 失败 %v", s.name, err1)
+		return nil, err1
 	}
 
 	return nil, nil

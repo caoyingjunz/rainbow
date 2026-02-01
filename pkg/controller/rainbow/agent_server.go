@@ -449,7 +449,9 @@ func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types
 
 	_, err = s.Call(ctx, req.ClientId, key, data)
 	if err != nil {
+		klog.Errorf("创建 agent github repo（%s）失败：%v", req.Repo, err)
 		return nil, err
 	}
+	klog.Errorf("创建 agent github repo（%s）成功：%v", req.Repo)
 	return nil, nil
 }
