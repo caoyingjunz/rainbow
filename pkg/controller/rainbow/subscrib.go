@@ -314,14 +314,14 @@ func (s *ServerController) subscribeDiff(ctx context.Context, sub model.Subscrib
 	return true, nil
 }
 
-func (s *ServerController) startSyncKubernetesVersion(ctx context.Context) {
-	klog.Infof("starting kubernetes version syncer")
-	ticker := time.NewTicker(3600 * time.Second)
+func (s *ServerController) startSyncKubernetesTags(ctx context.Context) {
+	klog.Infof("starting kubernetes tags syncer")
+	ticker := time.NewTicker(3600 * 6 * time.Second)
 	defer ticker.Stop()
 
-	opt := types.KubernetesTagRequest{SyncAll: false}
+	opt := types.CallKubernetesTagRequest{SyncAll: false}
 	for range ticker.C {
-		if _, err := s.SyncKubernetesVersions(ctx, &opt); err != nil {
+		if _, err := s.SyncKubernetesTags(ctx, &opt); err != nil {
 			klog.Error("failed kubernetes version syncer %v", err)
 		}
 	}

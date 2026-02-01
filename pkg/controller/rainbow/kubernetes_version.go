@@ -50,19 +50,19 @@ func (s *ServerController) ListKubernetesVersions(ctx context.Context, listOptio
 	return pageResult, nil
 }
 
-func (s *ServerController) SyncKubernetesVersions(ctx context.Context, req *types.KubernetesTagRequest) (interface{}, error) {
+func (s *ServerController) SyncKubernetesTags(ctx context.Context, req *types.CallKubernetesTagRequest) (interface{}, error) {
 	key := uuid.NewString()
 
-	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:                 4,
-		Uid:                  key,
-		KubernetesTagRequest: *req,
+	data, err := json.Marshal(types.CallMetaRequest{
+		Type:                     types.CallKubernetesTagType,
+		Uid:                      key,
+		CallKubernetesTagRequest: req,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	val, err := s.Call(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (s *ServerController) SyncKubernetesVersions(ctx context.Context, req *type
 		}
 	}
 
-	klog.Infof("新增同步版本(%v)", addVersions)
+	klog.Infof("新增k8s同步版本(%v)", addVersions)
 	return addVersions, nil
 }
 

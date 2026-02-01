@@ -1574,7 +1574,7 @@ func (cr *rainbowRouter) sendNotification(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) listKubernetesVersions(c *gin.Context) {
+func (cr *rainbowRouter) listKubernetesTags(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
@@ -1593,18 +1593,18 @@ func (cr *rainbowRouter) listKubernetesVersions(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) syncRemoteKubernetesVersions(c *gin.Context) {
+func (cr *rainbowRouter) syncKubernetesTags(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
 		err error
-		req types.KubernetesTagRequest
+		req types.CallKubernetesTagRequest
 	)
 	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	if resp.Result, err = cr.c.Server().SyncKubernetesVersions(c, &req); err != nil {
+	if resp.Result, err = cr.c.Server().SyncKubernetesTags(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

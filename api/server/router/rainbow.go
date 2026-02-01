@@ -57,11 +57,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		subscribeRoute.POST("/:Id/run", cr.runSubscribeImmediately)
 	}
 
-	kubernetesVersionRoute := httpEngine.Group("/rainbow/kubernetes/versions")
+	kubernetesVersionRoute := httpEngine.Group("/rainbow/kubernetes/tags")
 	{
-		kubernetesVersionRoute.GET("", cr.listKubernetesVersions)
-		// 废弃
-		kubernetesVersionRoute.POST("/sync", cr.syncRemoteKubernetesVersions)
+		kubernetesVersionRoute.GET("", cr.listKubernetesTags)
 	}
 
 	registryRoute := httpEngine.Group("/rainbow/registries")
@@ -155,7 +153,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	syncRoute := httpEngine.Group("/rainbow/sync")
 	{
 		syncRoute.POST("/users", cr.createOrUpdateUsers)
-		syncRoute.POST("/kubernetes/versions", cr.syncRemoteKubernetesVersions)
+		syncRoute.POST("/kubernetes/tags", cr.syncKubernetesTags)
 	}
 
 	// 镜像汇总

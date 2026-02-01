@@ -105,6 +105,8 @@ func (s *AgentController) process(ctx context.Context, date []byte) error {
 	switch reqMeta.Type {
 	case types.CallGithubType:
 		result, err = s.ProcessGithub(ctx, reqMeta.CallGithubRequest)
+	case types.CallKubernetesTagType:
+		result, err = s.ProcessKubernetesTags(ctx, reqMeta.CallKubernetesTagRequest)
 	default:
 
 		return fmt.Errorf("unsupported req call type %d", reqMeta.Type)
@@ -153,8 +155,6 @@ func (s *AgentController) search(ctx context.Context, date []byte) error {
 		result, err = s.SearchTags(ctx, reqMeta.TagSearchRequest)
 	case types.SearchTypeTagInfo:
 		result, err = s.SearchTagInfo(ctx, reqMeta.TagInfoSearchRequest)
-	case 4:
-		result, err = s.SyncKubernetesTags(ctx, reqMeta.KubernetesTagRequest)
 	default:
 		return fmt.Errorf("unsupported req type %d", reqMeta.Type)
 	}
@@ -829,7 +829,7 @@ func (s *AgentController) SearchTagInfo(ctx context.Context, req types.RemoteTag
 	return nil, nil
 }
 
-func (s *AgentController) SyncKubernetesTags(ctx context.Context, req types.KubernetesTagRequest) ([]byte, error) {
+func (s *AgentController) ProcessKubernetesTags(ctx context.Context, req *types.CallKubernetesTagRequest) ([]byte, error) {
 	if !req.SyncAll {
 		url := fmt.Sprintf("https://api.github.com/repos/kubernetes/kubernetes/tags?per_page=10")
 		return DoHttpRequest(url)

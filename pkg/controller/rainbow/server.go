@@ -138,7 +138,7 @@ type ServerInterface interface {
 	GetNotifyTypes(ctx context.Context) (interface{}, error)
 
 	ListKubernetesVersions(ctx context.Context, listOption types.ListOptions) (interface{}, error)
-	SyncKubernetesVersions(ctx context.Context, req *types.KubernetesTagRequest) (interface{}, error)
+	SyncKubernetesTags(ctx context.Context, req *types.CallKubernetesTagRequest) (interface{}, error)
 
 	ListRainbowds(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
@@ -263,7 +263,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.sync(ctx)
 	go s.startSyncDailyPulls(ctx)
 	go s.startAgentHeartbeat(ctx)
-	go s.startSyncKubernetesVersion(ctx)
+	go s.startSyncKubernetesTags(ctx)
 	go s.startSubscribeController(ctx)
 
 	klog.Infof("starting rocketmq producer")

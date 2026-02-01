@@ -81,7 +81,8 @@ const (
 )
 
 const (
-	CallGithubType = 5
+	CallGithubType        = 5
+	CallKubernetesTagType = 6
 )
 
 const (

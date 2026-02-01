@@ -336,11 +336,6 @@ type (
 		Tag        string `json:"tag" form:"tag"`
 	}
 
-	KubernetesTagRequest struct {
-		ClientId string `json:"client_id" form:"client_id"`
-		SyncAll  bool   `json:"sync_all"`
-	}
-
 	CallKubernetesTagRequest struct {
 		ClientId string `json:"client_id"`
 		SyncAll  bool   `json:"sync_all"`
@@ -359,7 +354,6 @@ type (
 		RepositorySearchRequest RemoteSearchRequest
 		TagSearchRequest        RemoteTagSearchRequest
 		TagInfoSearchRequest    RemoteTagInfoSearchRequest
-		KubernetesTagRequest    KubernetesTagRequest
 	}
 
 	CallMetaRequest struct {
