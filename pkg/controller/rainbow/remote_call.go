@@ -91,6 +91,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Cal
 		return []types.CommonSearchRepositoryResult{}, nil
 	}
 	s.setRepoHubType(&req)
+	req.SetNamespace()
 
 	req.TargetType = types.SearchTypeRepo
 	key := uuid.NewString()
@@ -121,6 +122,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Cal
 func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.CallSearchRequest) (interface{}, error) {
 	s.setRepoHubType(&req)
 	req.SetDefaultPageOption()
+	req.SetNamespace()
 
 	req.TargetType = types.SearchTypeTag
 	key := uuid.NewString()
@@ -148,6 +150,7 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.C
 
 func (s *ServerController) GetRepositoryTagInfo(ctx context.Context, req types.CallSearchRequest) (interface{}, error) {
 	s.setRepoHubType(&req)
+	req.SetNamespace()
 
 	key := uuid.NewString()
 	req.TargetType = types.SearchTypeTagInfo

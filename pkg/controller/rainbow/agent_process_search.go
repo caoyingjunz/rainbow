@@ -103,20 +103,15 @@ func (s *AgentController) SearchDockerhubTags(ctx context.Context, req *types.Ca
 
 	// 获取 token
 	repo := fmt.Sprintf("%s/%s", req.Namespace, req.Repository)
-	var t types.DockerToken
-	tokenClient := util.HttpClientV2{URL: fmt.Sprintf("https://auth.docker.io/token?service=registry.docker.io&scope=repository:%s:pull", repo)}
-	if err := tokenClient.Method(http.MethodGet).WithTimeout(30 * time.Second).Do(&t); err != nil {
-		return nil, err
-	}
+	klog.Infof("搜索 dockerhub 镜像(%s) tags", repo)
 
 	var ds types.HubTagResponse
-	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s/tags&page=%d&page_size=%d&name=%s", req.Namespace, req.Repository, req.Page, req.PageSize, req.Query)
+	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s/tags?page=%d&page_size=%d&name=%s", req.Namespace, req.Repository, req.Page, req.PageSize, req.Query)
 	httpClient := util.HttpClientV2{URL: url}
-	if err := httpClient.Method(http.MethodPost).
-		WithHeader(map[string]string{
-			"Authorization": fmt.Sprintf("Bearer %s", t.Token),
-		}).
+	if err := httpClient.Method(http.MethodGet).
+		WithTimeout(30 * time.Second).
 		Do(&ds); err != nil {
+		klog.Errorf("获取镜像tags失败 %v", err)
 		return nil, err
 	}
 

@@ -440,6 +440,12 @@ func (o *CallSearchRequest) SetDefaultPageOption() {
 	}
 }
 
+func (o *CallSearchRequest) SetNamespace() {
+	if len(o.Namespace) == 0 {
+		o.Namespace = DefaultDockerhubNamespace
+	}
+}
+
 // ListOptions is the query options to a standard REST list call.
 type ListOptions struct {
 	CustomMeta `json:",inline"`
