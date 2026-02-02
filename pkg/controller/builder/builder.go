@@ -4,19 +4,20 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"time"
+
 	"github.com/caoyingjunz/pixiulib/exec"
+	"github.com/docker/docker/client"
+	"k8s.io/klog/v2"
+
 	"github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/util"
-	"github.com/docker/docker/client"
-	"io"
-	"k8s.io/klog/v2"
-	"time"
 )
 
 type BuilderController struct {
 	Callback   string
-	RegistryId int64
-	BuilderId  int64
+	BuildId    int64
 	DockerFile string
 	Repo       string
 	Arch       string
@@ -27,7 +28,6 @@ type BuilderController struct {
 
 	Cfg      config.Config
 	Registry config.Registry
-	Images   config.Image
 }
 
 func (b *BuilderController) Login() error {
@@ -47,11 +47,10 @@ func NewBuilderController(cfg config.Config) *BuilderController {
 	return &BuilderController{
 		Cfg:        cfg,
 		Callback:   cfg.Builder.Callback,
-		BuilderId:  cfg.Builder.BuilderId,
-		RegistryId: cfg.Builder.RegistryId,
+		BuildId:    cfg.Builder.BuildId,
 		Repo:       cfg.Builder.Repo,
 		Arch:       cfg.Builder.Arch,
-		httpClient: util.NewHttpClient(5*time.Second, cfg.Plugin.Callback),
+		httpClient: util.NewHttpClient(5*time.Second, cfg.Builder.Callback),
 	}
 }
 
@@ -150,7 +149,7 @@ func (b *BuilderController) Run() error {
 }
 
 func (b *BuilderController) SyncBuildStatus(msg string) {
-	url := fmt.Sprintf("%s/rainbow/builds/%d/status", b.Callback, b.BuilderId)
+	url := fmt.Sprintf("%s/rainbow/builds/%d/status", b.Callback, b.BuildId)
 	err := b.httpClient.Post(url, nil, map[string]interface{}{"Status": msg}, nil)
 	if err != nil {
 		klog.Errorf("同步 %s 失败 %v", msg, err)
@@ -160,7 +159,7 @@ func (b *BuilderController) SyncBuildStatus(msg string) {
 }
 
 func (b *BuilderController) SyncBuildMessages(msg string) {
-	url := fmt.Sprintf("%s/rainbow/builds/%d/messages", b.Callback, b.BuilderId)
+	url := fmt.Sprintf("%s/rainbow/builds/%d/messages", b.Callback, b.BuildId)
 	err := b.httpClient.Post(url, nil, map[string]interface{}{"message": msg}, nil)
 	if err != nil {
 		klog.Errorf("同步 %s 失败 %v", msg, err)

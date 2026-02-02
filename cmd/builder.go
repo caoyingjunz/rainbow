@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
+
 	"github.com/caoyingjunz/pixiulib/config"
-	"github.com/caoyingjunz/rainbow/pkg/controller/builder"
 	"k8s.io/klog/v2"
 
 	rainbowconfig "github.com/caoyingjunz/rainbow/cmd/app/config"
+	"github.com/caoyingjunz/rainbow/pkg/controller/builder"
 )
 
 var (
@@ -30,7 +31,6 @@ func main() {
 	if err := bc.Complete(); err != nil {
 		klog.Fatal(err)
 	}
-
 	defer bc.Close()
 
 	if err := bc.Run(); err != nil {
