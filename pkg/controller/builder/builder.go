@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/caoyingjunz/pixiulib/exec"
@@ -127,11 +128,11 @@ func (b *BuilderController) Validate() error {
 }
 
 func (b *BuilderController) Run() error {
-	err := b.Login()
-	if err != nil {
-		return err
-	}
-	err = b.BuildAndPushImage()
+	//err := b.Login()
+	//if err != nil {
+	//	return err
+	//}
+	err := b.BuildAndPushImage()
 	if err != nil {
 		return err
 	}
@@ -139,14 +140,23 @@ func (b *BuilderController) Run() error {
 	return nil
 }
 
-func (b *BuilderController) SyncBuildStatus(msg string) {
-	url := fmt.Sprintf("%s/rainbow/builds/%d/status", b.Callback, b.BuildId)
-	err := b.httpClient.Post(url, nil, map[string]interface{}{"Status": msg}, nil)
+func (b *BuilderController) SyncBuildStatus(status string) {
+	data, err := util.BuildHttpBody(map[string]interface{}{"Status": status})
 	if err != nil {
-		klog.Errorf("同步 %s 失败 %v", msg, err)
-	} else {
-		klog.Infof("同步 %s 成功", msg)
+		klog.Errorf("构造请求体失败 %v", err)
+		return
 	}
+
+	httpClient := util.HttpClientV2{URL: fmt.Sprintf("%s/rainbow/set/build/%d/status", b.Callback, b.BuildId)}
+	if err1 := httpClient.Method(http.MethodPut).
+		WithTimeout(30 * time.Second).
+		WithBody(data).
+		Do(nil); err1 != nil {
+		klog.Errorf("同步状态失败 %v", err1)
+		return
+	}
+
+	klog.Infof("同步构建(%d)状态(%s)完成", b.BuildId, status)
 }
 
 func (b *BuilderController) SyncBuildMessages(msg string) {
