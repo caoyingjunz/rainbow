@@ -353,12 +353,15 @@ type (
 
 		Hub        string `json:"hub" form:"hub"`
 		SearchType int    `json:"search_type" form:"search_type"` // 0 模糊搜索 1 精准查询
-		TargetType string `json:"target_type"`
+		TargetType int    `json:"target_type" form:"target_type"` //  搜索资源类型，0 镜像，1 tag
 
-		Namespace string `json:"namespace" form:"namespace"`
-		Query     string `json:"query" form:"query"`
-		Page      string `json:"page" form:"page"`
-		PageSize  string `json:"page_size" form:"page_size"`
+		Namespace  string `json:"namespace" form:"namespace"`
+		Repository string `json:"repository" form:"repository"`
+		Tag        string `json:"tag" form:"tag"`
+
+		Query    string `json:"query" form:"query"`
+		Page     int    `json:"page" form:"page"`
+		PageSize int    `json:"page_size" form:"page_size"`
 	}
 
 	RemoteMetaRequest struct {
@@ -426,6 +429,16 @@ type (
 		Public      bool   `json:"public,omitempty"`
 	}
 )
+
+func (o *CallSearchRequest) SetDefaultPageOption() {
+	// 初始化分页属性
+	if o.Page <= 0 {
+		o.Page = 1
+	}
+	if o.PageSize <= 0 || o.PageSize > 100 {
+		o.PageSize = 10
+	}
+}
 
 // ListOptions is the query options to a standard REST list call.
 type ListOptions struct {

@@ -138,7 +138,7 @@ func (s *ServerController) subscribeAll(ctx context.Context, sub model.Subscribe
 		size = 10 // 最大并发是 10，
 	}
 
-	tagResp, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
+	tagResp, err := s.SearchRepositoryTags(ctx, types.CallSearchRequest{
 		Hub:        sub.ImageFrom,
 		Namespace:  ns,
 		Repository: repo,
@@ -237,16 +237,16 @@ func (s *ServerController) subscribeDiff(ctx context.Context, sub model.Subscrib
 		size = 10 // 最大并发是 100
 	}
 
-	remotes, err := s.SearchRepositoryTags(ctx, types.RemoteTagSearchRequest{
+	remotes, err := s.SearchRepositoryTags(ctx, types.CallSearchRequest{
 		Namespace:  ns,
 		Repository: repo,
-		Config: &types.SearchConfig{
-			ImageFrom: sub.ImageFrom,
-			Page:      1, // 从第一页开始搜索
-			Size:      size,
-			Policy:    sub.Policy,
-			Arch:      sub.Arch,
-		},
+		//Config: &types.SearchConfig{
+		//	ImageFrom: sub.ImageFrom,
+		//	Page:      1, // 从第一页开始搜索
+		//	Size:      size,
+		//	Policy:    sub.Policy,
+		//	Arch:      sub.Arch,
+		//},
 	})
 	if err != nil {
 		klog.Errorf("获取 dockerhub 镜像(%s)最新镜像版本失败 %v", sub.Path, err)

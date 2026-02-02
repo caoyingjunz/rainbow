@@ -71,29 +71,40 @@ func (s *ServerController) setSearchHubType(req *types.RemoteSearchRequest) {
 	}
 }
 
-func (s *ServerController) SearchRepositories(ctx context.Context, req types.RemoteSearchRequest) (interface{}, error) {
+// 兼容前端缺陷
+func (s *ServerController) setRepoHubType(req *types.CallSearchRequest) {
+	// 设置默认仓库类型
+	if len(req.Hub) == 0 {
+		req.Hub = types.ImageHubDocker
+	}
+	if req.Hub == "gcr" {
+		req.Hub = types.ImageHubGCR
+	}
+	if req.Hub == "quay" {
+		req.Hub = types.ImageHubQuay
+	}
+}
+
+func (s *ServerController) SearchRepositories(ctx context.Context, req types.CallSearchRequest) (interface{}, error) {
 	req.Query = strings.TrimSpace(req.Query)
 	if len(req.Query) == 0 {
 		return []types.CommonSearchRepositoryResult{}, nil
 	}
-	s.setSearchHubType(&req)
+	s.setRepoHubType(&req)
 
-	if err := s.preRemoteSearch(ctx, req); err != nil {
-		return nil, err
-	}
-
+	req.TargetType = types.SearchTypeRepo
 	key := uuid.NewString()
-	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:                    types.SearchTypeRepo,
-		Uid:                     key,
-		RepositorySearchRequest: req,
+	data, err := json.Marshal(types.CallMetaRequest{
+		Type:              types.CallSearchType,
+		Uid:               key,
+		CallSearchRequest: &req,
 	})
 	if err != nil {
 		klog.Errorf("序列化(%v)失败 %v", req, err)
 		return nil, err
 	}
 
-	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	val, err := s.Call(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -107,19 +118,23 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Rem
 	return searchResp, nil
 }
 
-func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.RemoteTagSearchRequest) (interface{}, error) {
+func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.CallSearchRequest) (interface{}, error) {
+	s.setRepoHubType(&req)
+	req.SetDefaultPageOption()
+
+	req.TargetType = types.SearchTypeTag
 	key := uuid.NewString()
-	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:             types.SearchTypeTag,
-		Uid:              key,
-		TagSearchRequest: req,
+	data, err := json.Marshal(types.CallMetaRequest{
+		Type:              types.CallSearchType,
+		Uid:               key,
+		CallSearchRequest: &req,
 	})
 	if err != nil {
 		klog.Errorf("序列化(%v)失败 %v", req, err)
 		return nil, err
 	}
 
-	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	val, err := s.Call(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -131,19 +146,22 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.R
 	return tagResp, nil
 }
 
-func (s *ServerController) SearchRepositoryTagInfo(ctx context.Context, req types.RemoteTagInfoSearchRequest) (interface{}, error) {
+func (s *ServerController) GetRepositoryTagInfo(ctx context.Context, req types.CallSearchRequest) (interface{}, error) {
+	s.setRepoHubType(&req)
+
 	key := uuid.NewString()
-	data, err := json.Marshal(types.RemoteMetaRequest{
-		Type:                 types.SearchTypeTagInfo,
-		Uid:                  key,
-		TagInfoSearchRequest: req,
+	req.TargetType = types.SearchTypeTagInfo
+	data, err := json.Marshal(types.CallMetaRequest{
+		Type:              types.CallSearchType,
+		Uid:               key,
+		CallSearchRequest: &req,
 	})
 	if err != nil {
 		klog.Errorf("序列化(%v)失败 %v", req, err)
 		return nil, err
 	}
 
-	val, err := s.doSearch(ctx, req.ClientId, key, data)
+	val, err := s.Call(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}

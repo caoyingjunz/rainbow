@@ -1043,7 +1043,7 @@ func (cr *rainbowRouter) searchRepositories(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		req types.RemoteSearchRequest
+		req types.CallSearchRequest
 		err error
 	)
 	if err = httputils.ShouldBindAny(c, nil, nil, &req); err != nil {
@@ -1063,15 +1063,12 @@ func (cr *rainbowRouter) searchRepositoryTags(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		req types.RemoteTagSearchRequest
+		req types.CallSearchRequest
 		err error
 	)
 	if err = httputils.ShouldBindAny(c, nil, nil, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
-	}
-	if len(req.Hub) == 0 {
-		req.Hub = "dockerhub"
 	}
 	req.Query = strings.TrimSpace(req.Query)
 	if resp.Result, err = cr.c.Server().SearchRepositoryTags(c, req); err != nil {
@@ -1082,11 +1079,11 @@ func (cr *rainbowRouter) searchRepositoryTags(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) searchRepositoryTagInfo(c *gin.Context) {
+func (cr *rainbowRouter) getRepositoryTagInfo(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		req      types.RemoteTagInfoSearchRequest
+		req      types.CallSearchRequest
 		nameMeta types.NameMeta
 		err      error
 	)
@@ -1097,10 +1094,7 @@ func (cr *rainbowRouter) searchRepositoryTagInfo(c *gin.Context) {
 	req.Repository = nameMeta.Name
 	req.Namespace = nameMeta.Namespace
 	req.Tag = c.Param("tag")
-	if len(req.Hub) == 0 {
-		req.Hub = "dockerhub"
-	}
-	if resp.Result, err = cr.c.Server().SearchRepositoryTagInfo(c, req); err != nil {
+	if resp.Result, err = cr.c.Server().GetRepositoryTagInfo(c, req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

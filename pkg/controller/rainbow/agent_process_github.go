@@ -1,6 +1,7 @@
 package rainbow
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -46,4 +47,49 @@ func (s *AgentController) ProcessGithub(ctx context.Context, req *types.CallGith
 	}
 
 	return nil, nil
+}
+
+func (s *AgentController) ProcessKubernetesTags(ctx context.Context, req *types.CallKubernetesTagRequest) ([]byte, error) {
+	if !req.SyncAll {
+		url := fmt.Sprintf("https://api.github.com/repos/kubernetes/kubernetes/tags?per_page=10")
+		return DoHttpRequest(url)
+	}
+
+	var allData []byte
+	page := 1
+	for {
+		url := fmt.Sprintf("https://api.github.com/repos/kubernetes/kubernetes/tags?per_page=100&page=%d", page)
+		data, err := DoHttpRequest(url)
+		if err != nil {
+			return nil, err
+		}
+		if len(data) == 0 || bytes.Equal(data, []byte("[]")) {
+			break
+		}
+		allData = appendData(allData, data)
+
+		page++
+		time.Sleep(10 * time.Millisecond) // 避免请求过快
+	}
+
+	return allData, nil
+}
+
+func appendData(allData, newData []byte) []byte {
+	// 情况1: 原始二进制直接拼接
+	// return append(allData, newData...)
+
+	// 情况2: JSON数组合并（更常见）
+	if len(allData) == 0 {
+		return newData
+	}
+
+	// 移除allData最后的']'和newData开头的'['
+	if allData[len(allData)-1] == ']' && newData[0] == '[' {
+		allData = allData[:len(allData)-1]
+		newData = newData[1:]
+		return append(append(allData, ','), newData...)
+	}
+
+	return append(allData, newData...)
 }
