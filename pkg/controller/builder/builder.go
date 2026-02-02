@@ -1,12 +1,14 @@
 package builder
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/caoyingjunz/rainbow/cmd/app/config"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/docker/docker/client"
+	"io"
 	"k8s.io/klog/v2"
 	"time"
 )
@@ -86,25 +88,39 @@ func (b *BuilderController) BuildAndPushImage() error {
 		b.Registry.Namespace,
 		b.Repo,
 	)
+
 	b.SyncBuildStatus("初始化构建环境")
 	klog.Info("Init build env")
-	buildInitCmd := []string{"docker", "buildx", "create", "--name", "multi-builder", "--driver", "docker-container", "--use"}
+
+	buildInitCmd := []string{
+		"docker", "buildx", "create",
+		"--name", "multi-builder",
+		"--driver", "docker-container",
+		"--use",
+	}
+
 	out, err := b.exec.Command(buildInitCmd[0], buildInitCmd[1:]...).CombinedOutput()
+	b.SyncBuildMessages(string(out))
 	if err != nil {
 		b.SyncBuildStatus("初始化构建失败")
-		return fmt.Errorf("failed to build image: %w\n%s", err, string(out))
-
+		return fmt.Errorf("failed to init buildx: %w\n%s", err, string(out))
 	}
+
 	b.SyncBuildStatus("开始构建上传镜像")
 	klog.Infof("Starting build image %s", imageName)
-	buildAndPushCmd := []string{"docker", "buildx", "build", "--platform", b.Arch, "-t", imageName, "--push", "."}
 
-	out, err = b.exec.Command(buildAndPushCmd[0], buildAndPushCmd[1:]...).CombinedOutput()
-	if err != nil {
+	buildAndPushCmd := b.exec.Command(
+		"docker", "buildx", "build",
+		"--platform", b.Arch,
+		"-t", imageName,
+		"--push", ".",
+	)
+
+	if err := b.runCmdAndStream(buildAndPushCmd); err != nil {
 		b.SyncBuildStatus("镜像构建上传失败")
-		return fmt.Errorf("failed to build image: %w\n%s", err, string(out))
+		return fmt.Errorf("failed to build and push image: %w", err)
 	}
-	fmt.Println(string(out))
+
 	b.SyncBuildStatus("镜像构建上传成功")
 	klog.Infof("Image built successfully: %s", imageName)
 
@@ -141,4 +157,43 @@ func (b *BuilderController) SyncBuildStatus(msg string) {
 	} else {
 		klog.Infof("同步 %s 成功", msg)
 	}
+}
+
+func (b *BuilderController) SyncBuildMessages(msg string) {
+	url := fmt.Sprintf("%s/rainbow/builds/%d/messages", b.Callback, b.BuilderId)
+	err := b.httpClient.Post(url, nil, map[string]interface{}{"message": msg}, nil)
+	if err != nil {
+		klog.Errorf("同步 %s 失败 %v", msg, err)
+	} else {
+		klog.Infof("同步 %s 成功", msg)
+	}
+}
+
+func (b *BuilderController) runCmdAndStream(cmd exec.Cmd) error {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	readPipe := func(r io.Reader) {
+		scanner := bufio.NewScanner(r)
+		scanner.Buffer(make([]byte, 1024), 1024*1024)
+		for scanner.Scan() {
+			b.SyncBuildMessages(scanner.Text())
+		}
+	}
+
+	go readPipe(stdout)
+	go readPipe(stderr)
+
+	return cmd.Wait()
 }
