@@ -46,29 +46,15 @@ func (b *BuilderController) Login() error {
 func NewBuilderController(cfg config.Config) *BuilderController {
 	return &BuilderController{
 		Cfg:        cfg,
-		Callback:   cfg.Builder.Callback,
-		BuildId:    cfg.Builder.BuildId,
-		Repo:       cfg.Builder.Repo,
-		Arch:       cfg.Builder.Arch,
-		httpClient: util.NewHttpClient(5*time.Second, cfg.Builder.Callback),
+		Callback:   cfg.Build.Callback,
+		BuildId:    cfg.Build.BuildId,
+		Repo:       cfg.Build.Repo,
+		Arch:       cfg.Build.Arch,
+		httpClient: util.NewHttpClient(5*time.Second, cfg.Build.Callback),
 	}
 }
 
 func (b *BuilderController) Complete() error {
-	var err error
-	if err = b.doComplete(); err != nil {
-		klog.Info(err)
-	}
-	return nil
-}
-
-func (b *BuilderController) Close() {
-	if b.docker != nil {
-		_ = b.docker.Close()
-	}
-}
-
-func (b *BuilderController) doComplete() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
@@ -78,6 +64,12 @@ func (b *BuilderController) doComplete() error {
 	b.Registry = b.Cfg.Registry
 
 	return b.Validate()
+}
+
+func (b *BuilderController) Close() {
+	if b.docker != nil {
+		_ = b.docker.Close()
+	}
 }
 
 func (b *BuilderController) BuildAndPushImage() error {
@@ -128,7 +120,6 @@ func (b *BuilderController) BuildAndPushImage() error {
 
 func (b *BuilderController) Validate() error {
 	if _, err := b.docker.Ping(context.Background()); err != nil {
-		klog.Errorf("%v", err)
 		return err
 	}
 	klog.Infof("builder validate completed")

@@ -44,6 +44,12 @@ plugin:
   synced: true
   driver: docker #skopeo or docker
 
+build:
+  callback: http://127.0.0.1:8090
+  build_id: 20220801
+  arch: linux/amd64
+  repo: nginx:v1
+
 rate_limit:
   user_rate_limit:
     ## 最大存储客户端IP数量
