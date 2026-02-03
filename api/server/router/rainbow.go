@@ -154,6 +154,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 	{
 		syncRoute.POST("/users", cr.createOrUpdateUsers)
 		syncRoute.POST("/kubernetes/tags", cr.syncKubernetesTags)
+		syncRoute.POST("/agents/drivers", cr.syncAgentDrivers)
 	}
 
 	// 镜像汇总

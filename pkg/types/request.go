@@ -344,8 +344,9 @@ type (
 	CallGithubRequest struct {
 		ClientId string `json:"client_id,omitempty"`
 
-		Op   string `json:"op,omitempty"` // 操作
-		Repo string `json:"repo,omitempty"`
+		Op    int      `json:"op,omitempty"` // 操作类型
+		Repo  string   `json:"repo,omitempty"`
+		Repos []string `json:"repos,omitempty"`
 	}
 
 	CallSearchRequest struct {

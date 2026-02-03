@@ -542,7 +542,7 @@ func (cr *rainbowRouter) createAgentRepo(c *gin.Context) {
 		return
 	}
 	githubReq.ClientId = idMeta.Name
-	if resp.Result, err = cr.c.Server().CreateAgentGithubRepo(c, &githubReq); err != nil {
+	if resp.Result, err = cr.c.Server().CreateAgentRepo(c, &githubReq); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -1602,6 +1602,25 @@ func (cr *rainbowRouter) syncKubernetesTags(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) syncAgentDrivers(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		err error
+		req types.CallGithubRequest
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().SyncAgentRepos(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
 	httputils.SetSuccess(c, resp)
 }
 

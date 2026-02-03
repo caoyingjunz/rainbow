@@ -14,18 +14,83 @@ import (
 )
 
 func (s *AgentController) ProcessGithub(ctx context.Context, req *types.CallGithubRequest) ([]byte, error) {
-	// op 作为预留字段，后续用于操作更多行为, 默认创建
-	// 目前仅支持创建 github 项目
-	agent, err := s.factory.Agent().GetByName(ctx, s.name)
+	switch req.Op {
+	case types.OpGetAction:
+		return s.GetGithubRepo(ctx, req)
+	case types.OpCreateAction:
+		return s.CreateGithubRepo(ctx, req)
+	case types.OpCreateIfNotAction:
+		return s.CreateAgentReposIfNot(ctx, req)
+	default:
+		return nil, fmt.Errorf("unSupported github op %d", req.Op)
+	}
+}
+
+func (s *AgentController) CreateAgentReposIfNot(ctx context.Context, req *types.CallGithubRequest) ([]byte, error) {
+	repos, err := s.getGithubRepos(ctx, req)
 	if err != nil {
-		klog.Errorf("获取 agent(%s)属性失败 %v", s.name, err)
 		return nil, err
 	}
-	if len(agent.GithubToken) == 0 {
-		klog.Infof("agent(%s) 的 token 为空", agent.Name)
-		return nil, fmt.Errorf("agent(%s) 的 token 为空", s.name)
+
+	existsRepoMap := make(map[string]bool)
+	for _, repo := range repos {
+		existsRepoMap[repo.Name] = true
+	}
+	klog.V(1).Infof("已存在 repo %v", existsRepoMap)
+
+	for _, repo := range req.Repos {
+		if existsRepoMap[repo] {
+			klog.Infof("repo %s 已存在，跳过创建", repo)
+			continue
+		}
+
+		klog.Infof("即将创建 repo %s", repo)
+		if _, err = s.CreateGithubRepo(ctx, &types.CallGithubRequest{
+			Repo: repo,
+		}); err != nil {
+			klog.Errorf("创建 repo（%s）失败 %v", repo, err)
+			return nil, err
+		}
 	}
 
+	klog.Infof("repo 全部同步完成")
+	return nil, nil
+}
+
+func (s *AgentController) getGithubRepos(ctx context.Context, req *types.CallGithubRequest) ([]types.GitHubRepository, error) {
+	token, err := s.GetAgentToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var repos []types.GitHubRepository
+	httpClient := util.HttpClientV2{URL: types.GithubAPIBase + "/user/repos"}
+	err1 := httpClient.Method(http.MethodGet).
+		WithTimeout(30 * time.Second).
+		WithHeader(map[string]string{
+			"Accept":               "application/vnd.github+json",
+			"Authorization":        fmt.Sprintf("Bearer %s", token),
+			"X-GitHub-Api-Version": "2022-11-28",
+		}).
+		Do(&repos)
+	if err1 != nil {
+		return nil, err
+	}
+
+	return repos, nil
+}
+
+func (s *AgentController) GetGithubRepo(ctx context.Context, req *types.CallGithubRequest) ([]byte, error) {
+	return nil, nil
+}
+
+func (s *AgentController) CreateGithubRepo(ctx context.Context, req *types.CallGithubRequest) ([]byte, error) {
+	token, err := s.GetAgentToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建 github 项目
 	body, err := util.BuildHttpBody(map[string]interface{}{"name": req.Repo, "private": true})
 	if err != nil {
 		return nil, err
@@ -36,7 +101,7 @@ func (s *AgentController) ProcessGithub(ctx context.Context, req *types.CallGith
 		WithHeader(map[string]string{
 			"Content-Type":         "application/json",
 			"Accept":               "application/vnd.github+json",
-			"Authorization":        fmt.Sprintf("Bearer %s", agent.GithubToken),
+			"Authorization":        fmt.Sprintf("Bearer %s", token),
 			"X-GitHub-Api-Version": "2022-11-28",
 		}).
 		WithBody(body).

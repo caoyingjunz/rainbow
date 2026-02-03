@@ -469,19 +469,26 @@ func (s *ServerController) ValidateToken(ctx *gin.Context) error {
 }
 
 func (s *ServerController) extractToken(c *gin.Context) (string, error) {
-	emptyFunc := func(t string) bool { return len(t) == 0 }
+	token := c.Query("token")
 
-	token := c.GetHeader("Authorization")
-	if emptyFunc(token) {
-		return "", fmt.Errorf("authorization header is not provided")
+	if len(token) == 0 {
+		return "", fmt.Errorf("download token is not provided")
 	}
-	fields := strings.Fields(token)
-	if len(fields) != 2 {
-		return "", fmt.Errorf("invalid authorization header format")
-	}
-	if fields[0] != "Bearer" {
-		return "", fmt.Errorf("unsupported authorization type")
-	}
+	return token, nil
 
-	return fields[1], nil
+	//emptyFunc := func(t string) bool { return len(t) == 0 }
+	//
+	//token := c.GetHeader("Authorization")
+	//if emptyFunc(token) {
+	//	return "", fmt.Errorf("authorization header is not provided")
+	//}
+	//fields := strings.Fields(token)
+	//if len(fields) != 2 {
+	//	return "", fmt.Errorf("invalid authorization header format")
+	//}
+	//if fields[0] != "Bearer" {
+	//	return "", fmt.Errorf("unsupported authorization type")
+	//}
+	//
+	//return fields[1], nil
 }

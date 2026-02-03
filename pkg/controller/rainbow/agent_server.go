@@ -439,8 +439,9 @@ func (s *ServerController) parseDockerJSONOutput(output string) ([]ContainerInfo
 	return containers, nil
 }
 
-func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types.CallGithubRequest) (interface{}, error) {
+func (s *ServerController) CreateAgentRepo(ctx context.Context, req *types.CallGithubRequest) (interface{}, error) {
 	key := guuid.NewString()
+	req.Op = types.OpCreateAction
 	data, err := json.Marshal(types.CallMetaRequest{
 		Type:              types.CallGithubType,
 		Uid:               key,
@@ -454,4 +455,42 @@ func (s *ServerController) CreateAgentGithubRepo(ctx context.Context, req *types
 	}
 	klog.Errorf("创建 agent github repo（%s）成功：%v", req.Repo)
 	return nil, nil
+}
+
+func (s *ServerController) CreateAgentReposIfNot(ctx context.Context, req *types.CallGithubRequest) error {
+	key := guuid.NewString()
+	req.Op = types.OpCreateIfNotAction
+	data, err := json.Marshal(types.CallMetaRequest{
+		Type:              types.CallGithubType,
+		Uid:               key,
+		CallGithubRequest: req,
+	})
+
+	_, err = s.Call(ctx, req.ClientId, key, data)
+	if err != nil {
+		klog.Errorf("创建 agentRepos（%s）失败：%v", req.Repo, err)
+		return err
+	}
+	klog.Errorf("创建 agentRepo（%s）成功：%v", req.Repo)
+	return nil
+}
+
+func (s *ServerController) SyncAgentRepos(ctx context.Context, req *types.CallGithubRequest) error {
+	agents, err := s.factory.Agent().List(ctx, db.WithStatus(model.RunAgentType))
+	if err != nil {
+		klog.Errorf("获取运行中 agent 列表失败 %v", err)
+		return err
+	}
+
+	for _, agent := range agents {
+		err = s.CreateAgentReposIfNot(ctx, &types.CallGithubRequest{
+			ClientId: agent.Name,
+			Repos:    req.Repos,
+		})
+		if err != nil {
+			klog.Errorf("同步 agent(%s) repo 失败 %v", agent.Name, err)
+		}
+	}
+
+	return nil
 }

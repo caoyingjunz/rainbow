@@ -51,6 +51,7 @@ type AgentController struct {
 	name     string
 	callback string
 	baseDir  string
+	token    string
 }
 
 func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis.Client) *AgentController {
@@ -64,6 +65,27 @@ func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis
 		queue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
 		exec:        exec.New(),
 	}
+}
+
+func (s *AgentController) GetAgentToken(ctx context.Context) (string, error) {
+	if len(s.token) != 0 {
+		klog.Infof("已从缓存中获取到token，直接返回")
+		return s.token, nil
+	}
+
+	klog.Infof("缓存中token不存在，尝试从库中获取")
+	agent, err := s.factory.Agent().GetByName(ctx, s.name)
+	if err != nil {
+		klog.Errorf("获取 agent(%s)属性失败 %v", s.name, err)
+		return "", err
+	}
+	if len(agent.GithubToken) == 0 {
+		klog.Infof("agent(%s) 的 token 为空", agent.Name)
+		return "", fmt.Errorf("agent(%s) 的 token 为空", s.name)
+	}
+
+	s.token = agent.GithubToken
+	return s.token, nil
 }
 
 func (s *AgentController) Subscribe(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {

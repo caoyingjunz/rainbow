@@ -75,6 +75,12 @@ const (
 )
 
 const (
+	OpCreateAction = iota + 1
+	OpGetAction
+	OpCreateIfNotAction
+)
+
+const (
 	SearchTypeRepo = iota + 1
 	SearchTypeTag
 	SearchTypeTagInfo
@@ -466,4 +472,10 @@ type ChartDetail struct {
 
 type ChartSaved struct {
 	Saved bool `json:"saved"`
+}
+
+type GitHubRepository struct {
+	Name     string `json:"name"`
+	FullName string `json:"full_name"`
+	Private  bool   `json:"private"`
 }
