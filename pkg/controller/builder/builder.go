@@ -16,7 +16,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/util"
 )
 
-type BuilderController struct {
+type BuildController struct {
 	Callback   string
 	BuildId    int64
 	DockerFile string
@@ -31,7 +31,7 @@ type BuilderController struct {
 	Registry config.Registry
 }
 
-func (b *BuilderController) Login() error {
+func (b *BuildController) Login() error {
 	cmd := []string{"docker", "login", "-u", b.Registry.Username, "-p", b.Registry.Password}
 	if b.Registry.Repository != "" {
 		cmd = append(cmd, b.Registry.Repository)
@@ -44,8 +44,8 @@ func (b *BuilderController) Login() error {
 	return nil
 }
 
-func NewBuilderController(cfg config.Config) *BuilderController {
-	return &BuilderController{
+func NewBuilderController(cfg config.Config) *BuildController {
+	return &BuildController{
 		Cfg:        cfg,
 		Callback:   cfg.Build.Callback,
 		BuildId:    cfg.Build.BuildId,
@@ -55,7 +55,7 @@ func NewBuilderController(cfg config.Config) *BuilderController {
 	}
 }
 
-func (b *BuilderController) Complete() error {
+func (b *BuildController) Complete() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return err
@@ -67,30 +67,19 @@ func (b *BuilderController) Complete() error {
 	return b.Validate()
 }
 
-func (b *BuilderController) Close() {
+func (b *BuildController) Close() {
 	if b.docker != nil {
 		_ = b.docker.Close()
 	}
 }
 
-func (b *BuilderController) BuildAndPushImage() error {
-	imageName := fmt.Sprintf(
-		"%s/%s/%s",
-		b.Registry.Repository,
-		b.Registry.Namespace,
-		b.Repo,
-	)
+func (b *BuildController) BuildAndPushImage() error {
+	imageName := fmt.Sprintf("%s/%s/%s", b.Registry.Repository, b.Registry.Namespace, b.Repo)
 
 	b.SyncBuildStatus("初始化构建环境")
 	klog.Info("Init build env")
 
-	buildInitCmd := []string{
-		"docker", "buildx", "create",
-		"--name", "multi-builder",
-		"--driver", "docker-container",
-		"--use",
-	}
-
+	buildInitCmd := []string{"docker", "buildx", "create", "--name", "multi-builder", "--driver", "docker-container", "--use"}
 	out, err := b.exec.Command(buildInitCmd[0], buildInitCmd[1:]...).CombinedOutput()
 	b.SyncBuildMessages(string(out))
 	if err != nil {
@@ -101,13 +90,7 @@ func (b *BuilderController) BuildAndPushImage() error {
 	b.SyncBuildStatus("开始构建上传镜像")
 	klog.Infof("Starting build image %s", imageName)
 
-	buildAndPushCmd := b.exec.Command(
-		"docker", "buildx", "build",
-		"--platform", b.Arch,
-		"-t", imageName,
-		"--push", ".",
-	)
-
+	buildAndPushCmd := b.exec.Command("docker", "buildx", "build", "--platform", b.Arch, "-t", imageName, "--push", ".")
 	if err := b.runCmdAndStream(buildAndPushCmd); err != nil {
 		b.SyncBuildStatus("镜像构建上传失败")
 		return fmt.Errorf("failed to build and push image: %w", err)
@@ -119,7 +102,7 @@ func (b *BuilderController) BuildAndPushImage() error {
 	return nil
 }
 
-func (b *BuilderController) Validate() error {
+func (b *BuildController) Validate() error {
 	if _, err := b.docker.Ping(context.Background()); err != nil {
 		return err
 	}
@@ -127,20 +110,18 @@ func (b *BuilderController) Validate() error {
 	return nil
 }
 
-func (b *BuilderController) Run() error {
-	//err := b.Login()
-	//if err != nil {
-	//	return err
-	//}
-	err := b.BuildAndPushImage()
-	if err != nil {
+func (b *BuildController) Run() error {
+	if err := b.Login(); err != nil {
+		return err
+	}
+	if err := b.BuildAndPushImage(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *BuilderController) SyncBuildStatus(status string) {
+func (b *BuildController) SyncBuildStatus(status string) {
 	data, err := util.BuildHttpBody(map[string]interface{}{"Status": status})
 	if err != nil {
 		klog.Errorf("构造请求体失败 %v", err)
@@ -159,7 +140,7 @@ func (b *BuilderController) SyncBuildStatus(status string) {
 	klog.Infof("同步构建(%d)状态(%s)完成", b.BuildId, status)
 }
 
-func (b *BuilderController) SyncBuildMessages(msg string) {
+func (b *BuildController) SyncBuildMessages(msg string) {
 	url := fmt.Sprintf("%s/rainbow/builds/%d/messages", b.Callback, b.BuildId)
 	err := b.httpClient.Post(url, nil, map[string]interface{}{"message": msg}, nil)
 	if err != nil {
@@ -169,12 +150,11 @@ func (b *BuilderController) SyncBuildMessages(msg string) {
 	}
 }
 
-func (b *BuilderController) runCmdAndStream(cmd exec.Cmd) error {
+func (b *BuildController) runCmdAndStream(cmd exec.Cmd) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -191,7 +171,6 @@ func (b *BuilderController) runCmdAndStream(cmd exec.Cmd) error {
 			b.SyncBuildMessages(scanner.Text())
 		}
 	}
-
 	go readPipe(stdout)
 	go readPipe(stderr)
 
