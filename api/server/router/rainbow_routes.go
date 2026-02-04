@@ -814,6 +814,12 @@ func (cr *rainbowRouter) AddDailyReview(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) getDailyMetrics(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) createLogo(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -1158,7 +1164,26 @@ func (cr *rainbowRouter) listSubscribeMessages(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) runSubscribeImmediately(c *gin.Context) {
+func (cr *rainbowRouter) runSubscribeNow2(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.RunSubscribeRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().RunSubscribe(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) runSubscribeNow(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (

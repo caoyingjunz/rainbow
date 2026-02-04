@@ -57,6 +57,8 @@ type ServerInterface interface {
 	ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error)
 	RunSubscribeImmediately(ctx context.Context, req *types.UpdateSubscribeRequest) error
 
+	RunSubscribe(ctx context.Context, req *types.RunSubscribeRequest) error
+
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
 
