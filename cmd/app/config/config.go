@@ -130,6 +130,7 @@ type PluginOption struct {
 }
 
 type BuildOption struct {
+	RegistryId     int64  `yaml:"registry_id"`
 	Callback       string `yaml:"callback"`
 	BuildId        int64  `yaml:"build_id"`
 	Arch           string `yaml:"arch"`
@@ -191,6 +192,13 @@ type PluginTemplateConfig struct {
 	Plugin     PluginOption     `yaml:"plugin"`
 	Registry   Registry         `yaml:"registry"`
 	Images     []Image          `yaml:"images"`
+}
+
+type BuildTemplateConfig struct {
+	Default    DefaultOption    `yaml:"default"`
+	Kubernetes KubernetesOption `yaml:"kubernetes"`
+	Build      BuildOption      `yaml:"build"`
+	Registry   Registry         `yaml:"registry"`
 }
 
 type Image struct {
