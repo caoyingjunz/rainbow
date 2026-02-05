@@ -81,12 +81,19 @@ func (s *ServerController) runSubscribeFull(ctx context.Context, sub *model.Subs
 	}
 
 	klog.Infof("即将增量推送订阅镜像(%v)", imagesNeedSync)
+
+	// 订阅的默认空间，在同步任务时做一次转换
+	taskNamespace := sub.Namespace
+	if len(taskNamespace) == 0 {
+		taskNamespace = defaultNamespace
+	}
+
 	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
 		Name:         uuid.NewRandName(fmt.Sprintf("订阅-%s-", sub.Path), 8),
 		UserId:       sub.UserId,
 		UserName:     sub.UserName,
 		RegisterId:   sub.RegisterId,
-		Namespace:    sub.Namespace,
+		Namespace:    taskNamespace,
 		Images:       imagesNeedSync,
 		OwnerRef:     1,
 		SubscribeId:  sub.Id,
@@ -177,13 +184,18 @@ func (s *ServerController) runSubscribeIncrement(ctx context.Context, sub *model
 		return nil
 	}
 
+	// 订阅的默认空间，在同步任务时做一次转换
+	taskNamespace := sub.Namespace
+	if len(taskNamespace) == 0 {
+		taskNamespace = defaultNamespace
+	}
 	klog.Infof("即将增量推送订阅镜像(%v)", imagesNeedSync)
 	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
 		Name:         uuid.NewRandName(fmt.Sprintf("订阅-%s-", sub.Path), 8),
 		UserId:       sub.UserId,
 		UserName:     sub.UserName,
 		RegisterId:   sub.RegisterId,
-		Namespace:    sub.Namespace,
+		Namespace:    taskNamespace,
 		Images:       imagesNeedSync,
 		OwnerRef:     1,
 		SubscribeId:  sub.Id,
