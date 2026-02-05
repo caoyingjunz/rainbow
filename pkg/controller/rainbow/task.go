@@ -12,7 +12,6 @@ import (
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
-	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/errors"
@@ -67,6 +66,7 @@ func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateT
 		//}
 		return utilerrors.NewAggregate(errs)
 	}
+
 	return nil
 }
 
@@ -199,6 +199,22 @@ func (s *ServerController) CreateTaskMessages(ctx context.Context, taskId int64,
 			klog.Errorf("记录 %s 失败 %v", msg, err)
 		}
 	}
+}
+
+func (s *ServerController) parseImageNameFromPath(ctx context.Context, path string, regId int64, namespace string) (string, error) {
+	parts2 := strings.Split(path, "/")
+	name := parts2[len(parts2)-1]
+	if len(name) == 0 {
+		return "", fmt.Errorf("不合规镜像名称 %s", path)
+	}
+	// 如果使用默认内置仓库，则添加租户名称
+	if regId == *RegistryId {
+		if len(namespace) != 0 {
+			name = namespace + "/" + name
+		}
+	}
+
+	return name, nil
 }
 
 func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64, req *types.CreateTaskRequest) error {
@@ -603,134 +619,6 @@ func (s *ServerController) DeleteTasksByIds(ctx context.Context, ids []int64) er
 			klog.Errorf("%v", err)
 			return err
 		}
-	}
-
-	return nil
-}
-
-func (s *ServerController) preCreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
-	// 订阅默认不超过 20
-	if req.Size > 50 {
-		return fmt.Errorf("订阅镜像版本数超过阈值 50")
-	}
-	if err := ValidateArch(req.Arch); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *ServerController) CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
-	if err := s.preCreateSubscribe(ctx, req); err != nil {
-		return err
-	}
-
-	parts2 := strings.Split(req.Path, "/")
-	srcPath := parts2[len(parts2)-1]
-	if len(srcPath) == 0 {
-		return fmt.Errorf("不合规镜像名称 %s", req.Path)
-	}
-
-	ns := WrapNamespace(req.Namespace, req.UserName)
-	if len(ns) != 0 {
-		srcPath = ns + "/" + srcPath
-	}
-
-	// 初始化镜像来源
-	if len(req.ImageFrom) == 0 {
-		req.ImageFrom = types.ImageHubDocker
-	}
-
-	rawPath := req.Path
-	// 默认dockerhub不指定 ns时，会添加默认值
-	if req.ImageFrom == types.ImageHubDocker {
-		parts := strings.Split(rawPath, "/")
-		if len(parts) == 1 {
-			rawPath = types.DefaultDockerhubNamespace + "/" + rawPath
-		}
-	}
-
-	req.Policy = strings.TrimSpace(req.Policy)
-	if len(req.Policy) == 0 {
-		req.Policy = "latest"
-	}
-
-	return s.factory.Task().CreateSubscribe(ctx, &model.Subscribe{
-		UserModel: rainbow.UserModel{
-			UserId:   req.UserId,
-			UserName: req.UserName,
-		},
-		Namespace: ns,
-		Path:      req.Path,
-		RawPath:   rawPath,
-		SrcPath:   srcPath,
-		Enable:    req.Enable,   // 是否启动订阅
-		Size:      req.Size,     // 最多同步多少个版本
-		Interval:  req.Interval, // 多久执行一次
-		ImageFrom: req.ImageFrom,
-		Policy:    req.Policy,
-		Arch:      req.Arch,
-		Rewrite:   req.Rewrite,
-	})
-}
-
-func (s *ServerController) UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error {
-	if err := ValidateArch(req.Arch); err != nil {
-		return err
-	}
-	update := map[string]interface{}{
-		"size":       req.Size,
-		"interval":   req.Interval,
-		"image_from": req.ImageFrom,
-		"policy":     req.Policy,
-		"arch":       req.Arch,
-		"rewrite":    req.Rewrite,
-		"namespace":  req.Namespace,
-	}
-
-	enable := req.Enable
-	old, err := s.factory.Task().GetSubscribe(ctx, req.Id)
-	if err == nil {
-		if enable != old.Enable {
-			update["enable"] = enable
-
-			msg := ""
-			// 原先是关闭，最新开启，则刷新 sub message 为开启
-			if !old.Enable && enable {
-				msg = fmt.Sprintf("手动启动制品订阅")
-			}
-			if old.Enable && !enable {
-				msg = fmt.Sprintf("手动关闭制品订阅")
-			}
-			s.CreateSubscribeMessageWithLog(ctx, *old, msg)
-
-			// 同步更新（订正）命名空间
-			newNS := WrapNamespace(req.Namespace, old.UserName)
-			if newNS != old.Namespace {
-				update["namespace"] = newNS
-			}
-		}
-	}
-
-	if err = s.factory.Task().UpdateSubscribe(ctx, req.Id, req.ResourceVersion, update); err != nil {
-		return err
-	}
-	return nil
-}
-
-// DeleteSubscribe 删除订阅
-// 1. 删除订阅
-// 2. 删除订阅记录
-// 3. 删除订阅关联的同步任务
-func (s *ServerController) DeleteSubscribe(ctx context.Context, subId int64) error {
-	if err := s.factory.Task().DeleteSubscribe(ctx, subId); err != nil {
-		return err
-	}
-	if err := s.factory.Task().DeleteSubscribeAllMessage(ctx, subId); err != nil {
-		return err
-	}
-	if err := s.factory.Task().DeleteBySubscribe(ctx, subId); err != nil {
-		return err
 	}
 
 	return nil

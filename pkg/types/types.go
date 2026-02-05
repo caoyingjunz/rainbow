@@ -58,6 +58,11 @@ const (
 )
 
 const (
+	FreeUserType = 0
+	PayUserType  = 1
+)
+
+const (
 	ImageHubDocker = "dockerhub"
 	ImageHubGCR    = "gcr.io"
 	ImageHubQuay   = "quay.io"

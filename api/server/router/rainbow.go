@@ -20,9 +20,10 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
-	rainbowdRoute := httpEngine.Group("/rainbow/rainbowds")
+	metricsRoute := httpEngine.Group("/api/v1/metrics")
 	{
-		rainbowdRoute.GET("", cr.listRainbowds)
+		// TODO
+		metricsRoute.GET("/active-users/daily", cr.getDailyMetrics)
 	}
 
 	taskRoute := httpEngine.Group("/rainbow/tasks")
@@ -53,8 +54,14 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		subscribeRoute.DELETE("/:Id", cr.deleteSubscribe)
 		subscribeRoute.GET("/:Id", cr.getSubscribe)
 		subscribeRoute.GET("", cr.listSubscribes)
+
 		subscribeRoute.GET("/:Id/messages", cr.listSubscribeMessages)
-		subscribeRoute.POST("/:Id/run", cr.runSubscribeImmediately)
+	}
+
+	// 执行 API 路由
+	runRoute := httpEngine.Group("/rainbow/run")
+	{
+		runRoute.POST("/subscribes", cr.runSubscribeNow)
 	}
 
 	kubernetesVersionRoute := httpEngine.Group("/rainbow/kubernetes/tags")
@@ -230,6 +237,11 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		buildRoute.POST("/:Id/messages", cr.createBuildMessage)
 		buildRoute.GET("/:Id/messages", cr.listBuildMessages)
+	}
+
+	rainbowdRoute := httpEngine.Group("/rainbow/rainbowds")
+	{
+		rainbowdRoute.GET("", cr.listRainbowds)
 	}
 
 	// 设置资源状态API

@@ -364,6 +364,13 @@ type (
 		Query    string `json:"query" form:"query"`
 		Page     int    `json:"page" form:"page"`
 		PageSize int    `json:"page_size" form:"page_size"`
+
+		CustomConfig *SearchCustomConfig `json:"custom_config,omitempty" form:"custom_config,omitempty"`
+	}
+
+	SearchCustomConfig struct {
+		Policy string `json:"policy"`
+		Arch   string `json:"arch"`
 	}
 
 	RemoteMetaRequest struct {
@@ -412,14 +419,21 @@ type (
 		Id              int64 `json:"id"`
 		ResourceVersion int64 `json:"resource_version"`
 
-		Enable    bool          `json:"enable"`     // 启动或者关闭
-		Size      int           `json:"size"`       // 同步最新多少个版本
-		Interval  time.Duration `json:"interval"`   // 间隔多久同步一次
-		ImageFrom string        `json:"image_from"` // 镜像来源，支持 dockerhub, gcr, quay.io
-		Policy    string        `json:"policy"`     // 默认定义所有版本镜像，支持正则表达式，比如 v1.*
-		Arch      string        `json:"arch"`       // 支持的架构，默认不限制  linux/amd64
-		Rewrite   bool          `json:"rewrite"`    // 是否覆盖推送
-		Namespace string        `json:"namespace"`
+		UserMetaRequest `json:",inline"`
+		Enable          bool          `json:"enable"`     // 启动或者关闭
+		Size            int           `json:"size"`       // 同步最新多少个版本
+		Interval        time.Duration `json:"interval"`   // 间隔多久同步一次
+		ImageFrom       string        `json:"image_from"` // 镜像来源，支持 dockerhub, gcr, quay.io
+		Policy          string        `json:"policy"`     // 默认定义所有版本镜像，支持正则表达式，比如 v1.*
+		Arch            string        `json:"arch"`       // 支持的架构，默认不限制  linux/amd64
+		Rewrite         bool          `json:"rewrite"`    // 是否覆盖推送
+		Namespace       string        `json:"namespace"`
+	}
+
+	RunSubscribeRequest struct {
+		UserMetaRequest `json:",inline"`
+
+		SubscribeId int64 `json:"subscribe_id"`
 	}
 
 	EnableChartRepoRequest struct {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -105,8 +106,20 @@ func (s *AgentController) SearchDockerhubTags(ctx context.Context, req *types.Ca
 	repo := fmt.Sprintf("%s/%s", req.Namespace, req.Repository)
 	klog.Infof("搜索 dockerhub 镜像(%s) tags", repo)
 
+	arch := ""
+	if req.CustomConfig != nil {
+		if len(req.CustomConfig.Policy) != 0 {
+			req.Query = req.CustomConfig.Policy
+		}
+		if len(req.CustomConfig.Arch) != 0 {
+			arch = req.CustomConfig.Arch
+		}
+	}
+	klog.Infof("arch %s query %s", arch, req.Query)
+
 	var ds types.HubTagResponse
 	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s/tags?page=%d&page_size=%d&name=%s", req.Namespace, req.Repository, req.Page, req.PageSize, req.Query)
+	klog.Infof("url %s", url)
 	httpClient := util.HttpClientV2{URL: url}
 	if err := httpClient.Method(http.MethodGet).
 		WithTimeout(30 * time.Second).
@@ -115,6 +128,7 @@ func (s *AgentController) SearchDockerhubTags(ctx context.Context, req *types.Ca
 		return nil, err
 	}
 
+	// arch 不支持直接 API 查询，对已查询结果进行过滤
 	return json.Marshal(types.CommonSearchTagResult{
 		Hub:        types.ImageHubDocker,
 		Namespace:  req.Namespace,
@@ -122,8 +136,30 @@ func (s *AgentController) SearchDockerhubTags(ctx context.Context, req *types.Ca
 		Total:      ds.Count,
 		PageSize:   req.PageSize,
 		Page:       req.Page,
-		TagResult:  s.buildCommonTagForDockerhub(ds.Results),
+		TagResult:  s.buildCommonTagForDockerhub(s.FilterTagsByArch(arch, ds.Results)),
 	})
+}
+
+func (s *AgentController) FilterTagsByArch(arch string, tags []types.TagResult) []types.TagResult {
+	if len(arch) == 0 {
+		return tags
+	}
+
+	parts := strings.Split(arch, "/")
+	if len(parts) != 2 {
+		return tags
+	}
+	os, architecture := parts[0], parts[1]
+
+	var filterTags []types.TagResult
+	for _, tag := range tags {
+		for _, image := range tag.Images {
+			if image.Architecture == architecture && image.OS == os {
+				filterTags = append(filterTags, tag)
+			}
+		}
+	}
+	return filterTags
 }
 
 func (s *AgentController) GetDockerhubTagInfo(ctx context.Context, req *types.CallSearchRequest) ([]byte, error) {
