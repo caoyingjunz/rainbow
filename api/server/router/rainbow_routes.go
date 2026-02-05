@@ -8,7 +8,6 @@ import (
 
 	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/rainbow/pkg/types"
-	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 func (cr *rainbowRouter) createLabel(c *gin.Context) {
@@ -1164,7 +1163,7 @@ func (cr *rainbowRouter) listSubscribeMessages(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) runSubscribeNow2(c *gin.Context) {
+func (cr *rainbowRouter) runSubscribeNow(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
@@ -1176,38 +1175,6 @@ func (cr *rainbowRouter) runSubscribeNow2(c *gin.Context) {
 		return
 	}
 	if err = cr.c.Server().RunSubscribe(c, &req); err != nil {
-		httputils.SetFailed(c, resp, err)
-		return
-	}
-
-	httputils.SetSuccess(c, resp)
-}
-
-func (cr *rainbowRouter) runSubscribeNow(c *gin.Context) {
-	resp := httputils.NewResponse()
-
-	var (
-		idMeta types.IdMeta
-		req    types.UpdateSubscribeRequest
-		err    error
-	)
-	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
-		httputils.SetFailed(c, resp, err)
-		return
-	}
-	req.Id = idMeta.ID
-	if err = cr.c.Server().RunSubscribeImmediately(c, &req); err != nil {
-		if errors.IsImageNotFound(err) {
-			resp.SetMessageWithCode(err, 1001)
-			c.JSON(http.StatusOK, resp)
-			return
-		}
-		if errors.IsDisableStatus(err) {
-			resp.SetMessageWithCode(err, 1002)
-			c.JSON(http.StatusOK, resp)
-			return
-		}
-
 		httputils.SetFailed(c, resp, err)
 		return
 	}

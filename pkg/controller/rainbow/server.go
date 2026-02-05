@@ -55,7 +55,6 @@ type ServerInterface interface {
 	GetSubscribe(ctx context.Context, subId int64) (interface{}, error)
 
 	ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error)
-	RunSubscribeImmediately(ctx context.Context, req *types.UpdateSubscribeRequest) error
 
 	RunSubscribe(ctx context.Context, req *types.RunSubscribeRequest) error
 
@@ -362,19 +361,28 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 				continue
 			}
 
-			changed, err := s.subscribe(ctx, sub)
-			if err == nil {
-				// 订阅触发成功
-				if changed {
-					s.CreateSubscribeMessageWithLog(ctx, sub, fmt.Sprintf("%s 在 %v 订阅触发成功", sub.Path, time.Now().Format("2006-01-02 15:04:05")))
-				}
-			} else {
+			if err = s.RunSubscribe(ctx, &types.RunSubscribeRequest{SubscribeId: sub.Id}); err != nil {
 				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
 				s.CreateSubscribeMessageAndFailTimesAdd(ctx, sub, err.Error())
+			} else {
+				s.CreateSubscribeMessageWithLog(ctx, sub, fmt.Sprintf("%s 在 %v 订阅触发成功", sub.Path, time.Now().Format("2006-01-02 15:04:05")))
 			}
 
 			// 仅保留最新的 n 个事件
 			_ = s.cleanSubscribeMessages(ctx, sub.Id, 5)
+		}
+	}
+}
+
+func (s *ServerController) startSyncKubernetesTags(ctx context.Context) {
+	klog.Infof("starting kubernetes tags syncer")
+	ticker := time.NewTicker(3600 * 6 * time.Second)
+	defer ticker.Stop()
+
+	opt := types.CallKubernetesTagRequest{SyncAll: false}
+	for range ticker.C {
+		if _, err := s.SyncKubernetesTags(ctx, &opt); err != nil {
+			klog.Error("failed kubernetes version syncer %v", err)
 		}
 	}
 }

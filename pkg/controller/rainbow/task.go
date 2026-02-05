@@ -201,6 +201,22 @@ func (s *ServerController) CreateTaskMessages(ctx context.Context, taskId int64,
 	}
 }
 
+func (s *ServerController) parseImageNameFromPath(ctx context.Context, path string, regId int64, namespace string) (string, error) {
+	parts2 := strings.Split(path, "/")
+	name := parts2[len(parts2)-1]
+	if len(name) == 0 {
+		return "", fmt.Errorf("不合规镜像名称 %s", path)
+	}
+	// 如果使用默认内置仓库，则添加租户名称
+	if regId == *RegistryId {
+		if len(namespace) != 0 {
+			name = namespace + "/" + name
+		}
+	}
+
+	return name, nil
+}
+
 func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64, req *types.CreateTaskRequest) error {
 	klog.Infof("使用镜像仓库(%d)", req.RegisterId)
 	reg, err := s.factory.Registry().Get(ctx, req.RegisterId)

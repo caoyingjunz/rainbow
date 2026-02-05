@@ -55,16 +55,13 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		subscribeRoute.GET("/:Id", cr.getSubscribe)
 		subscribeRoute.GET("", cr.listSubscribes)
 
-		// DEPRECATED
-		subscribeRoute.POST("/:Id/run", cr.runSubscribeNow)
-
 		subscribeRoute.GET("/:Id/messages", cr.listSubscribeMessages)
 	}
 
 	// 执行 API 路由
 	runRoute := httpEngine.Group("/rainbow/run")
 	{
-		runRoute.POST("/subscribes", cr.runSubscribeNow2)
+		runRoute.POST("/subscribes", cr.runSubscribeNow)
 	}
 
 	kubernetesVersionRoute := httpEngine.Group("/rainbow/kubernetes/tags")
