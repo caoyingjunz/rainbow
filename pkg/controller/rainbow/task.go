@@ -31,8 +31,8 @@ const (
 	defaultArch      = "linux/amd64"
 	defaultDriver    = "skopeo"
 
-	k8sImageCount      = 5 // 默认数量
-	defaultRemainCount = 20
+	k8sImageCount      = 5   // 默认数量
+	defaultRemainCount = 100 // TODO 临时设置，后续缩降到 20
 )
 
 func (s *ServerController) preCreateTask(ctx context.Context, req *types.CreateTaskRequest) error {

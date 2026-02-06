@@ -348,7 +348,7 @@ func (s *ServerController) ListSubscribes(ctx context.Context, listOption types.
 
 func (s *ServerController) preCreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error {
 	// 同一个镜像，禁止重复订阅
-	_, err := s.factory.Task().GetSubscribeBy(ctx, db.WithPath(req.Path))
+	_, err := s.factory.Task().GetSubscribeBy(ctx, db.WithPath(req.Path), db.WithUser(req.UserId))
 	if err == nil {
 		return fmt.Errorf("镜像(%s)的订阅已存在", req.Path)
 	}

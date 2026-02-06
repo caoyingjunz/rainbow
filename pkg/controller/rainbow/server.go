@@ -290,7 +290,7 @@ func (s *ServerController) startRainbowdHeartbeat(ctx context.Context) {
 	for range ticker.C {
 		klog.V(1).Infof("即将进行 rainbowd 的状态检查")
 		for nodeName, sshConfig := range s.sshConfigMap {
-			old, err := s.factory.Rainbowd().GetByName(ctx, nodeName)
+			_, err := s.factory.Rainbowd().GetByName(ctx, nodeName)
 			if err != nil {
 				klog.Errorf("获取 rainbowd %s 失败 %v ", nodeName, err)
 				klog.Errorf("等待 %s 下一次检查", nodeName)
@@ -301,17 +301,18 @@ func (s *ServerController) startRainbowdHeartbeat(ctx context.Context) {
 			if !s.IsRainbowReachable(&sshConfig, nodeName) {
 				status = model.UnRunAgentType
 			}
+			klog.V(1).Infof("rainbowd %s 的状态为 %s", nodeName, status)
 
-			updates := map[string]interface{}{"last_transition_time": time.Now()}
-			if old.Status != status {
-				updates["status"] = status
-				klog.Infof("rainbowd 的状态发生改变，即将同步")
-			} else {
-				klog.V(1).Infof("rainbowd(%s)的状态未发生变化，等待下一次更新", nodeName)
-			}
-			if err = s.factory.Rainbowd().Update(ctx, old.Id, updates); err != nil {
-				klog.Errorf("同步 rainbowd(%s) 状态失败 %v 等待下一次同步", nodeName, err)
-			}
+			//updates := map[string]interface{}{"last_transition_time": time.Now()}
+			//if old.Status != status {
+			//	updates["status"] = status
+			//	klog.Infof("rainbowd 的状态发生改变，即将同步")
+			//} else {
+			//	klog.V(1).Infof("rainbowd(%s)的状态未发生变化，等待下一次更新", nodeName)
+			//}
+			//if err = s.factory.Rainbowd().Update(ctx, old.Id, updates); err != nil {
+			//	klog.Errorf("同步 rainbowd(%s) 状态失败 %v 等待下一次同步", nodeName, err)
+			//}
 		}
 	}
 }

@@ -84,6 +84,8 @@ func (s *ServerController) ReconcileAgent(ctx context.Context, sshConfig *sshuti
 	case model.OfflineAgentType, model.DeletingAgentType:
 		err = s.UninstallAgentContainer(sshConfig, agent)
 		destStatus = model.UnRunAgentType
+	case model.UpgradeAgentBinaryType:
+		err = s.UpgradeAgentBinaryContainer(sshConfig, agent)
 	default:
 		klog.Infof("未命中 agent(%s) 状态(%s) 等待下次协同", agent.Name, agent.Status)
 		return nil
@@ -171,6 +173,9 @@ func (s *ServerController) UpdateAgentStatus(ctx context.Context, req *types.Upd
 		realStatus := strings.Replace(req.Status, "强制", "", -1)
 		return s.factory.Agent().UpdateByName(ctx, req.AgentName, map[string]interface{}{"status": realStatus, "message": fmt.Sprintf("Agent has been set to %s", realStatus)})
 	}
+	if req.Status == "强制删除" {
+		return s.factory.Agent().DeleteBy(ctx, db.WithName(req.AgentName))
+	}
 
 	old, err := s.factory.Agent().GetByName(ctx, req.AgentName)
 	if err != nil {
@@ -219,7 +224,40 @@ func (s *ServerController) UpdateAgent(ctx context.Context, req *types.UpdateAge
 }
 
 func (s *ServerController) ListAgents(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Agent().List(ctx, db.WithNameLike(listOption.NameSelector))
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+	opts := []db.Options{
+		db.WithNameLike(listOption.NameSelector),
+		db.WithStatus(listOption.AgentStatus),
+	}
+
+	var err error
+	pageResult.Total, err = s.factory.Agent().Count(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取代理总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+	pageResult.Items, err = s.factory.Agent().List(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取代理列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
 
 func (s *ServerController) GetAgentContainer(sshConfig *sshutil.SSHConfig, containerName string) (*ContainerInfo, error) {
@@ -347,6 +385,30 @@ func (s *ServerController) BootstrapAgentContainer(sshConfig *sshutil.SSHConfig,
 
 	klog.Infof("agent 初始化完成")
 	return nil
+}
+
+// UpgradeAgentBinaryContainer 先停止 agent 容器，然后替换 agent 二进制文件 然后启动 agent 容器
+func (s *ServerController) UpgradeAgentBinaryContainer(sshConfig *sshutil.SSHConfig, agent *model.Agent) error {
+	klog.Infof("UpgradeAgentBinaryContainer rainbow %s agent %s", agent.RainbowdName, agent.Name)
+	if err := s.StopAgentContainer(sshConfig, agent); err != nil {
+		return err
+	}
+
+	sshClient, err := sshutil.NewSSHClient(sshConfig)
+	if err != nil {
+		return err
+	}
+	defer sshClient.Close()
+
+	containerName := agent.Name
+	destDir := filepath.Join(s.cfg.Rainbowd.DataDir, containerName)
+	// 替换 agent 二进制
+	if err = sshClient.UploadFile(s.cfg.Rainbowd.TemplateDir+"/agent", destDir+"/agent", "0755"); err != nil {
+		klog.Errorf("传输 agent 二进制文件失败 %v", err)
+		return err
+	}
+
+	return s.StartAgentContainer(sshConfig, agent)
 }
 
 func (s *ServerController) UninstallAgentContainer(sshConfig *sshutil.SSHConfig, agent *model.Agent) error {

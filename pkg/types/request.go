@@ -298,6 +298,7 @@ type (
 		OwnerRef    string `form:"ownerRef"`
 		SubscribeId int64  `form:"subscribe_id"`
 		Project     string `form:"project"`
+		AgentStatus string `form:"agent_status"`
 	}
 
 	RemoteSearchRequest struct {
@@ -442,7 +443,7 @@ type (
 		ProjectName string `json:"project_name,omitempty"`
 		Password    string `json:"password"`
 		Email       string `json:"email"`
-		Public      bool   `json:"public,omitempty"`
+		Public      bool   `json:"is_public,omitempty"`
 	}
 )
 
