@@ -18,5 +18,6 @@ func GetAgentRunningStatus() []string {
 		RestartingAgentType,
 		UpgradeAgentType,
 		OfflineAgentType,
+		UpgradeAgentBinaryType,
 	}
 }

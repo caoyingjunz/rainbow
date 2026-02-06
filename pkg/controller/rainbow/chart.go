@@ -65,9 +65,15 @@ func (s *ServerController) EnableChartRepo(ctx context.Context, req *types.Enabl
 		return err
 	}
 
+	// 修改为启用状态
+	if err := s.factory.Task().UpdateUserBy(ctx, map[string]interface{}{"enable_chart": true}, db.WithUser(req.UserId)); err != nil {
+		klog.Errorf("更新用户启用状态失败 %v", err)
+		return err
+	}
 	return nil
 }
 
+// DEPRECATED
 func (s *ServerController) EnableChartRepo2(ctx context.Context, req *types.EnableChartRepoRequest) error {
 	if err := s.preEnableChartRepo(ctx, req); err != nil {
 		return err

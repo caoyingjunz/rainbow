@@ -16,9 +16,11 @@ type AgentInterface interface {
 	Delete(ctx context.Context, agentId int64) error
 	Get(ctx context.Context, agentId int64) (*model.Agent, error)
 	GetByName(ctx context.Context, agentName string) (*model.Agent, error)
+	DeleteBy(ctx context.Context, opts ...Options) error
 	UpdateByName(ctx context.Context, agentName string, updates map[string]interface{}) error
 	List(ctx context.Context, opts ...Options) ([]model.Agent, error)
 	ListForSchedule(ctx context.Context, opts ...Options) ([]model.Agent, error)
+	Count(ctx context.Context, opts ...Options) (int64, error)
 }
 
 func newAgent(db *gorm.DB) AgentInterface {
@@ -90,6 +92,18 @@ func (a *agent) GetByName(ctx context.Context, agentName string) (*model.Agent, 
 	return &audit, nil
 }
 
+func (a *agent) DeleteBy(ctx context.Context, opts ...Options) error {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Delete(&model.Agent{}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (a *agent) List(ctx context.Context, opts ...Options) ([]model.Agent, error) {
 	var audits []model.Agent
 	tx := a.db.WithContext(ctx)
@@ -114,4 +128,18 @@ func (a *agent) ListForSchedule(ctx context.Context, opts ...Options) ([]model.A
 	}
 
 	return audits, nil
+}
+
+func (a *agent) Count(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.Agent{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }
