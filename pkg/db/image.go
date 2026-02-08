@@ -149,7 +149,6 @@ func (a *image) GetImageWithTagsCount(ctx context.Context, imageId int64, del bo
 	}
 	i.TagsCount = tx.Model(&i).Association("Tags").Count()
 	return &i, nil
-
 }
 
 func (a *image) List(ctx context.Context, opts ...Options) ([]model.Image, error) {
