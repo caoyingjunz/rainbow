@@ -102,6 +102,8 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		imageRoute.PUT("/status", cr.UpdateImageStatus)
 		imageRoute.POST("/batches", cr.createImages)
+
+		imageRoute.GET("/:Id/tags", cr.listImageTags)
 		imageRoute.DELETE("/:Id/tags/:TagId", cr.deleteImageTag)
 	}
 

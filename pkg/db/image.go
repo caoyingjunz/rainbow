@@ -18,6 +18,7 @@ type ImageInterface interface {
 	Get(ctx context.Context, imageId int64, del bool) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
+	GetImageWithTagsCount(ctx context.Context, imageId int64, del bool) (*model.Image, error)
 	CreateFlow(ctx context.Context, object *model.Downflow) error
 
 	CreateInBatch(ctx context.Context, objects []model.Image) error
@@ -40,6 +41,8 @@ type ImageInterface interface {
 	ListTags(ctx context.Context, opts ...Options) ([]model.Tag, error)
 
 	GetTagWithArch(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error)
+
+	TagCount(ctx context.Context, opts ...Options) (int64, error)
 
 	CreateNamespace(ctx context.Context, object *model.Namespace) (*model.Namespace, error)
 	UpdateNamespace(ctx context.Context, namespaceId int64, resourceVersion int64, updates map[string]interface{}) error
@@ -134,6 +137,21 @@ func (a *image) Get(ctx context.Context, imageId int64, del bool) (*model.Image,
 	return &audit, nil
 }
 
+func (a *image) GetImageWithTagsCount(ctx context.Context, imageId int64, del bool) (*model.Image, error) {
+	tx := a.db.WithContext(ctx)
+	if del {
+		tx = tx.Unscoped()
+	}
+
+	var i model.Image
+	if err := tx.Where("id = ?", imageId).First(&i).Error; err != nil {
+		return nil, err
+	}
+	i.TagsCount = tx.Model(&i).Association("Tags").Count()
+	return &i, nil
+
+}
+
 func (a *image) List(ctx context.Context, opts ...Options) ([]model.Image, error) {
 	var audits []model.Image
 	tx := a.db.WithContext(ctx)
@@ -181,6 +199,19 @@ func (a *image) Count(ctx context.Context, opts ...Options) (int64, error) {
 
 	var total int64
 	if err := tx.Model(&model.Image{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (a *image) TagCount(ctx context.Context, opts ...Options) (int64, error) {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	var total int64
+	if err := tx.Model(&model.Tag{}).Count(&total).Error; err != nil {
 		return 0, err
 	}
 

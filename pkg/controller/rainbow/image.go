@@ -214,6 +214,43 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 
 	return nil
 }
+func (s *ServerController) ListImageTags(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error) {
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+
+	opts := []db.Options{ // 先写条件，再写排序，再偏移，再设置每页数量
+		db.WithNameLike(listOption.NameSelector),
+		db.WithImage(imageId),
+	}
+	var err error
+
+	pageResult.Total, err = s.factory.Image().TagCount(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取镜像Tag总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+
+	pageResult.Items, err = s.factory.Image().ListTags(ctx, opts...) // 改成不带版本列表以加速显示
+	if err != nil {
+		klog.Errorf("获取镜像 Tag 列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+	return pageResult, nil
+}
 
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	// 初始化分页属性
@@ -279,31 +316,30 @@ func IsDurationExceeded(t time.Time, duration time.Duration) bool {
 }
 
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {
-	object, err := s.factory.Image().Get(ctx, imageId, false)
+	object, err := s.factory.Image().GetImageWithTagsCount(ctx, imageId, false)
 	if err != nil {
 		return nil, err
 	}
 
+	// 尝试更新属性
 	go s.AfterGetImage(ctx, object)
-
 	return object, nil
-
 }
 
 // AfterGetImage 获取镜像后，尝试更新属性
 func (s *ServerController) AfterGetImage(ctx context.Context, object *model.Image) {
 	// 如果 10 分钟内已更新，则直接返回
 	if !IsDurationExceeded(object.LastSyncTime, 30*time.Minute) {
-		klog.Infof("镜像(%s/%s) 30分钟内进行过同步，无需重复执行", object.Namespace, object.Name)
+		klog.V(1).Infof("镜像(%s/%s) 30分钟内进行过同步，无需重复执行", object.Namespace, object.Name)
 		return
 	}
 	// 非官方内置仓库，无需更新
 	if !s.isDefaultRepo(object.RegisterId) {
-		klog.Infof("非官方镜像，无需同步")
+		klog.V(1).Infof("非官方镜像，无需同步")
 		return
 	}
 	if err := s.SyncInfoByRemoteImage(ctx, object); err != nil {
-		klog.Infof("SyncInfoByRemoteImage 失败 %v", err)
+		klog.Errorf("SyncInfoByRemoteImage 失败 %v", err)
 	}
 }
 
@@ -337,8 +373,7 @@ func (s *ServerController) UpdateImageInfoFromRemote(ctx context.Context, newIma
 	}
 
 	if len(updates) == 0 {
-		klog.Infof("无新增变化，无需更新")
-		return nil
+		klog.Infof("无镜像变化，仅更新同步时间，避免频繁调用外部API")
 	}
 
 	updates["last_sync_time"] = time.Now()

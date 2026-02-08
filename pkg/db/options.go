@@ -230,6 +230,15 @@ func WithNameLike(name string) Options {
 	}
 }
 
+func WithImage(imageId int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if imageId == 0 {
+			return tx
+		}
+		return tx.Where("image_id = ?", imageId)
+	}
+}
+
 func WithPathLike(path string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(path) == 0 {
