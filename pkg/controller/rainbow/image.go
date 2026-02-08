@@ -227,6 +227,7 @@ func (s *ServerController) ListImageTags(ctx context.Context, imageId int64, lis
 	opts := []db.Options{ // 先写条件，再写排序，再偏移，再设置每页数量
 		db.WithNameLike(listOption.NameSelector),
 		db.WithImage(imageId),
+		db.WithStatus(listOption.CustomStatus),
 	}
 	var err error
 
