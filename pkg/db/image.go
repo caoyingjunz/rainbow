@@ -19,6 +19,7 @@ type ImageInterface interface {
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
 	GetImageWithTagsCount(ctx context.Context, imageId int64, del bool) (*model.Image, error)
+	ListWithTagsCount(ctx context.Context, opts ...Options) ([]model.Image, error)
 	CreateFlow(ctx context.Context, object *model.Downflow) error
 
 	CreateInBatch(ctx context.Context, objects []model.Image) error
@@ -159,6 +160,31 @@ func (a *image) List(ctx context.Context, opts ...Options) ([]model.Image, error
 	}
 	if err := tx.Find(&audits).Error; err != nil {
 		return nil, err
+	}
+
+	return audits, nil
+}
+
+func (a *image) ListWithTagsCount(ctx context.Context, opts ...Options) ([]model.Image, error) {
+	var audits []model.Image
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Find(&audits).Error; err != nil {
+		return nil, err
+	}
+
+	for index, old := range audits {
+		fmt.Println("audits[index].Id", audits[index].Id)
+		c, err := a.Count(ctx, WithId(audits[index].Id))
+		if err != nil {
+			continue
+		}
+		old.TagsCount = c
+		fmt.Println("audits[index].Id", c)
+
+		audits[index] = old
 	}
 
 	return audits, nil

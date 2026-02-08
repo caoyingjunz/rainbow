@@ -285,7 +285,7 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 		db.WithLimit(listOption.Limit),
 	}...)
 	//pageResult.Items, err = s.factory.Image().ListImagesWithTag(ctx, opts...)
-	pageResult.Items, err = s.factory.Image().List(ctx, opts...) // 改成不带版本列表以加速显示
+	pageResult.Items, err = s.factory.Image().ListWithTagsCount(ctx, opts...) // 改成不带版本列表以加速显示
 	if err != nil {
 		klog.Errorf("获取镜像列表失败 %v", err)
 		pageResult.Message = err.Error()
