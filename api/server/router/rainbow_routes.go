@@ -1616,6 +1616,12 @@ func (cr *rainbowRouter) syncAgentDrivers(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) syncNamespaces(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) fix(c *gin.Context) {
 	resp := httputils.NewResponse()
 	var (

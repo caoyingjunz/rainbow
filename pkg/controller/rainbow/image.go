@@ -284,17 +284,27 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 		return nil, err
 	}
 
+	go s.AfterGetImage(ctx, object)
+
+	return object, nil
+
+}
+
+// AfterGetImage 获取镜像后，尝试更新属性
+func (s *ServerController) AfterGetImage(ctx context.Context, object *model.Image) {
 	// 如果 10 分钟内已更新，则直接返回
-	if !IsDurationExceeded(object.LastSyncTime, 10*time.Minute) {
-		klog.Infof("镜像(%s/%s) 10分钟内进行过同步，无需重复执行", object.Namespace, object.Name)
-		return object, nil
+	if !IsDurationExceeded(object.LastSyncTime, 30*time.Minute) {
+		klog.Infof("镜像(%s/%s) 30分钟内进行过同步，无需重复执行", object.Namespace, object.Name)
+		return
 	}
 	// 非官方内置仓库，无需更新
 	if !s.isDefaultRepo(object.RegisterId) {
-		return object, nil
+		klog.Infof("非官方镜像，无需同步")
+		return
 	}
-
-	return s.GetAndUpdateByRemoteImage(ctx, object)
+	if err := s.SyncInfoByRemoteImage(ctx, object); err != nil {
+		klog.Infof("SyncInfoByRemoteImage 失败 %v", err)
+	}
 }
 
 func (s *ServerController) UpdateTagFromRemote(ctx context.Context, newTag swrmodel.ShowReposTagResp, oldTag model.Tag) error {
@@ -327,6 +337,7 @@ func (s *ServerController) UpdateImageInfoFromRemote(ctx context.Context, newIma
 	}
 
 	if len(updates) == 0 {
+		klog.Infof("无新增变化，无需更新")
 		return nil
 	}
 
@@ -334,8 +345,8 @@ func (s *ServerController) UpdateImageInfoFromRemote(ctx context.Context, newIma
 	return s.factory.Image().Update(ctx, old.Id, old.ResourceVersion, updates)
 }
 
-// GetAndUpdateByRemoteImage 获取远端镜像属性且保存
-func (s *ServerController) GetAndUpdateByRemoteImage(ctx context.Context, object *model.Image) (interface{}, error) {
+// SyncInfoByRemoteImage 获取远端镜像属性且保存
+func (s *ServerController) SyncInfoByRemoteImage(ctx context.Context, object *model.Image) error {
 	targetName := object.Name
 	if strings.Contains(targetName, "/") {
 		targetName = strings.ReplaceAll(targetName, "/", "$")
@@ -349,19 +360,19 @@ func (s *ServerController) GetAndUpdateByRemoteImage(ctx context.Context, object
 	resp, err := SwrClient.ListRepositoryTags(&swrmodel.ListRepositoryTagsRequest{Namespace: HuaweiNamespace, Repository: targetName})
 	if err != nil {
 		klog.Errorf("获取远端镜像版本失败 %v", err)
-		return object, nil
+		return nil
 	}
 	tags := *resp.Body
 	for _, t := range tags {
 		name := t.Tag
 		old, ok := oldTagMap[name]
 		if !ok {
-			klog.Infof("远端镜像(%s)的版本(%s)未收录，忽略", targetName, name)
+			klog.V(1).Infof("远端镜像(%s)的版本(%s)未收录，忽略", targetName, name)
 			continue
 		}
 		if err = s.UpdateTagFromRemote(ctx, t, old); err != nil {
-			klog.Errorf("更新远端镜像版本至本地失败", err)
-			return object, err
+			klog.Errorf("更新远端镜像版本至本地失败 %v", err)
+			return err
 		}
 	}
 
@@ -369,14 +380,13 @@ func (s *ServerController) GetAndUpdateByRemoteImage(ctx context.Context, object
 	newImage, err := SwrClient.ShowRepository(&swrmodel.ShowRepositoryRequest{Namespace: HuaweiNamespace, Repository: targetName})
 	if err != nil {
 		klog.Errorf("获取远端镜像详情失败 %v", err)
-		return object, nil
+		return nil
 	}
 	if err = s.UpdateImageInfoFromRemote(ctx, newImage, object); err != nil {
-		return object, err
+		return err
 	}
 
-	// 获取最新的属性
-	return s.factory.Image().Get(ctx, object.Id, false)
+	return nil
 }
 
 func (s *ServerController) CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error) {
