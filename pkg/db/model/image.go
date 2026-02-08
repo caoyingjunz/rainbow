@@ -1,8 +1,9 @@
 package model
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
@@ -28,6 +29,7 @@ type Image struct {
 	Size        int64  `json:"size"`
 	Pull        int64  `json:"pull"`
 	Tags        []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
+	TagsCount   int64  `json:"tags_count"`
 	Description string `json:"description"`
 
 	IsPublic      bool      `json:"is_public"`

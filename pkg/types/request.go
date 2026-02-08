@@ -292,13 +292,14 @@ type (
 	}
 
 	CustomMeta struct {
-		Status      int    `form:"status"`
-		Namespace   string `form:"namespace"`
-		Agent       string `form:"agent"`
-		OwnerRef    string `form:"ownerRef"`
-		SubscribeId int64  `form:"subscribe_id"`
-		Project     string `form:"project"`
-		AgentStatus string `form:"agent_status"`
+		Status       int    `form:"status"`
+		Namespace    string `form:"namespace"`
+		Agent        string `form:"agent"`
+		OwnerRef     string `form:"ownerRef"`
+		SubscribeId  int64  `form:"subscribe_id"`
+		Project      string `form:"project"`
+		AgentStatus  string `form:"agent_status"`
+		CustomStatus string `form:"custom_status"`
 	}
 
 	RemoteSearchRequest struct {

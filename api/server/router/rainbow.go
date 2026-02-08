@@ -102,6 +102,8 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		imageRoute.PUT("/status", cr.UpdateImageStatus)
 		imageRoute.POST("/batches", cr.createImages)
+
+		imageRoute.GET("/:Id/tags", cr.listImageTags)
 		imageRoute.DELETE("/:Id/tags/:TagId", cr.deleteImageTag)
 	}
 
@@ -162,6 +164,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		syncRoute.POST("/users", cr.createOrUpdateUsers)
 		syncRoute.POST("/kubernetes/tags", cr.syncKubernetesTags)
 		syncRoute.POST("/agents/drivers", cr.syncAgentDrivers)
+		syncRoute.POST("/namespaces", cr.syncNamespaces)
 	}
 
 	// 镜像汇总

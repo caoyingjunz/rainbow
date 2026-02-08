@@ -715,6 +715,28 @@ func (cr *rainbowRouter) deleteImageTag(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) listImageTags(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID int64 `uri:"Id" binding:"required"`
+		}
+		listOption types.ListOptions
+		err        error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListImageTags(c, idMeta.ID, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) UpdateImageStatus(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -1612,6 +1634,12 @@ func (cr *rainbowRouter) syncAgentDrivers(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) syncNamespaces(c *gin.Context) {
+	resp := httputils.NewResponse()
 
 	httputils.SetSuccess(c, resp)
 }
