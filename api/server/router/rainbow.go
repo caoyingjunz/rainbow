@@ -105,6 +105,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		imageRoute.GET("/:Id/tags", cr.listImageTags)
 		imageRoute.DELETE("/:Id/tags/:TagId", cr.deleteImageTag)
+		imageRoute.GET("/:Id/tags/:TagId", cr.getImageTag)
 	}
 
 	batchRoute := httpEngine.Group("/rainbow/batch")

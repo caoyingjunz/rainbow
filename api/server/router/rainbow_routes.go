@@ -715,6 +715,28 @@ func (cr *rainbowRouter) deleteImageTag(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) getImageTag(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID    int64 `uri:"Id" binding:"required"`
+			TagId int64 `uri:"TagId" binding:"required"`
+		}
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().GetImageTag(c, idMeta.ID, idMeta.TagId); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) listImageTags(c *gin.Context) {
 	resp := httputils.NewResponse()
 

@@ -90,6 +90,7 @@ type ServerInterface interface {
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error)
 	DeleteImageTag(ctx context.Context, imageId int64, TagId int64) error
+	GetImageTag(ctx context.Context, imageId int64, tagId int64) (interface{}, error)
 
 	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	AddDailyReview(ctx context.Context, page string) error
@@ -589,11 +590,12 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 	for range ticker.C {
 		agents, err := s.factory.Agent().List(ctx)
 		if err != nil {
-			klog.Error("获取 agents 列表失败，等待下一次重试 %v", err)
+			klog.Warningf("获取 agents 列表失败，等待下一次重试 %v", err)
 			continue
 		}
 
 		for _, agent := range agents {
+			// 如果状态已处于非运行状态，则直接忽略检查
 			if agent.Status != model.RunAgentType {
 				klog.V(1).Infof("agent(%s)非在线状态，忽略", agent.Name)
 				continue
@@ -601,6 +603,7 @@ func (s *ServerController) startAgentHeartbeat(ctx context.Context) {
 
 			diff := time.Now().Sub(agent.LastTransitionTime)
 			if diff > time.Minute*5 {
+				// 如果已是未知状态，则无需更新
 				if agent.Status == model.UnknownAgentType {
 					continue
 				}

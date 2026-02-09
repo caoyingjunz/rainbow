@@ -512,6 +512,10 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, ta
 	return s.CalculateImageSize(ctx, imageId)
 }
 
+func (s *ServerController) GetImageTag(ctx context.Context, imageId int64, tagId int64) (interface{}, error) {
+	return s.factory.Image().GetTag(ctx, tagId, false)
+}
+
 func (s *ServerController) CreateNamespace(ctx context.Context, req *types.CreateNamespaceRequest) error {
 	// 全局只能有一个命名空间
 	_, err := s.factory.Image().GetNamespace(ctx, db.WithName(req.Name))

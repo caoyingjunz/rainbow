@@ -402,7 +402,10 @@ func (s *rainbowdController) reconcileAgent(agent *model.Agent) error {
 	}
 
 	if needUpdated {
-		if err = s.factory.Agent().Update(context.TODO(), agent.Id, agent.ResourceVersion, map[string]interface{}{"status": model.RunAgentType}); err != nil {
+		if err = s.factory.Agent().Update(context.TODO(), agent.Id, agent.ResourceVersion, map[string]interface{}{
+			"status":               model.RunAgentType,
+			"last_transition_time": time.Now(),
+		}); err != nil {
 			return err
 		}
 	}
