@@ -8,7 +8,6 @@ import (
 
 	"github.com/caoyingjunz/pixiulib/httputils"
 	"github.com/caoyingjunz/rainbow/pkg/types"
-	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 func (cr *rainbowRouter) createLabel(c *gin.Context) {
@@ -716,6 +715,28 @@ func (cr *rainbowRouter) deleteImageTag(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) listImageTags(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID int64 `uri:"Id" binding:"required"`
+		}
+		listOption types.ListOptions
+		err        error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListImageTags(c, idMeta.ID, listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) UpdateImageStatus(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -810,6 +831,12 @@ func (cr *rainbowRouter) AddDailyReview(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) getDailyMetrics(c *gin.Context) {
+	resp := httputils.NewResponse()
 
 	httputils.SetSuccess(c, resp)
 }
@@ -1158,31 +1185,18 @@ func (cr *rainbowRouter) listSubscribeMessages(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
-func (cr *rainbowRouter) runSubscribeImmediately(c *gin.Context) {
+func (cr *rainbowRouter) runSubscribeNow(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		idMeta types.IdMeta
-		req    types.UpdateSubscribeRequest
-		err    error
+		req types.RunSubscribeRequest
+		err error
 	)
-	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	req.Id = idMeta.ID
-	if err = cr.c.Server().RunSubscribeImmediately(c, &req); err != nil {
-		if errors.IsImageNotFound(err) {
-			resp.SetMessageWithCode(err, 1001)
-			c.JSON(http.StatusOK, resp)
-			return
-		}
-		if errors.IsDisableStatus(err) {
-			resp.SetMessageWithCode(err, 1002)
-			c.JSON(http.StatusOK, resp)
-			return
-		}
-
+	if err = cr.c.Server().RunSubscribe(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
@@ -1620,6 +1634,12 @@ func (cr *rainbowRouter) syncAgentDrivers(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) syncNamespaces(c *gin.Context) {
+	resp := httputils.NewResponse()
 
 	httputils.SetSuccess(c, resp)
 }

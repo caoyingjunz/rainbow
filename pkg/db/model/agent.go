@@ -25,6 +25,8 @@ const (
 	UpgradeAgentType    string = "升级中"
 	OfflineAgentType    string = "下线中"
 
+	UpgradeAgentBinaryType string = "进程升级中"
+
 	PublicAgentType  string = "public"
 	PrivateAgentType string = "private"
 )

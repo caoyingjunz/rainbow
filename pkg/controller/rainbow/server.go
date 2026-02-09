@@ -55,7 +55,8 @@ type ServerInterface interface {
 	GetSubscribe(ctx context.Context, subId int64) (interface{}, error)
 
 	ListSubscribeMessages(ctx context.Context, subId int64) (interface{}, error)
-	RunSubscribeImmediately(ctx context.Context, req *types.UpdateSubscribeRequest) error
+
+	RunSubscribe(ctx context.Context, req *types.RunSubscribeRequest) error
 
 	ListTaskImages(ctx context.Context, taskId int64, listOption types.ListOptions) (interface{}, error)
 	ReRunTask(ctx context.Context, req *types.UpdateTaskRequest) error
@@ -78,6 +79,8 @@ type ServerInterface interface {
 	DeleteImage(ctx context.Context, imageId int64) error
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
+	ListImageTags(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error)
 
 	ListImagesByIds(ctx context.Context, ids []int64) (interface{}, error)
 	DeleteImagesByIds(ctx context.Context, ids []int64) error
@@ -289,7 +292,7 @@ func (s *ServerController) startRainbowdHeartbeat(ctx context.Context) {
 	for range ticker.C {
 		klog.V(1).Infof("即将进行 rainbowd 的状态检查")
 		for nodeName, sshConfig := range s.sshConfigMap {
-			old, err := s.factory.Rainbowd().GetByName(ctx, nodeName)
+			_, err := s.factory.Rainbowd().GetByName(ctx, nodeName)
 			if err != nil {
 				klog.Errorf("获取 rainbowd %s 失败 %v ", nodeName, err)
 				klog.Errorf("等待 %s 下一次检查", nodeName)
@@ -300,17 +303,18 @@ func (s *ServerController) startRainbowdHeartbeat(ctx context.Context) {
 			if !s.IsRainbowReachable(&sshConfig, nodeName) {
 				status = model.UnRunAgentType
 			}
+			klog.V(1).Infof("rainbowd %s 的状态为 %s", nodeName, status)
 
-			updates := map[string]interface{}{"last_transition_time": time.Now()}
-			if old.Status != status {
-				updates["status"] = status
-				klog.Infof("rainbowd 的状态发生改变，即将同步")
-			} else {
-				klog.V(1).Infof("rainbowd(%s)的状态未发生变化，等待下一次更新", nodeName)
-			}
-			if err = s.factory.Rainbowd().Update(ctx, old.Id, updates); err != nil {
-				klog.Errorf("同步 rainbowd(%s) 状态失败 %v 等待下一次同步", nodeName, err)
-			}
+			//updates := map[string]interface{}{"last_transition_time": time.Now()}
+			//if old.Status != status {
+			//	updates["status"] = status
+			//	klog.Infof("rainbowd 的状态发生改变，即将同步")
+			//} else {
+			//	klog.V(1).Infof("rainbowd(%s)的状态未发生变化，等待下一次更新", nodeName)
+			//}
+			//if err = s.factory.Rainbowd().Update(ctx, old.Id, updates); err != nil {
+			//	klog.Errorf("同步 rainbowd(%s) 状态失败 %v 等待下一次同步", nodeName, err)
+			//}
 		}
 	}
 }
@@ -360,19 +364,28 @@ func (s *ServerController) startSubscribeController(ctx context.Context) {
 				continue
 			}
 
-			changed, err := s.subscribe(ctx, sub)
-			if err == nil {
-				// 订阅触发成功
-				if changed {
-					s.CreateSubscribeMessageWithLog(ctx, sub, fmt.Sprintf("%s 在 %v 订阅触发成功", sub.Path, time.Now().Format("2006-01-02 15:04:05")))
-				}
-			} else {
+			if err = s.RunSubscribe(ctx, &types.RunSubscribeRequest{SubscribeId: sub.Id}); err != nil {
 				klog.Error("failed to do Subscribe(%s) %v", sub.Path, err)
 				s.CreateSubscribeMessageAndFailTimesAdd(ctx, sub, err.Error())
+			} else {
+				s.CreateSubscribeMessageWithLog(ctx, sub, fmt.Sprintf("%s 在 %v 订阅触发成功", sub.Path, time.Now().Format("2006-01-02 15:04:05")))
 			}
 
 			// 仅保留最新的 n 个事件
 			_ = s.cleanSubscribeMessages(ctx, sub.Id, 5)
+		}
+	}
+}
+
+func (s *ServerController) startSyncKubernetesTags(ctx context.Context) {
+	klog.Infof("starting kubernetes tags syncer")
+	ticker := time.NewTicker(3600 * 6 * time.Second)
+	defer ticker.Stop()
+
+	opt := types.CallKubernetesTagRequest{SyncAll: false}
+	for range ticker.C {
+		if _, err := s.SyncKubernetesTags(ctx, &opt); err != nil {
+			klog.Error("failed kubernetes version syncer %v", err)
 		}
 	}
 }
