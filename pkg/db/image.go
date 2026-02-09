@@ -19,6 +19,7 @@ type ImageInterface interface {
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
 	GetImageWithTagsCount(ctx context.Context, imageId int64, del bool) (*model.Image, error)
+	ListWithTagsCount(ctx context.Context, opts ...Options) ([]model.Image, error)
 	CreateFlow(ctx context.Context, object *model.Downflow) error
 
 	CreateInBatch(ctx context.Context, objects []model.Image) error
@@ -162,6 +163,39 @@ func (a *image) List(ctx context.Context, opts ...Options) ([]model.Image, error
 	}
 
 	return audits, nil
+}
+
+func (a *image) ListWithTagsCount(ctx context.Context, opts ...Options) ([]model.Image, error) {
+	var audits []model.Image
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	// 使用子查询获取标签计数
+	subQuery := a.db.WithContext(ctx).
+		Model(&model.Tag{}).
+		Select("image_id, COUNT(*) as tags_count").
+		Group("image_id")
+
+	// 执行查询
+	err := tx.
+		Select("images.*, COALESCE(t.tags_count, 0) as tags_count").
+		Joins("LEFT JOIN (?) t ON images.id = t.image_id", subQuery).
+		Find(&audits).Error
+
+	return audits, err
+
+	//if err := tx.Find(&audits).Error; err != nil {
+	//	return nil, err
+	//}
+	//
+	//// 性能较差
+	//for i := range audits {
+	//	audits[i].TagsCount = a.db.WithContext(ctx).Model(&audits[i]).Association("Tags").Count()
+	//}
+
+	//return audits, nil
 }
 
 func (a *image) ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error) {
