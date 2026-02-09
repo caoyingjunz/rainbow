@@ -37,6 +37,7 @@ func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateIma
 	return s.factory.Image().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
 
+// TryUpdateRemotePublic 更新内置标准镜像仓库为 public
 func (s *ServerController) TryUpdateRemotePublic(ctx context.Context, req *types.UpdateImageStatusRequest, old *model.Image) error {
 	if !s.isDefaultRepo(req.RegistryId) {
 		return nil

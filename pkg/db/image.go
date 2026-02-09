@@ -171,23 +171,31 @@ func (a *image) ListWithTagsCount(ctx context.Context, opts ...Options) ([]model
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
-	if err := tx.Find(&audits).Error; err != nil {
-		return nil, err
-	}
 
-	for index, old := range audits {
-		fmt.Println("audits[index].Id", audits[index].Id)
-		c, err := a.Count(ctx, WithId(audits[index].Id))
-		if err != nil {
-			continue
-		}
-		old.TagsCount = c
-		fmt.Println("audits[index].Id", c)
+	// 使用子查询获取标签计数
+	subQuery := a.db.WithContext(ctx).
+		Model(&model.Tag{}).
+		Select("image_id, COUNT(*) as tags_count").
+		Group("image_id")
 
-		audits[index] = old
-	}
+	// 执行查询
+	err := tx.
+		Select("images.*, COALESCE(t.tags_count, 0) as tags_count").
+		Joins("LEFT JOIN (?) t ON images.id = t.image_id", subQuery).
+		Find(&audits).Error
 
-	return audits, nil
+	return audits, err
+
+	//if err := tx.Find(&audits).Error; err != nil {
+	//	return nil, err
+	//}
+	//
+	//// 性能较差
+	//for i := range audits {
+	//	audits[i].TagsCount = a.db.WithContext(ctx).Model(&audits[i]).Association("Tags").Count()
+	//}
+
+	//return audits, nil
 }
 
 func (a *image) ListWithTask(ctx context.Context, taskId int64, opts ...Options) ([]model.Image, error) {
