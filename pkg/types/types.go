@@ -49,6 +49,11 @@ const (
 )
 
 const (
+	SyncNamespaceLogoType  = 0
+	SyncNamespaceLabelType = 1
+)
+
+const (
 	SkopeoDriver = "skopeo"
 	DockerDriver = "docker"
 )

@@ -281,19 +281,29 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 
 	offset := (listOption.Page - 1) * listOption.Limit
 	opts = append(opts, []db.Options{
-		db.WithModifyOrderByDesc(),
+		db.WithCreateOrderByDesc(),
 		db.WithOffset(offset),
 		db.WithLimit(listOption.Limit),
 	}...)
-	//pageResult.Items, err = s.factory.Image().ListImagesWithTag(ctx, opts...)
-	pageResult.Items, err = s.factory.Image().ListWithTagsCount(ctx, opts...) // 改成不带版本列表以加速显示
+
+	objects, err := s.factory.Image().ListWithTagsCount(ctx, opts...) // 优化成不带版本列表以加速显示
 	if err != nil {
 		klog.Errorf("获取镜像列表失败 %v", err)
 		pageResult.Message = err.Error()
 		return pageResult, err
 	}
+	pageResult.Items = objects
 
+	go s.AfterListImages(ctx, objects)
 	return pageResult, nil
+}
+
+func (s *ServerController) AfterListImages(ctx context.Context, objects []model.Image) {
+	klog.Infof("开启延迟更新镜像列表属性，镜像数 %d", len(objects))
+	for _, obj := range objects {
+		time.Sleep(1 * time.Second) // 延迟2s执行，避免被限速
+		s.AfterGetImage(ctx, &obj)
+	}
 }
 
 func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
@@ -526,6 +536,8 @@ func (s *ServerController) CreateNamespace(ctx context.Context, req *types.Creat
 	// 执行创建
 	_, err = s.factory.Image().CreateNamespace(ctx, &model.Namespace{
 		Name:        req.Name,
+		Logo:        req.Logo,
+		Label:       req.Label,
 		Description: req.Description,
 	})
 	if err != nil {
@@ -546,7 +558,42 @@ func (s *ServerController) DeleteNamespace(ctx context.Context, objectId int64) 
 func (s *ServerController) UpdateNamespace(ctx context.Context, req *types.UpdateNamespaceRequest) error {
 	updates := make(map[string]interface{})
 	updates["description"] = req.Description
+	updates["logo"] = req.Logo
+	updates["label"] = req.Label
 	return s.factory.Image().UpdateNamespace(ctx, req.Id, req.ResourceVersion, updates)
+}
+
+func (s *ServerController) SyncNamespace(ctx context.Context, req *types.SyncNamespaceRequest) error {
+	obj, err := s.factory.Image().GetNamespace(ctx, db.WithId(req.Id))
+	if err != nil {
+		return fmt.Errorf("无法获取命名空间")
+	}
+
+	if obj.Name == defaultNamespace {
+		return fmt.Errorf("默认空间无法通过命名空间同步")
+	}
+
+	switch req.SyncType {
+	case types.SyncNamespaceLogoType:
+		return s.syncNamespaceLogo(ctx, req, obj)
+	case types.SyncNamespaceLabelType:
+		return s.syncNamespaceLabel(ctx, req, obj)
+	default:
+		return fmt.Errorf("unsupported sync type %d", req.SyncType)
+	}
+}
+
+func (s *ServerController) syncNamespaceLogo(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {
+	opts := []db.Options{db.WithNamespace(ns.Name)}
+	if !req.Rewrite {
+		opts = append(opts, db.WithEmptyLogo())
+	}
+
+	return s.factory.Image().UpdateImagesLogo(ctx, map[string]interface{}{"logo": ns.Logo}, opts...)
+}
+
+func (s *ServerController) syncNamespaceLabel(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {
+	return nil
 }
 
 func (s *ServerController) ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error) {

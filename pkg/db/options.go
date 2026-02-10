@@ -33,6 +33,12 @@ func WithModifyOrderByDesc() Options {
 	}
 }
 
+func WithCreateOrderByDesc() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("gmt_create DESC")
+	}
+}
+
 func WithOffset(offset int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Offset(offset)
@@ -263,6 +269,12 @@ func WithNamespace(ns string) Options {
 			return tx
 		}
 		return tx.Where("namespace = ?", ns)
+	}
+}
+
+func WithEmptyLogo() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("logo = ?", "")
 	}
 }
 

@@ -110,6 +110,8 @@ type ServerInterface interface {
 	DeleteNamespace(ctx context.Context, objectId int64) error
 	ListNamespaces(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	SyncNamespace(ctx context.Context, req *types.SyncNamespaceRequest) error
+
 	Overview(ctx context.Context) (interface{}, error)
 	Downflow(ctx context.Context) (interface{}, error)
 	Store(ctx context.Context) (interface{}, error)

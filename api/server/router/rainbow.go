@@ -160,6 +160,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		userRoute.GET("/:Id", cr.getUser)
 		userRoute.GET("", cr.listUsers)
 	}
+
 	syncRoute := httpEngine.Group("/rainbow/sync")
 	{
 		syncRoute.POST("/users", cr.createOrUpdateUsers)
