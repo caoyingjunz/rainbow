@@ -564,7 +564,31 @@ func (s *ServerController) UpdateNamespace(ctx context.Context, req *types.Updat
 }
 
 func (s *ServerController) SyncNamespace(ctx context.Context, req *types.SyncNamespaceRequest) error {
+	obj, err := s.factory.Image().GetNamespace(ctx, db.WithId(req.Id))
+	if err != nil {
+		return fmt.Errorf("无法获取命名空间")
+	}
 
+	if obj.Name == defaultNamespace {
+		return fmt.Errorf("默认空间无法通过命名空间同步")
+	}
+
+	switch req.SyncType {
+	case types.SyncNamespaceLogoType:
+		return s.syncNamespaceLogo(ctx, req, obj)
+	case types.SyncNamespaceLabelType:
+		return s.syncNamespaceLabel(ctx, req, obj)
+	default:
+		return fmt.Errorf("unsupported sync type %d", req.SyncType)
+	}
+}
+
+func (s *ServerController) syncNamespaceLogo(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {
+
+	return nil
+}
+
+func (s *ServerController) syncNamespaceLabel(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {
 	return nil
 }
 
