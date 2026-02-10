@@ -584,8 +584,12 @@ func (s *ServerController) SyncNamespace(ctx context.Context, req *types.SyncNam
 }
 
 func (s *ServerController) syncNamespaceLogo(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {
+	opts := []db.Options{db.WithNamespace(ns.Name)}
+	if !req.Rewrite {
+		opts = append(opts, db.WithEmptyLogo())
+	}
 
-	return nil
+	return s.factory.Image().UpdateImagesLogo(ctx, map[string]interface{}{"logo": ns.Logo}, opts...)
 }
 
 func (s *ServerController) syncNamespaceLabel(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {

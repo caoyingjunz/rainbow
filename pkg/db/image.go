@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 )
@@ -34,6 +35,8 @@ type ImageInterface interface {
 	GetBy(ctx context.Context, opts ...Options) (*model.Image, error)
 
 	ListImagesWithTag(ctx context.Context, opts ...Options) ([]model.Image, error)
+
+	UpdateImagesLogo(ctx context.Context, updates map[string]interface{}, opts ...Options) error
 
 	CreateTag(ctx context.Context, object *model.Tag) (*model.Tag, error)
 	UpdateTag(ctx context.Context, imageId int64, tag string, updates map[string]interface{}) error
@@ -441,4 +444,20 @@ func (a *image) GetNamespaceCount(ctx context.Context, opts ...Options) (int64, 
 		return 0, err
 	}
 	return total, nil
+}
+
+func (a *image) UpdateImagesLogo(ctx context.Context, updates map[string]interface{}, opts ...Options) error {
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	f := tx.Model(&model.Image{}).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		klog.Warning("record not updated")
+	}
+	return nil
 }

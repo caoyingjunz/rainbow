@@ -272,6 +272,12 @@ func WithNamespace(ns string) Options {
 	}
 }
 
+func WithEmptyLogo() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("logo = ?", "")
+	}
+}
+
 func WithAgent(agent string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(agent) == 0 {
