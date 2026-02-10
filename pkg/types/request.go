@@ -174,14 +174,26 @@ type (
 
 	CreateNamespaceRequest struct {
 		Name        string `json:"name"`
+		Label       string `json:"label"`
+		Logo        string `json:"logo"`
 		Description string `json:"description"`
 	}
 
 	UpdateNamespaceRequest struct {
-		Id              int64  `json:"id"`
-		ResourceVersion int64  `json:"resource_version"`
-		Name            string `json:"name"`
-		Description     string `json:"description"`
+		Id              int64 `json:"id"`
+		ResourceVersion int64 `json:"resource_version"`
+
+		Name        string `json:"name"`
+		Label       string `json:"label"`
+		Logo        string `json:"logo"`
+		Description string `json:"description"`
+	}
+
+	SyncNamespaceRequest struct {
+		Id int64 `json:"id"`
+
+		SyncType int  `json:"sync_type"` // 0 logo 1 label
+		Rewrite  bool `json:"rewrite"`   // 覆盖现有配置
 	}
 
 	CreateUserRequest struct {

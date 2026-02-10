@@ -83,6 +83,8 @@ type Namespace struct {
 	rainbow.Model
 
 	Name        string `json:"name"`
+	Label       string `json:"label"`
+	Logo        string `json:"logo"`
 	Description string `json:"description"`
 }
 

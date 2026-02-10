@@ -33,6 +33,12 @@ func WithModifyOrderByDesc() Options {
 	}
 }
 
+func WithCreateOrderByDesc() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("gmt_create DESC")
+	}
+}
+
 func WithOffset(offset int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Offset(offset)
