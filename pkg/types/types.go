@@ -49,8 +49,9 @@ const (
 )
 
 const (
-	SyncNamespaceLogoType  = 0
-	SyncNamespaceLabelType = 1
+	SyncNamespaceLogoType        = 0
+	SyncNamespaceLabelType       = 1
+	SyncNamespaceDefaultLogoType = 2
 )
 
 const (

@@ -21,6 +21,7 @@ type LabelInterface interface {
 	UpdateLogo(ctx context.Context, labelId int64, resourceVersion int64, updates map[string]interface{}) error
 	DeleteLogo(ctx context.Context, logoId int64) error
 	ListLogos(ctx context.Context, opts ...Options) ([]model.Logo, error)
+	GetLogo(ctx context.Context, opts ...Options) (*model.Logo, error)
 }
 
 func newLabel(db *gorm.DB) LabelInterface {
@@ -117,4 +118,17 @@ func (l *label) ListLogos(ctx context.Context, opts ...Options) ([]model.Logo, e
 	}
 
 	return audits, nil
+}
+
+func (l *label) GetLogo(ctx context.Context, opts ...Options) (*model.Logo, error) {
+	tx := l.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var audit model.Logo
+	if err := tx.First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
 }
