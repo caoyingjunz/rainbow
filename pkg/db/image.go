@@ -456,9 +456,6 @@ func (a *image) UpdateImagesLogo(ctx context.Context, updates map[string]interfa
 	if f.Error != nil {
 		return f.Error
 	}
-
-	fmt.Println("RowsAffected", f.RowsAffected)
-
 	if f.RowsAffected == 0 {
 		klog.Warning("record not updated")
 	}
