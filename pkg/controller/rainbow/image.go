@@ -292,6 +292,17 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 		pageResult.Message = err.Error()
 		return pageResult, err
 	}
+
+	// 添加默认 logo
+	defaultLogo, _ := s.GetDefaultLogo(ctx)
+	for index, obj := range objects {
+		if len(obj.Logo) != 0 {
+			continue
+		}
+		obj.Logo = defaultLogo
+		objects[index] = obj
+	}
+
 	pageResult.Items = objects
 
 	go s.AfterListImages(ctx, objects)
@@ -327,10 +338,26 @@ func IsDurationExceeded(t time.Time, duration time.Duration) bool {
 	return now.Sub(t) > duration
 }
 
+func (s *ServerController) GetDefaultLogo(ctx context.Context) (string, error) {
+	lg, err := s.factory.Label().GetLogo(ctx, db.WithName("default"))
+	if err != nil {
+		return "", err
+	}
+	return lg.Logo, nil
+}
+
 func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interface{}, error) {
 	object, err := s.factory.Image().GetImageWithTagsCount(ctx, imageId, false)
 	if err != nil {
 		return nil, err
+	}
+
+	// 如果 logo 不存在，获取默认 logo
+	if len(object.Logo) == 0 {
+		defaultLogo, err := s.GetDefaultLogo(ctx)
+		if err == nil {
+			object.Logo = defaultLogo
+		}
 	}
 
 	// 尝试更新属性
@@ -568,7 +595,6 @@ func (s *ServerController) SyncNamespace(ctx context.Context, req *types.SyncNam
 	if err != nil {
 		return fmt.Errorf("无法获取命名空间")
 	}
-
 	if obj.Name == defaultNamespace {
 		return fmt.Errorf("默认空间无法通过命名空间同步")
 	}
@@ -578,6 +604,8 @@ func (s *ServerController) SyncNamespace(ctx context.Context, req *types.SyncNam
 		return s.syncNamespaceLogo(ctx, req, obj)
 	case types.SyncNamespaceLabelType:
 		return s.syncNamespaceLabel(ctx, req, obj)
+	case types.SyncNamespaceDefaultLogoType:
+		return s.syncNamespaceDefaultLogo(ctx, req, obj)
 	default:
 		return fmt.Errorf("unsupported sync type %d", req.SyncType)
 	}
@@ -590,6 +618,30 @@ func (s *ServerController) syncNamespaceLogo(ctx context.Context, req *types.Syn
 	}
 
 	return s.factory.Image().UpdateImagesLogo(ctx, map[string]interface{}{"logo": ns.Logo}, opts...)
+}
+
+func (s *ServerController) syncNamespaceDefaultLogo(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {
+	// 如果logo已经存在
+	if len(ns.Logo) != 0 {
+		// 如果不是覆盖则直接返回
+		if !req.Rewrite {
+			return nil
+		}
+	}
+
+	name := ns.Name
+	logoObj, err := s.factory.Label().GetLogo(ctx, db.WithName(name))
+	if err != nil {
+		klog.Errorf("获取Logo %s 失败 %v", name, err)
+		return fmt.Errorf("获取Logo(%s)失败", name)
+	}
+	if ns.Logo != logoObj.Logo {
+		updates := make(map[string]interface{})
+		updates["logo"] = logoObj.Logo
+		return s.factory.Image().UpdateNamespace(ctx, ns.Id, ns.ResourceVersion, updates)
+	}
+
+	return nil
 }
 
 func (s *ServerController) syncNamespaceLabel(ctx context.Context, req *types.SyncNamespaceRequest, ns *model.Namespace) error {

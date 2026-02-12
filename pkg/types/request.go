@@ -192,7 +192,7 @@ type (
 	SyncNamespaceRequest struct {
 		Id int64 `json:"id"`
 
-		SyncType int  `json:"sync_type"` // 0 logo 1 label
+		SyncType int  `json:"sync_type"` // 0 logo 1 label 2 默认logo
 		Rewrite  bool `json:"rewrite"`   // 覆盖现有配置
 	}
 

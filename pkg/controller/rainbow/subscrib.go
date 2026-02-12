@@ -59,6 +59,8 @@ func (s *ServerController) runSubscribeFull(ctx context.Context, sub *model.Subs
 	newImages, err := s.SearchRepositoryTags(ctx, types.CallSearchRequest{
 		Namespace:    ns,
 		Repository:   repo,
+		Query:        sub.Policy,
+		PageSize:     size,
 		CustomConfig: &types.SearchCustomConfig{Policy: sub.Policy, Arch: sub.Arch},
 	})
 	if err != nil {
@@ -88,6 +90,10 @@ func (s *ServerController) runSubscribeFull(ctx context.Context, sub *model.Subs
 		taskNamespace = defaultNamespace
 	}
 
+	if len(imagesNeedSync) > 25 {
+		klog.Infof("镜像版本过多，本次同步前25个镜像版本")
+		imagesNeedSync = imagesNeedSync[:25]
+	}
 	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
 		Name:         uuid.NewRandName(fmt.Sprintf("订阅-%s-", sub.Path), 8),
 		UserId:       sub.UserId,
@@ -159,6 +165,8 @@ func (s *ServerController) runSubscribeIncrement(ctx context.Context, sub *model
 	newImages, err := s.SearchRepositoryTags(ctx, types.CallSearchRequest{
 		Namespace:    ns,
 		Repository:   repo,
+		Query:        sub.Policy,
+		PageSize:     size,
 		CustomConfig: &types.SearchCustomConfig{Policy: sub.Policy, Arch: sub.Arch},
 	})
 	if err != nil {
@@ -188,6 +196,11 @@ func (s *ServerController) runSubscribeIncrement(ctx context.Context, sub *model
 	taskNamespace := sub.Namespace
 	if len(taskNamespace) == 0 {
 		taskNamespace = defaultNamespace
+	}
+
+	if len(imagesNeedSync) > 25 {
+		klog.Infof("镜像版本过多，本次同步前25个镜像版本")
+		imagesNeedSync = imagesNeedSync[:25]
 	}
 	klog.Infof("即将增量推送订阅镜像(%v)", imagesNeedSync)
 	if err = s.CreateTask(ctx, &types.CreateTaskRequest{
