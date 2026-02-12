@@ -21,7 +21,6 @@ func (cr *rainbowRouter) createLabel(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if err = cr.c.Server().CreateLabel(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
