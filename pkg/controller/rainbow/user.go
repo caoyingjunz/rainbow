@@ -154,6 +154,7 @@ func (s *ServerController) ListUsers(ctx context.Context, listOption types.ListO
 	}
 	opts := []db.Options{
 		db.WithUser(listOption.UserId),
+		db.WithNameLike(listOption.NameSelector),
 	}
 
 	var err error
