@@ -39,5 +39,5 @@ type ImageLabel struct {
 }
 
 func (l *ImageLabel) TableName() string {
-	return "image_label_bindings"
+	return "image_labels"
 }
