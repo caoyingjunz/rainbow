@@ -12,6 +12,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateImageRequest) error {
@@ -29,7 +30,6 @@ func (s *ServerController) CreateImage(ctx context.Context, req *types.CreateIma
 
 func (s *ServerController) UpdateImage(ctx context.Context, req *types.UpdateImageRequest) error {
 	updates := make(map[string]interface{})
-	updates["label"] = req.Label
 	updates["logo"] = req.Logo
 	updates["description"] = req.Description
 	updates["is_public"] = req.IsPublic
@@ -683,4 +683,55 @@ func (s *ServerController) ListNamespaces(ctx context.Context, listOption types.
 	}
 
 	return pageResult, nil
+}
+
+func (s *ServerController) BindImageLabels(ctx context.Context, imageId int64, req types.BindImageLabels) error {
+	switch req.OP {
+	case types.AddImageLabelType:
+		klog.Infof("开始新增标签 %v", req.LabelIds)
+		for _, labelId := range req.LabelIds {
+			if err := s.AddImageLabel(ctx, imageId, labelId); err != nil {
+				return err
+			}
+		}
+	case types.DeleteImageLabelType:
+		klog.Infof("开始移除标签 %v", req.LabelIds)
+		for _, labelId := range req.LabelIds {
+			if err := s.DeleteImageLabel(ctx, imageId, labelId); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *ServerController) AddImageLabel(ctx context.Context, imageId int64, labelId int64) error {
+	_, err := s.factory.Label().GetImageLabel(ctx, db.WithLabel(labelId), db.WithImage(imageId))
+	if err == nil {
+		klog.Infof("镜像已绑定该标签，无需重复添加")
+		return nil
+	}
+
+	if !errors.IsNotFound(err) {
+		klog.Errorf("查询镜像标签关联失败 %v", err)
+		return err
+	}
+	if _, err = s.factory.Label().CreateImageLabel(ctx, &model.ImageLabel{ImageID: imageId, LabelID: labelId}); err != nil {
+		klog.Errorf("添加镜像标签失败 %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *ServerController) DeleteImageLabel(ctx context.Context, imageId int64, labelId int64) error {
+	if err := s.factory.Label().DeleteImageLabel(ctx, db.WithLabel(labelId), db.WithImage(imageId)); err != nil {
+		klog.Errorf("删除镜像标签关联失败 %v", err)
+		return err
+	}
+	return nil
+}
+
+func (s *ServerController) ListImageLabels(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Label().ListImageLabelNames(ctx, imageId)
 }

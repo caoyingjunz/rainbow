@@ -313,3 +313,12 @@ func WithType(Type string) Options {
 		return tx.Where("Type = ?", Type)
 	}
 }
+
+func WithLabel(labelId int64) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if labelId == 0 {
+			return tx
+		}
+		return tx.Where("label_id = ?", labelId)
+	}
+}

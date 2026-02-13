@@ -22,15 +22,15 @@ type Image struct {
 	UserName   string `json:"user_name"`
 	RegisterId int64  `json:"register_id"`
 
-	Logo        string `json:"logo"`
-	Label       string `json:"label" gorm:"index:idx"` // 标记镜像类型，比如 ai，k8s
-	Namespace   string `json:"namespace"`
-	Mirror      string `json:"mirror"`
-	Size        int64  `json:"size"`
-	Pull        int64  `json:"pull"`
-	Tags        []Tag  `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
-	TagsCount   int64  `json:"tags_count"`
-	Description string `json:"description"`
+	Logo        string  `json:"logo"`
+	Labels      []Label `gorm:"many2many:image_label;constraint:OnDelete:CASCADE"` // 标记镜像类型，比如 ai，k8s
+	Namespace   string  `json:"namespace"`
+	Mirror      string  `json:"mirror"`
+	Size        int64   `json:"size"`
+	Pull        int64   `json:"pull"`
+	Tags        []Tag   `json:"tags" gorm:"foreignKey:ImageId;constraint:OnDelete:CASCADE;"`
+	TagsCount   int64   `json:"tags_count"`
+	Description string  `json:"description"`
 
 	IsPublic      bool      `json:"is_public"`
 	IsOfficial    bool      `json:"is_official"`

@@ -55,6 +55,11 @@ const (
 )
 
 const (
+	AddImageLabelType    = 0
+	DeleteImageLabelType = 1
+)
+
+const (
 	SkopeoDriver = "skopeo"
 	DockerDriver = "docker"
 )

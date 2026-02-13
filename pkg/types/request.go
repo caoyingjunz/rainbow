@@ -172,6 +172,11 @@ type (
 		Target     string `json:"target"`
 	}
 
+	BindImageLabels struct {
+		OP       int     `json:"op"` // add or delete, 默认添加
+		LabelIds []int64 `json:"label_ids"`
+	}
+
 	CreateNamespaceRequest struct {
 		Name        string `json:"name"`
 		Label       string `json:"label"`

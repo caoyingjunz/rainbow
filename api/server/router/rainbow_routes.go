@@ -21,7 +21,6 @@ func (cr *rainbowRouter) createLabel(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	if err = cr.c.Server().CreateLabel(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
@@ -74,8 +73,8 @@ func (cr *rainbowRouter) listLabels(c *gin.Context) {
 	resp := httputils.NewResponse()
 
 	var (
-		err        error
 		listOption types.ListOptions
+		err        error
 	)
 	if err = httputils.ShouldBindAny(c, nil, nil, &listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
@@ -715,6 +714,28 @@ func (cr *rainbowRouter) deleteImageTag(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) bindImageLabels(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID int64 `uri:"Id" binding:"required"`
+		}
+		req types.BindImageLabels
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, &idMeta, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().BindImageLabels(c, idMeta.ID, req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) getImageTag(c *gin.Context) {
 	resp := httputils.NewResponse()
 
@@ -730,6 +751,28 @@ func (cr *rainbowRouter) getImageTag(c *gin.Context) {
 		return
 	}
 	if resp.Result, err = cr.c.Server().GetImageTag(c, idMeta.ID, idMeta.TagId); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
+func (cr *rainbowRouter) listImageLabels(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		idMeta struct {
+			ID int64 `uri:"Id" binding:"required"`
+		}
+		listOption types.ListOptions
+		err        error
+	)
+	if err = httputils.ShouldBindAny(c, nil, &idMeta, &listOption); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if resp.Result, err = cr.c.Server().ListImageLabels(c, idMeta.ID, listOption); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

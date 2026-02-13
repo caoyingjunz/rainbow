@@ -2,17 +2,35 @@ package rainbow
 
 import (
 	"context"
+	"fmt"
+
+	"k8s.io/klog/v2"
+
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
-	"k8s.io/klog/v2"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
+func (s *ServerController) preCreateLabel(ctx context.Context, req *types.CreateLabelRequest) error {
+	_, err := s.factory.Label().Get(ctx, db.WithName(req.Name))
+	if err == nil {
+		return fmt.Errorf("标签%s已存在，无法重复创建", req.Name)
+	}
+	if errors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
 func (s *ServerController) CreateLabel(ctx context.Context, req *types.CreateLabelRequest) error {
-	_, err := s.factory.Label().Create(ctx, &model.Label{
+	if err := s.preCreateLabel(ctx, req); err != nil {
+		return err
+	}
+
+	if _, err := s.factory.Label().Create(ctx, &model.Label{
 		Name: req.Name,
-	})
-	if err != nil {
+	}); err != nil {
 		klog.Errorf("创建标签失败 %v", err)
 		return err
 	}
@@ -37,11 +55,39 @@ func (s *ServerController) UpdateLabel(ctx context.Context, req *types.UpdateLab
 }
 
 func (s *ServerController) ListLabels(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	list, err := s.factory.Label().List(ctx, db.WithNameLike(listOption.NameSelector))
-	if err != nil {
-		return nil, err
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
 	}
-	return list, nil
+	opts := []db.Options{
+		db.WithNameLike(listOption.NameSelector),
+	}
+
+	var err error
+	pageResult.Total, err = s.factory.Label().Count(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取标签总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+	pageResult.Items, err = s.factory.Label().List(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取标签列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
 
 func (s *ServerController) CreateLogo(ctx context.Context, req *types.CreateLogoRequest) error {
@@ -63,5 +109,37 @@ func (s *ServerController) DeleteLogo(ctx context.Context, logoId int64) error {
 }
 
 func (s *ServerController) ListLogos(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Label().ListLogos(ctx, db.WithNameLike(listOption.NameSelector))
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+	opts := []db.Options{
+		db.WithNameLike(listOption.NameSelector),
+	}
+
+	var err error
+	pageResult.Total, err = s.factory.Label().CountLogos(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取 Logo 总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithModifyOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+	pageResult.Items, err = s.factory.Label().ListLogos(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取 Logo 列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	return pageResult, nil
 }
