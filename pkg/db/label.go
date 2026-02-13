@@ -16,12 +16,21 @@ type LabelInterface interface {
 	Delete(ctx context.Context, id int64) error
 	Update(ctx context.Context, labelId int64, resourceVersion int64, updates map[string]interface{}) error
 	List(ctx context.Context, opts ...Options) ([]model.Label, error)
+	Count(ctx context.Context, opts ...Options) (int64, error)
+	Get(ctx context.Context, opts ...Options) (*model.Label, error)
 
 	CreateLogo(ctx context.Context, object *model.Logo) (*model.Logo, error)
 	UpdateLogo(ctx context.Context, labelId int64, resourceVersion int64, updates map[string]interface{}) error
 	DeleteLogo(ctx context.Context, logoId int64) error
 	ListLogos(ctx context.Context, opts ...Options) ([]model.Logo, error)
+	CountLogos(ctx context.Context, opts ...Options) (int64, error)
 	GetLogo(ctx context.Context, opts ...Options) (*model.Logo, error)
+
+	CreateImageLabel(ctx context.Context, object *model.ImageLabel) (*model.ImageLabel, error)
+	GetImageLabel(ctx context.Context, opts ...Options) (*model.ImageLabel, error)
+	DeleteImageLabel(ctx context.Context, opts ...Options) error
+	ListImageLabels(ctx context.Context, opts ...Options) ([]model.ImageLabel, error)
+	ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error)
 }
 
 func newLabel(db *gorm.DB) LabelInterface {
@@ -76,6 +85,33 @@ func (l *label) List(ctx context.Context, opts ...Options) ([]model.Label, error
 	return audits, nil
 }
 
+func (l *label) Count(ctx context.Context, opts ...Options) (int64, error) {
+	tx := l.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.Label{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (l *label) Get(ctx context.Context, opts ...Options) (*model.Label, error) {
+	tx := l.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var audit model.Label
+	if err := tx.First(&audit).Error; err != nil {
+		return nil, err
+	}
+	return &audit, nil
+}
+
 func (l *label) CreateLogo(ctx context.Context, object *model.Logo) (*model.Logo, error) {
 	now := time.Now()
 	object.GmtCreate = now
@@ -120,6 +156,20 @@ func (l *label) ListLogos(ctx context.Context, opts ...Options) ([]model.Logo, e
 	return audits, nil
 }
 
+func (l *label) CountLogos(ctx context.Context, opts ...Options) (int64, error) {
+	tx := l.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.Logo{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
 func (l *label) GetLogo(ctx context.Context, opts ...Options) (*model.Logo, error) {
 	tx := l.db.WithContext(ctx)
 	for _, opt := range opts {
@@ -131,4 +181,67 @@ func (l *label) GetLogo(ctx context.Context, opts ...Options) (*model.Logo, erro
 		return nil, err
 	}
 	return &audit, nil
+}
+
+// ImageLabel 增删改查
+
+func (l *label) CreateImageLabel(ctx context.Context, object *model.ImageLabel) (*model.ImageLabel, error) {
+	now := time.Now()
+	object.GmtCreate = now
+	object.GmtModified = now
+
+	if err := l.db.WithContext(ctx).Create(object).Error; err != nil {
+		return nil, err
+	}
+	return object, nil
+}
+
+func (l *label) GetImageLabel(ctx context.Context, opts ...Options) (*model.ImageLabel, error) {
+
+	tx := l.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var audit model.ImageLabel
+	if err := tx.First(&audit).Error; err != nil {
+		return nil, err
+	}
+
+	return &audit, nil
+}
+
+func (l *label) DeleteImageLabel(ctx context.Context, opts ...Options) error {
+	tx := l.db.WithContext(ctx).Model(&model.ImageLabel{})
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	return tx.Delete(&model.ImageLabel{}).Error
+}
+
+func (l *label) ListImageLabels(ctx context.Context, opts ...Options) ([]model.ImageLabel, error) {
+	var list []model.ImageLabel
+	tx := l.db.WithContext(ctx).Model(&model.ImageLabel{})
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (l *label) ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error) {
+	var labelNames []string
+	err := l.db.WithContext(ctx).
+		Table("labels").
+		Joins("JOIN image_labels ON image_labels.label_id = labels.id").
+		Where("image_labels.image_id = ?", imageId).
+		Pluck("labels.name", &labelNames).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return labelNames, nil
 }

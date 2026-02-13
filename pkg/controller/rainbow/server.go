@@ -92,6 +92,9 @@ type ServerInterface interface {
 	DeleteImageTag(ctx context.Context, imageId int64, TagId int64) error
 	GetImageTag(ctx context.Context, imageId int64, tagId int64) (interface{}, error)
 
+	BindImageLabels(ctx context.Context, imageId int64, req types.BindImageLabels) error
+	ListImageLabels(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error)
+
 	GetCollection(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	AddDailyReview(ctx context.Context, page string) error
 

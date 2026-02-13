@@ -241,7 +241,7 @@ func (s *ServerController) ListAgents(ctx context.Context, listOption types.List
 	var err error
 	pageResult.Total, err = s.factory.Agent().Count(ctx, opts...)
 	if err != nil {
-		klog.Errorf("获取代理总数失败 %v", err)
+		klog.Errorf("获取agent总数失败 %v", err)
 		pageResult.Message = err.Error()
 	}
 	offset := (listOption.Page - 1) * listOption.Limit
@@ -252,7 +252,7 @@ func (s *ServerController) ListAgents(ctx context.Context, listOption types.List
 	}...)
 	pageResult.Items, err = s.factory.Agent().List(ctx, opts...)
 	if err != nil {
-		klog.Errorf("获取代理列表失败 %v", err)
+		klog.Errorf("获取agent列表失败 %v", err)
 		pageResult.Message = err.Error()
 		return pageResult, err
 	}

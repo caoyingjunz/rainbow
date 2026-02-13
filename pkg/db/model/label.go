@@ -12,7 +12,7 @@ type Label struct {
 	rainbow.Model
 
 	Name   string  `gorm:"index:idx_name,unique" json:"name"` // k8s, db, ai等标识
-	Images []Image `gorm:"many2many:image_label;constraint:OnDelete:CASCADE"`
+	Images []Image `json:"images,omitempty" gorm:"many2many:image_label;constraint:OnDelete:CASCADE"`
 }
 
 func (l *Label) TableName() string {
@@ -35,7 +35,7 @@ type ImageLabel struct {
 	rainbow.Model
 
 	ImageID int64 `gorm:"primaryKey"`
-	LabelD  int64 `gorm:"primaryKey"`
+	LabelID int64 `gorm:"primaryKey"`
 }
 
 func (l *ImageLabel) TableName() string {
