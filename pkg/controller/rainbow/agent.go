@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -45,8 +46,9 @@ type AgentController struct {
 	cfg         rainbowconfig.Config
 	redisClient *redis.Client
 
-	queue workqueue.RateLimitingInterface
-	exec  exec.Interface
+	queue      workqueue.RateLimitingInterface
+	buildQueue workqueue.RateLimitingInterface
+	exec       exec.Interface
 
 	name     string
 	callback string
@@ -63,6 +65,7 @@ func NewAgent(f db.ShareDaoFactory, cfg rainbowconfig.Config, redisClient *redis
 		baseDir:     cfg.Agent.DataDir,
 		callback:    cfg.Plugin.Callback,
 		queue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-agent"),
+		buildQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "rainbow-build-agent"),
 		exec:        exec.New(),
 	}
 }
@@ -153,11 +156,13 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 
 	go s.startHeartbeat(ctx)
 	go s.getNextWorkItems(ctx)
+	go s.getNextBuildWorkItems(ctx)
 	go s.startSyncActionUsage(ctx)
 	go s.startGC(ctx)
 
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
+		go wait.UntilWithContext(ctx, s.buildWorker, 1*time.Second)
 	}
 
 	return nil
@@ -358,8 +363,34 @@ func (s *AgentController) getNextWorkItems(ctx context.Context) {
 	}
 }
 
+func (s *AgentController) getNextBuildWorkItems(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// 获取未处理build任务
+		builds, err := s.factory.Build().ListWithAgent(ctx, s.name)
+		if err != nil {
+			klog.Error("failed to list builds %v", err)
+			continue
+		}
+		if len(builds) == 0 {
+			continue
+		}
+
+		for _, build := range builds {
+			s.buildQueue.Add(fmt.Sprintf("%d/%d", build.Id, build.ResourceVersion))
+		}
+	}
+}
+
 func (s *AgentController) worker(ctx context.Context) {
 	for s.processNextWorkItem(ctx) {
+	}
+}
+
+func (s *AgentController) buildWorker(ctx context.Context) {
+	for s.processNextBuildWorkItem(ctx) {
 	}
 }
 
@@ -389,6 +420,36 @@ func (s *AgentController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+func (s *AgentController) processNextBuildWorkItem(ctx context.Context) bool {
+	key, quit := s.buildQueue.Get()
+	if quit {
+		return false
+	}
+	defer s.buildQueue.Done(key)
+
+	klog.Infof("Build(%v) 被调度到本节点，开始处理", key)
+
+	buildId, resourceVersion, err := KeyFunc(key)
+	if err != nil {
+		s.handleErr(ctx, err, key)
+		return true
+	}
+
+	_ = s.factory.Build().UpdateDirectly(ctx, buildId, map[string]interface{}{
+		"status": "构建初始化",
+	})
+
+	if err = s.syncBuild(ctx, buildId, resourceVersion); err != nil {
+		_ = s.factory.Build().CreateBuildMessage(ctx, &model.BuildMessage{
+			BuildId: buildId,
+			Message: fmt.Sprintf("构建失败: %v", err),
+		})
+		s.handleErr(ctx, err, key)
+	}
+
+	return true
+}
+
 func (s *AgentController) GetOneAdminRegistry(ctx context.Context) (*model.Registry, error) {
 	regs, err := s.factory.Registry().GetAdminRegistries(ctx)
 	if err != nil {
@@ -407,6 +468,44 @@ func (s *AgentController) GetOneAdminRegistry(ctx context.Context) (*model.Regis
 	return &t, err
 }
 
+func (s *AgentController) makeBuildConfigAndDockerfile(ctx context.Context, build model.Build) (*rainbowconfig.BuildTemplateConfig, error) {
+	buildId := build.Id
+
+	var (
+		registry *model.Registry
+		err      error
+	)
+	// 未指定自定义参考时，使用默认仓库
+	if build.RegistryId == 0 {
+		registry, err = s.GetOneAdminRegistry(ctx)
+	} else {
+		registry, err = s.factory.Registry().Get(ctx, build.RegistryId)
+	}
+	if err != nil {
+		klog.Error("failed to get registry %v", err)
+		return nil, fmt.Errorf("failed to get registry %v", err)
+	}
+
+	builderTemplateConfig := &rainbowconfig.BuildTemplateConfig{
+		Default: rainbowconfig.DefaultOption{
+			Time: time.Now().Unix(),
+		},
+		Build: rainbowconfig.BuildOption{
+			Callback:   s.callback,
+			BuildId:    buildId,
+			RegistryId: registry.Id,
+			Repo:       build.Repo,
+			Arch:       build.Arch,
+		},
+		Registry: rainbowconfig.Registry{
+			Repository: registry.Repository,
+			Namespace:  registry.Namespace,
+			Username:   registry.Username,
+			Password:   registry.Password,
+		},
+	}
+	return builderTemplateConfig, nil
+}
 func (s *AgentController) makePluginConfig(ctx context.Context, task model.Task) (*rainbowconfig.PluginTemplateConfig, error) {
 	taskId := task.Id
 
@@ -534,6 +633,55 @@ func (s *AgentController) sync(ctx context.Context, taskId int64, resourceVersio
 	return nil
 }
 
+func (s *AgentController) syncBuild(ctx context.Context, buildId int64, resourceVersion int64) error {
+	build, err := s.factory.Build().GetOne(ctx, buildId, resourceVersion)
+	if err != nil {
+		if errors.IsNotUpdated(err) {
+			return nil
+		}
+		return fmt.Errorf("failted to get one task %d %v", buildId, err)
+	}
+	klog.Infof("开始处理任务(%s),任务ID(%d)", build.Name, buildId)
+
+	tplCfg, err := s.makeBuildConfigAndDockerfile(ctx, *build)
+	cfg, err := yaml.Marshal(tplCfg)
+	if err != nil {
+		return err
+	}
+
+	buildIdStr := fmt.Sprintf("%d", build.Id)
+
+	destDir := filepath.Join(s.baseDir, buildIdStr)
+	if err = util.EnsureDirectoryExists(destDir); err != nil {
+		return err
+	}
+	if !util.IsDirectoryExists(destDir + "/builder") {
+		if err = util.Copy(s.baseDir+"/builder", destDir); err != nil {
+			return err
+		}
+	}
+
+	git := util.NewGit(destDir+"/builder", buildIdStr, buildIdStr+"-"+time.Now().String())
+	if err = git.Checkout(); err != nil {
+		return err
+	}
+	if err = util.WriteIntoFile(string(cfg), destDir+"/builder/config.yaml"); err != nil {
+		return err
+	}
+
+	dockerfilePath := destDir + "/builder/Dockerfile"
+
+	err = restoreDockerfileFromBase64(build.Dockerfile, dockerfilePath)
+	if err != nil {
+		return err
+	}
+
+	if err = git.Push(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // TODO
 func (s *AgentController) handleErr(ctx context.Context, err error, key interface{}) {
 	if err == nil {
@@ -576,4 +724,17 @@ func KeyFunc(key interface{}) (int64, int64, error) {
 	}
 
 	return taskId, resourceVersion, nil
+}
+
+func restoreDockerfileFromBase64(base64Str string, dockerfilePath string) error {
+	decoded, err := base64.StdEncoding.DecodeString(base64Str)
+	if err != nil {
+		return fmt.Errorf("decode dockerfile base64 failed: %w", err)
+	}
+
+	if err := os.WriteFile(dockerfilePath, decoded, 0644); err != nil {
+		return fmt.Errorf("write Dockerfile failed: %w", err)
+	}
+
+	return nil
 }

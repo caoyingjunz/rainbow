@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -15,7 +16,10 @@ type BuildInterface interface {
 	Create(ctx context.Context, object *model.Build) (*model.Build, error)
 	Delete(ctx context.Context, dockerfileId int64) error
 	Update(ctx context.Context, DockerfileId int64, resourceVersion int64, updates map[string]interface{}) error
+	UpdateDirectly(ctx context.Context, buildId int64, updates map[string]interface{}) error
+	GetOne(ctx context.Context, buildId int64, resourceVersion int64) (*model.Build, error)
 	List(ctx context.Context, opts ...Options) ([]model.Build, error)
+	ListWithAgent(ctx context.Context, agentName string, opts ...Options) ([]model.Build, error)
 	Get(ctx context.Context, dockerfileId int64) (*model.Build, error)
 	UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error
 	Count(ctx context.Context, opts ...Options) (int64, error)
@@ -32,39 +36,39 @@ type build struct {
 	db *gorm.DB
 }
 
-func (d *build) Create(ctx context.Context, object *model.Build) (*model.Build, error) {
+func (b *build) Create(ctx context.Context, object *model.Build) (*model.Build, error) {
 	now := time.Now()
 	object.GmtCreate = now
 	object.GmtModified = now
 
-	if err := d.db.WithContext(ctx).Create(object).Error; err != nil {
+	if err := b.db.WithContext(ctx).Create(object).Error; err != nil {
 		return nil, err
 	}
 	return object, nil
 }
 
-func (d *build) Get(ctx context.Context, dockerfileId int64) (*model.Build, error) {
+func (b *build) Get(ctx context.Context, dockerfileId int64) (*model.Build, error) {
 	var audit model.Build
-	if err := d.db.WithContext(ctx).Where("id = ?", dockerfileId).First(&audit).Error; err != nil {
+	if err := b.db.WithContext(ctx).Where("id = ?", dockerfileId).First(&audit).Error; err != nil {
 		return nil, err
 	}
 	return &audit, nil
 }
 
-func (d *build) Delete(ctx context.Context, dockerfileId int64) error {
+func (b *build) Delete(ctx context.Context, dockerfileId int64) error {
 	var audit model.Build
-	if err := d.db.WithContext(ctx).Clauses(clause.Returning{}).Where("id = ?", dockerfileId).Delete(&audit).Error; err != nil {
+	if err := b.db.WithContext(ctx).Clauses(clause.Returning{}).Where("id = ?", dockerfileId).Delete(&audit).Error; err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (d *build) Update(ctx context.Context, DockerfileId int64, resourceVersion int64, updates map[string]interface{}) error {
+func (b *build) Update(ctx context.Context, DockerfileId int64, resourceVersion int64, updates map[string]interface{}) error {
 	updates["gmt_modified"] = time.Now()
 	updates["resource_version"] = resourceVersion + 1
 
-	f := d.db.WithContext(ctx).Model(&model.Build{}).Where("id = ? and resource_version = ?", DockerfileId, resourceVersion).Updates(updates)
+	f := b.db.WithContext(ctx).Model(&model.Build{}).Where("id = ? and resource_version = ?", DockerfileId, resourceVersion).Updates(updates)
 	if f.Error != nil {
 		return f.Error
 	}
@@ -75,9 +79,22 @@ func (d *build) Update(ctx context.Context, DockerfileId int64, resourceVersion 
 	return nil
 }
 
-func (d *build) List(ctx context.Context, opts ...Options) ([]model.Build, error) {
+func (b *build) UpdateDirectly(ctx context.Context, buildId int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	f := b.db.WithContext(ctx).Model(&model.Build{}).Where("id = ?", buildId).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
+}
+
+func (b *build) List(ctx context.Context, opts ...Options) ([]model.Build, error) {
 	var audits []model.Build
-	tx := d.db.WithContext(ctx)
+	tx := b.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
@@ -88,11 +105,23 @@ func (d *build) List(ctx context.Context, opts ...Options) ([]model.Build, error
 
 	return audits, nil
 }
+func (b *build) ListWithAgent(ctx context.Context, agentName string, opts ...Options) ([]model.Build, error) {
+	var audits []model.Build
+	tx := b.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+	if err := tx.Where("agent_name = ? and status = ?", agentName, "调度中").Find(&audits).Error; err != nil {
+		return nil, err
+	}
 
-func (d *build) UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error {
+	return audits, nil
+}
+
+func (b *build) UpdateBy(ctx context.Context, updates map[string]interface{}, opts ...Options) error {
 	updates["gmt_modified"] = time.Now()
 
-	tx := d.db.WithContext(ctx)
+	tx := b.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
@@ -107,8 +136,8 @@ func (d *build) UpdateBy(ctx context.Context, updates map[string]interface{}, op
 	return nil
 }
 
-func (d *build) Count(ctx context.Context, opts ...Options) (int64, error) {
-	tx := d.db.WithContext(ctx)
+func (b *build) Count(ctx context.Context, opts ...Options) (int64, error) {
+	tx := b.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
@@ -121,18 +150,18 @@ func (d *build) Count(ctx context.Context, opts ...Options) (int64, error) {
 	return total, nil
 }
 
-func (d *build) CreateBuildMessage(ctx context.Context, object *model.BuildMessage) error {
+func (b *build) CreateBuildMessage(ctx context.Context, object *model.BuildMessage) error {
 	now := time.Now()
 	object.GmtCreate = now
 	object.GmtModified = now
 
-	err := d.db.WithContext(ctx).Create(object).Error
+	err := b.db.WithContext(ctx).Create(object).Error
 	return err
 }
 
-func (d *build) ListBuildMessages(ctx context.Context, opts ...Options) ([]model.BuildMessage, error) {
+func (b *build) ListBuildMessages(ctx context.Context, opts ...Options) ([]model.BuildMessage, error) {
 	var audits []model.BuildMessage
-	tx := d.db.WithContext(ctx)
+	tx := b.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
 	}
@@ -141,4 +170,20 @@ func (d *build) ListBuildMessages(ctx context.Context, opts ...Options) ([]model
 		return nil, err
 	}
 	return audits, nil
+}
+
+func (b *build) GetOne(ctx context.Context, buildId int64, resourceVersion int64) (*model.Build, error) {
+	updates := make(map[string]interface{})
+	updates["gmt_modified"] = time.Now()
+	updates["resource_version"] = resourceVersion + 1
+
+	f := b.db.WithContext(ctx).Model(&model.Build{}).Where("id = ? and resource_version = ?", buildId, resourceVersion).Updates(updates)
+	if f.Error != nil {
+		return nil, f.Error
+	}
+	if f.RowsAffected == 0 {
+		return nil, errors.ErrRecordNotUpdate
+	}
+
+	return b.Get(ctx, buildId)
 }
