@@ -675,13 +675,23 @@ func (s *ServerController) ListNamespaces(ctx context.Context, listOption types.
 		db.WithLimit(listOption.Limit),
 	}...)
 
-	pageResult.Items, err = s.factory.Image().ListNamespaces(ctx, opts...)
+	objects, err := s.factory.Image().ListNamespaces(ctx, opts...)
 	if err != nil {
 		klog.Errorf("获取命名空间失败 %v", err)
 		pageResult.Message = err.Error()
 		return pageResult, err
 	}
 
+	defaultLogo, _ := s.GetDefaultLogo(ctx)
+	for index, obj := range objects {
+		if len(obj.Logo) != 0 {
+			continue
+		}
+		obj.Logo = defaultLogo
+		objects[index] = obj
+	}
+
+	pageResult.Items = objects
 	return pageResult, nil
 }
 
