@@ -711,6 +711,33 @@ func (s *ServerController) BindImageLabels(ctx context.Context, imageId int64, r
 				return err
 			}
 		}
+	case types.IdempotentImageLabelType:
+		klog.Infof("幂等标签 %v", req.LabelIds)
+		// 判断标签是否需要移除，是则先移除，然后全量新增
+		olds, err := s.factory.Label().ListImageLabels(ctx, db.WithImage(imageId))
+		if err != nil {
+			return err
+		}
+
+		newMap := make(map[int64]bool)
+		for _, newLabel := range req.LabelIds {
+			newMap[newLabel] = true
+		}
+		for _, old := range olds {
+			// 移除
+			if !newMap[old.LabelID] {
+				if err = s.DeleteImageLabel(ctx, imageId, old.LabelID); err != nil {
+					return err
+				}
+			}
+		}
+
+		// 全量新增，如果存在自动跳过
+		for _, labelId := range req.LabelIds {
+			if err = s.AddImageLabel(ctx, imageId, labelId); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
