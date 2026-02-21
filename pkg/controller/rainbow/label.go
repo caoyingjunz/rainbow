@@ -152,20 +152,22 @@ func (s *ServerController) ListLabelImages(ctx context.Context, listOption types
 		return nil, err
 	}
 
-	total, err := s.factory.Label().GetLabelImagesCount(ctx, labelIds)
-	if err != nil {
-
-		return nil, err
+	listOption.SetDefaultPageOption()
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
 	}
-
-	fmt.Println("total", total)
-
-	images, err := s.factory.Label().ListLabelImages(ctx, labelIds)
+	images, total, err := s.factory.Label().ListLabelImages(ctx, labelIds, listOption.Page, listOption.Limit)
 	if err != nil {
 		klog.Errorf("获取 label image 失败 %v", err)
 		return nil, err
 	}
-	return images, nil
+
+	pageResult.Items = images
+	pageResult.Total = total
+	return pageResult, nil
 }
 
 func (s *ServerController) parseLabelIds(labelIdsStr string) ([]int64, error) {

@@ -31,8 +31,7 @@ type LabelInterface interface {
 	ListImageLabels(ctx context.Context, opts ...Options) ([]model.ImageLabel, error)
 	ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error)
 
-	ListLabelImages(ctx context.Context, labelIds []int64) ([]model.Image, error)
-	GetLabelImagesCount(ctx context.Context, labelIds []int64) (int64, error)
+	ListLabelImages(ctx context.Context, labelIds []int64, page int, limit int) ([]model.Image, int64, error)
 }
 
 func newLabel(db *gorm.DB) LabelInterface {
@@ -247,20 +246,7 @@ func (l *label) ListImageLabelNames(ctx context.Context, imageId int64) ([]strin
 	return labelNames, nil
 }
 
-func (l *label) ListLabelImages(ctx context.Context, labelIds []int64) ([]model.Image, error) {
-	subQuery := l.db.WithContext(ctx).
-		Table("image_labels").
-		Select("image_id").
-		Where("label_id IN ?", labelIds).
-		Group("image_id").
-		Having("COUNT(DISTINCT label_id) = ?", len(labelIds))
-
-	var images []model.Image
-	err := l.db.Where("id IN (?)", subQuery).Find(&images).Error
-	return images, err
-}
-
-func (l *label) GetLabelImagesCount(ctx context.Context, labelIds []int64) (int64, error) {
+func (l *label) ListLabelImages(ctx context.Context, labelIds []int64, page int, limit int) ([]model.Image, int64, error) {
 	subQuery := l.db.WithContext(ctx).
 		Table("image_labels").
 		Select("image_id").
@@ -271,7 +257,18 @@ func (l *label) GetLabelImagesCount(ctx context.Context, labelIds []int64) (int6
 	var total int64
 	err := l.db.Where("id IN (?)", subQuery).Model(&model.Image{}).Count(&total).Error
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
-	return total, nil
+
+	var images []model.Image
+	offset := (page - 1) * limit
+	if err = l.db.Where("id IN (?)", subQuery).
+		Offset(offset).
+		Limit(limit).
+		Order("gmt_modified DESC").
+		Find(&images).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return images, total, nil
 }
