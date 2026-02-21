@@ -3,6 +3,8 @@ package rainbow
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"k8s.io/klog/v2"
 
@@ -142,4 +144,50 @@ func (s *ServerController) ListLogos(ctx context.Context, listOption types.ListO
 	}
 
 	return pageResult, nil
+}
+
+func (s *ServerController) ListLabelImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	labelIds, err := s.parseLabelIds(listOption.LabelIds)
+	if err != nil {
+		return nil, err
+	}
+
+	listOption.SetDefaultPageOption()
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+	images, total, err := s.factory.Label().ListLabelImages(ctx, labelIds, listOption.Page, listOption.Limit)
+	if err != nil {
+		klog.Errorf("获取 label image 失败 %v", err)
+		return nil, err
+	}
+
+	pageResult.Items = images
+	pageResult.Total = total
+	return pageResult, nil
+}
+
+func (s *ServerController) parseLabelIds(labelIdsStr string) ([]int64, error) {
+	l := strings.TrimSpace(labelIdsStr)
+	if len(l) == 0 {
+		return nil, fmt.Errorf("no label ids found")
+	}
+	parts := strings.Split(l, ",")
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("no label ids found")
+	}
+
+	var labelIds []int64
+	for _, p := range parts {
+		labelId, err := strconv.ParseInt(p, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("id %s 不合规", p)
+		}
+		labelIds = append(labelIds, labelId)
+	}
+
+	return labelIds, nil
 }

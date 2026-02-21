@@ -55,8 +55,9 @@ const (
 )
 
 const (
-	AddImageLabelType    = 0
-	DeleteImageLabelType = 1
+	AddImageLabelType        = 0
+	DeleteImageLabelType     = 1
+	IdempotentImageLabelType = 2
 )
 
 const (

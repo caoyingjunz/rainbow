@@ -138,6 +138,8 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		labelRoute.DELETE("/:Id", cr.deleteLabel)
 		labelRoute.PUT("/:Id", cr.updateLabel)
 		labelRoute.GET("", cr.listLabels)
+
+		labelRoute.GET("/images", cr.listLabelImages) // 根据标签获取镜像列表，标签可以是多个，格式 ?labels=labelId1,LABLiD2
 	}
 
 	logoRoute := httpEngine.Group("/rainbow/logos")

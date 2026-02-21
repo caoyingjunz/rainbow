@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-
 	"time"
 
 	"gorm.io/gorm"
@@ -31,6 +30,8 @@ type LabelInterface interface {
 	DeleteImageLabel(ctx context.Context, opts ...Options) error
 	ListImageLabels(ctx context.Context, opts ...Options) ([]model.ImageLabel, error)
 	ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error)
+
+	ListLabelImages(ctx context.Context, labelIds []int64, page int, limit int) ([]model.Image, int64, error)
 }
 
 func newLabel(db *gorm.DB) LabelInterface {
@@ -197,7 +198,6 @@ func (l *label) CreateImageLabel(ctx context.Context, object *model.ImageLabel) 
 }
 
 func (l *label) GetImageLabel(ctx context.Context, opts ...Options) (*model.ImageLabel, error) {
-
 	tx := l.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
@@ -244,4 +244,31 @@ func (l *label) ListImageLabelNames(ctx context.Context, imageId int64) ([]strin
 	}
 
 	return labelNames, nil
+}
+
+func (l *label) ListLabelImages(ctx context.Context, labelIds []int64, page int, limit int) ([]model.Image, int64, error) {
+	subQuery := l.db.WithContext(ctx).
+		Table("image_labels").
+		Select("image_id").
+		Where("label_id IN ?", labelIds).
+		Group("image_id").
+		Having("COUNT(DISTINCT label_id) = ?", len(labelIds))
+
+	var total int64
+	err := l.db.Where("id IN (?)", subQuery).Model(&model.Image{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var images []model.Image
+	offset := (page - 1) * limit
+	if err = l.db.Where("id IN (?)", subQuery).
+		Offset(offset).
+		Limit(limit).
+		Order("gmt_modified DESC").
+		Find(&images).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return images, total, nil
 }
