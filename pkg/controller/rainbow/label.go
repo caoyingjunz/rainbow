@@ -152,6 +152,14 @@ func (s *ServerController) ListLabelImages(ctx context.Context, listOption types
 		return nil, err
 	}
 
+	total, err := s.factory.Label().GetLabelImagesCount(ctx, labelIds)
+	if err != nil {
+
+		return nil, err
+	}
+
+	fmt.Println("total", total)
+
 	images, err := s.factory.Label().ListLabelImages(ctx, labelIds)
 	if err != nil {
 		klog.Errorf("获取 label image 失败 %v", err)
