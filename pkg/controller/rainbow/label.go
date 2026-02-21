@@ -152,9 +152,12 @@ func (s *ServerController) ListLabelImages(ctx context.Context, listOption types
 		return nil, err
 	}
 
-	fmt.Println("labelIds", labelIds)
-
-	return nil, nil
+	images, err := s.factory.Label().ListLabelImages(ctx, labelIds)
+	if err != nil {
+		klog.Errorf("获取 label image 失败 %v", err)
+		return nil, err
+	}
+	return images, nil
 }
 
 func (s *ServerController) parseLabelIds(labelIdsStr string) ([]int64, error) {

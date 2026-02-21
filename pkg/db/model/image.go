@@ -23,7 +23,7 @@ type Image struct {
 	RegisterId int64  `json:"register_id"`
 
 	Logo        string  `json:"logo"`
-	Labels      []Label `gorm:"many2many:image_label;constraint:OnDelete:CASCADE"` // 标记镜像类型，比如 ai，k8s
+	Labels      []Label `json:"labels" gorm:"many2many:image_labels;constraint:OnDelete:CASCADE"` // 标记镜像类型，比如 ai，k8s
 	Namespace   string  `json:"namespace"`
 	Mirror      string  `json:"mirror"`
 	Size        int64   `json:"size"`
