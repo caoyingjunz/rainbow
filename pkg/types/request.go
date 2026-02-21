@@ -317,6 +317,7 @@ type (
 		Project      string `form:"project"`
 		AgentStatus  string `form:"agent_status"`
 		CustomStatus string `form:"custom_status"`
+		LabelIds     string `form:"label_ids"`
 	}
 
 	RemoteSearchRequest struct {
