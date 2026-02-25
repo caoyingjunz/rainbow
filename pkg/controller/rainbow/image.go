@@ -321,6 +321,10 @@ func (s *ServerController) ListPublicImages(ctx context.Context, listOption type
 	return s.factory.Image().List(ctx, db.WithPublic(), db.WithNameLike(listOption.NameSelector), db.WithLimit(listOption.Limit))
 }
 
+func (s *ServerController) SearchImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	return s.factory.Image().List(ctx, db.WithPublic(), db.WithNameLike(listOption.NameSelector), db.WithLimit(listOption.Limit))
+}
+
 func (s *ServerController) ListImagesByIds(ctx context.Context, ids []int64) (interface{}, error) {
 	return s.factory.Image().List(ctx, db.WithIDIn(ids...))
 }

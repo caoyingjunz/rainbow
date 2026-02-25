@@ -121,10 +121,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		batchRoute.POST("/delete/tasks", cr.deleteTasksByIds)
 	}
 
-	// TODO 实现首页
 	searchRoute := httpEngine.Group("/rainbow/search")
 	{
-		searchRoute.GET("/public/images", cr.listPublicImages)
+		searchRoute.GET("/images", cr.listPublicImages)
 	}
 
 	collectRoute := httpEngine.Group("/rainbow/collections")

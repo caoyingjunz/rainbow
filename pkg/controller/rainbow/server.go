@@ -86,6 +86,7 @@ type ServerInterface interface {
 	DeleteImagesByIds(ctx context.Context, ids []int64) error
 
 	ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	SearchImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
 	UpdateImageStatus(ctx context.Context, req *types.UpdateImageStatusRequest) error
 	CreateImages(ctx context.Context, req *types.CreateImagesRequest) ([]model.Image, error)
