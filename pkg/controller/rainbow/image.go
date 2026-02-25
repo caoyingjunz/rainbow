@@ -770,5 +770,5 @@ func (s *ServerController) DeleteImageLabel(ctx context.Context, imageId int64, 
 }
 
 func (s *ServerController) ListImageLabels(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Label().ListImageLabelNames(ctx, imageId)
+	return s.factory.Label().ListImageLabelsV2(ctx, imageId)
 }
