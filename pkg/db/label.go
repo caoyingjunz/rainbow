@@ -29,6 +29,8 @@ type LabelInterface interface {
 	GetImageLabel(ctx context.Context, opts ...Options) (*model.ImageLabel, error)
 	DeleteImageLabel(ctx context.Context, opts ...Options) error
 	ListImageLabels(ctx context.Context, opts ...Options) ([]model.ImageLabel, error)
+
+	ListImageLabelsV2(ctx context.Context, imageId int64) ([]model.Label, error)
 	ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error)
 
 	ListLabelImages(ctx context.Context, labelIds []int64, page int, limit int) ([]model.Image, int64, error)
@@ -230,6 +232,20 @@ func (l *label) ListImageLabels(ctx context.Context, opts ...Options) ([]model.I
 		return nil, err
 	}
 	return list, nil
+}
+
+func (l *label) ListImageLabelsV2(ctx context.Context, imageId int64) ([]model.Label, error) {
+	var labels []model.Label
+	err := l.db.WithContext(ctx).
+		Table("labels").
+		Joins("JOIN image_labels ON image_labels.label_id = labels.id").
+		Where("image_labels.image_id = ?", imageId).
+		Find(&labels).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return labels, nil
 }
 
 func (l *label) ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error) {
