@@ -123,7 +123,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 	searchRoute := httpEngine.Group("/rainbow/search")
 	{
-		searchRoute.GET("/images", cr.listPublicImages)
+		searchRoute.GET("/images", cr.searchImages)
 	}
 
 	collectRoute := httpEngine.Group("/rainbow/collections")
