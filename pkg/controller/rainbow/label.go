@@ -173,11 +173,11 @@ func (s *ServerController) ListLabelImages(ctx context.Context, listOption types
 func (s *ServerController) parseLabelIds(labelIdsStr string) ([]int64, error) {
 	l := strings.TrimSpace(labelIdsStr)
 	if len(l) == 0 {
-		return nil, fmt.Errorf("no label ids found")
+		return []int64{}, nil
 	}
 	parts := strings.Split(l, ",")
 	if len(parts) == 0 {
-		return nil, fmt.Errorf("no label ids found")
+		return []int64{}, nil
 	}
 
 	var labelIds []int64

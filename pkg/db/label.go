@@ -34,6 +34,7 @@ type LabelInterface interface {
 	ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error)
 
 	ListLabelImages(ctx context.Context, labelIds []int64, page int, limit int) ([]model.Image, int64, error)
+	ListLabelPublicImages(ctx context.Context, labelIds []int64, query string, page int, limit int) ([]model.Image, int64, error)
 }
 
 func newLabel(db *gorm.DB) LabelInterface {
@@ -283,6 +284,34 @@ func (l *label) ListLabelImages(ctx context.Context, labelIds []int64, page int,
 		Limit(limit).
 		Order("gmt_modified DESC").
 		Find(&images).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return images, total, nil
+}
+
+func (l *label) ListLabelPublicImages(ctx context.Context, labelIds []int64, query string, page int, limit int) ([]model.Image, int64, error) {
+	subQuery := l.db.WithContext(ctx).
+		Table("image_labels").
+		Select("image_id").
+		Where("label_id IN ?", labelIds).
+		Group("image_id").
+		Having("COUNT(DISTINCT label_id) = ?", len(labelIds))
+
+	var total int64
+	d := l.db.Where("id IN (?)", subQuery).Where("is_public = 1")
+	if len(query) != 0 {
+		d = d.Where("name like ?", "%"+query+"%")
+	}
+
+	err := d.Model(&model.Image{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var images []model.Image
+	offset := (page - 1) * limit
+	if err = d.Offset(offset).Limit(limit).Order("gmt_modified DESC").Find(&images).Error; err != nil {
 		return nil, 0, err
 	}
 
