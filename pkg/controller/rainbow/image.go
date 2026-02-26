@@ -193,7 +193,7 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 
 	delImage, err := s.factory.Image().Get(ctx, imageId, true)
 	if err != nil {
-		klog.Errorf("获取已删除镜像 %d 失败: %v", imageId, s, err)
+		klog.Errorf("获取已删除镜像 %d 失败: %v", imageId, err)
 		return nil
 	}
 
@@ -251,6 +251,60 @@ func (s *ServerController) ListImageTags(ctx context.Context, imageId int64, lis
 		pageResult.Message = err.Error()
 		return pageResult, err
 	}
+	return pageResult, nil
+}
+
+func (s *ServerController) SearchPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+
+	opts := []db.Options{
+		db.WithNameLike(listOption.NameSelector),
+		db.WithPublic(),
+	}
+
+	var err error
+	// 先获取总数
+	pageResult.Total, err = s.factory.Image().Count(ctx, opts...)
+	if err != nil {
+		klog.Errorf("获取镜像总数失败 %v", err)
+		pageResult.Message = err.Error()
+	}
+
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithCreateOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+
+	objects, err := s.factory.Image().ListWithTagsCount(ctx, opts...) // 优化成不带版本列表以加速显示
+	if err != nil {
+		klog.Errorf("获取镜像列表失败 %v", err)
+		pageResult.Message = err.Error()
+		return pageResult, err
+	}
+
+	// 添加默认 logo
+	defaultLogo, _ := s.GetDefaultLogo(ctx)
+	for index, obj := range objects {
+		if len(obj.Logo) != 0 {
+			continue
+		}
+		obj.Logo = defaultLogo
+		objects[index] = obj
+	}
+
+	pageResult.Items = objects
+
+	go s.AfterListImages(ctx, objects)
 	return pageResult, nil
 }
 
@@ -312,13 +366,48 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 func (s *ServerController) AfterListImages(ctx context.Context, objects []model.Image) {
 	klog.Infof("开启延迟更新镜像列表属性，镜像数 %d", len(objects))
 	for _, obj := range objects {
-		time.Sleep(1 * time.Second) // 延迟2s执行，避免被限速
+		time.Sleep(1 * time.Second) // 延迟1s执行，避免被限速
 		s.AfterGetImage(ctx, &obj)
 	}
 }
 
-func (s *ServerController) ListPublicImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	return s.factory.Image().List(ctx, db.WithPublic(), db.WithNameLike(listOption.NameSelector), db.WithLimit(listOption.Limit))
+func (s *ServerController) SearchImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	labelIds, err := s.parseLabelIds(listOption.LabelIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// 无需标签查询，直接获取全部公开镜像列表
+	if len(labelIds) == 0 {
+		klog.Infof("进行全量镜像搜索")
+		return s.SearchPublicImages(ctx, listOption)
+	}
+
+	klog.Infof("进行标签镜像搜索")
+	return s.SearchPublicImagesWithLabel(ctx, labelIds, listOption)
+}
+
+func (s *ServerController) SearchPublicImagesWithLabel(ctx context.Context, labelIds []int64, listOption types.ListOptions) (interface{}, error) {
+	listOption.SetDefaultPageOption()
+
+	pageResult := types.PageResult{
+		PageRequest: types.PageRequest{
+			Page:  listOption.Page,
+			Limit: listOption.Limit,
+		},
+	}
+
+	images, total, err := s.factory.Label().ListLabelPublicImages(ctx, labelIds, listOption.NameSelector, listOption.Page, listOption.Limit)
+	if err != nil {
+		klog.Errorf("获取 label image 失败 %v", err)
+		return nil, err
+	}
+
+	pageResult.Items = images
+	pageResult.Total = total
+
+	go s.AfterListImages(ctx, images)
+	return pageResult, nil
 }
 
 func (s *ServerController) ListImagesByIds(ctx context.Context, ids []int64) (interface{}, error) {
