@@ -471,8 +471,11 @@ func (o *CallSearchRequest) SetDefaultPageOption() {
 	if o.Page <= 0 {
 		o.Page = 1
 	}
-	if o.PageSize <= 0 || o.PageSize > 100 {
+	if o.PageSize <= 0 {
 		o.PageSize = 10
+	}
+	if o.PageSize > 100 {
+		o.PageSize = 100
 	}
 }
 
