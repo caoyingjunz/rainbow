@@ -498,8 +498,11 @@ func (o *ListOptions) SetDefaultPageOption() {
 	if o.Page <= 0 {
 		o.Page = 1
 	}
-	if o.Limit <= 0 || o.Limit > 100 {
+	if o.Limit <= 0 {
 		o.Limit = 10
+	}
+	if o.Limit > 100 {
+		o.Limit = 100
 	}
 }
 
