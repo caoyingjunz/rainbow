@@ -1,11 +1,13 @@
 package model
 
 import (
+	"time"
+
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
 
 func init() {
-	register(&Review{}, &Daily{})
+	register(&Review{}, &Count{})
 }
 
 type Review struct {
@@ -26,4 +28,18 @@ type Daily struct {
 
 func (t *Daily) TableName() string {
 	return "dailies"
+}
+
+type Count struct {
+	rainbow.Model
+
+	RecordTime time.Time `json:"record_time"`
+
+	Pull  int64 `json:"pull"`
+	Task  int64 `json:"task"`
+	Image int64 `json:"image"`
+}
+
+func (s *Count) TableName() string {
+	return "counts"
 }
