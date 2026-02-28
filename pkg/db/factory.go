@@ -29,6 +29,7 @@ type ShareDaoFactory interface {
 	Build() BuildInterface
 	Notify() NotifyInterface
 	Rainbowd() RainbowdInterface
+	Count() CountInterface
 }
 
 type shareDaoFactory struct {
@@ -43,6 +44,7 @@ func (f *shareDaoFactory) Label() LabelInterface       { return newLabel(f.db) }
 func (f *shareDaoFactory) Build() BuildInterface       { return newBuild(f.db) }
 func (f *shareDaoFactory) Notify() NotifyInterface     { return newNotify(f.db) }
 func (f *shareDaoFactory) Rainbowd() RainbowdInterface { return newRainbowd(f.db) }
+func (f *shareDaoFactory) Count() CountInterface       { return newCount(f.db) }
 
 func NewDaoFactory(db *gorm.DB, migrate bool) (ShareDaoFactory, error) {
 	if migrate {
