@@ -421,6 +421,7 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 func (s *ServerController) syncPulls(ctx context.Context) {
 	now := time.Now()
 
+	klog.Infof("全量执行 pull 同步")
 	images, err := s.factory.Image().List(ctx, db.WithLastSyncBefore(now.Add(-30*time.Minute)))
 	if err != nil {
 		klog.Errorf("获取镜像列表失败 %v", err)
