@@ -304,7 +304,7 @@ func (s *ServerController) SearchPublicImages(ctx context.Context, listOption ty
 
 	pageResult.Items = objects
 
-	go s.AfterListImages(ctx, objects)
+	go s.AfterListImages(ctx, objects, 1*time.Second)
 	return pageResult, nil
 }
 
@@ -359,14 +359,14 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 
 	pageResult.Items = objects
 
-	go s.AfterListImages(ctx, objects)
+	go s.AfterListImages(ctx, objects, 1*time.Second)
 	return pageResult, nil
 }
 
-func (s *ServerController) AfterListImages(ctx context.Context, objects []model.Image) {
+func (s *ServerController) AfterListImages(ctx context.Context, objects []model.Image, interval time.Duration) {
 	klog.Infof("开启延迟更新镜像列表属性，镜像数 %d", len(objects))
 	for _, obj := range objects {
-		time.Sleep(1 * time.Second) // 延迟1s执行，避免被限速
+		time.Sleep(interval) // 延迟执行，避免被限速
 		s.AfterGetImage(ctx, &obj)
 	}
 }
@@ -406,7 +406,7 @@ func (s *ServerController) SearchPublicImagesWithLabel(ctx context.Context, labe
 	pageResult.Items = images
 	pageResult.Total = total
 
-	go s.AfterListImages(ctx, images)
+	go s.AfterListImages(ctx, images, 1*time.Second)
 	return pageResult, nil
 }
 
@@ -456,7 +456,7 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 
 // AfterGetImage 获取镜像后，尝试更新属性
 func (s *ServerController) AfterGetImage(ctx context.Context, object *model.Image) {
-	// 如果 10 分钟内已更新，则直接返回
+	// 如果 30 分钟内已更新，则直接返回
 	if !IsDurationExceeded(object.LastSyncTime, 30*time.Minute) {
 		klog.V(1).Infof("镜像(%s/%s) 30分钟内进行过同步，无需重复执行", object.Namespace, object.Name)
 		return
@@ -466,6 +466,8 @@ func (s *ServerController) AfterGetImage(ctx context.Context, object *model.Imag
 		klog.V(1).Infof("非官方镜像，无需同步")
 		return
 	}
+
+	klog.Infof("即将开始同步镜像(%s)的下载数", object.Name)
 	if err := s.SyncInfoByRemoteImage(ctx, object); err != nil {
 		klog.Errorf("SyncInfoByRemoteImage 失败 %v", err)
 	}
