@@ -440,7 +440,8 @@ func (s *ServerController) startSyncCounts(ctx context.Context) {
 }
 
 func (s *ServerController) syncCounts(ctx context.Context) {
-
+	//TODO
+	klog.Infof("syncCounts TODO")
 }
 
 func (s *ServerController) syncPulls(ctx context.Context) {

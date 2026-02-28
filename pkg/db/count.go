@@ -11,7 +11,7 @@ import (
 
 type CountInterface interface {
 	Create(ctx context.Context, object *model.Count) (*model.Count, error)
-	Delete(ctx context.Context, id int64) error
+	Delete(ctx context.Context, opts ...Options) error
 	List(ctx context.Context, opts ...Options) ([]model.Count, error)
 }
 
@@ -34,8 +34,8 @@ func (c *count) Create(ctx context.Context, object *model.Count) (*model.Count, 
 	return object, nil
 }
 
-func (c *count) Delete(ctx context.Context, id int64) error {
-	return c.db.WithContext(ctx).Where("id = ?", id).Delete(&model.Count{}).Error
+func (c *count) Delete(ctx context.Context, opts ...Options) error {
+	return nil
 }
 
 func (c *count) List(ctx context.Context, opts ...Options) ([]model.Count, error) {
