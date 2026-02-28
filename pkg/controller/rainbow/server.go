@@ -274,6 +274,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.schedule(ctx)
 	go s.sync(ctx)
 	go s.startSyncDailyPulls(ctx)
+	go s.startSyncCounts(ctx)
 	go s.startAgentHeartbeat(ctx)
 	go s.startSyncKubernetesTags(ctx)
 	go s.startSubscribeController(ctx)
@@ -405,7 +406,7 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 		s.syncPulls(ctx)
 	})
 	if err != nil {
-		klog.Fatal("定时任务配置错误:", err)
+		klog.Fatal("SyncDailyPulls 定时任务配置错误:", err)
 	}
 	c.Start()
 	klog.Infof("starting pull images syncer")
@@ -416,6 +417,30 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 	<-sig
 	c.Stop()
 	klog.Infof("定时任务(pull images)已停止")
+}
+
+func (s *ServerController) startSyncCounts(ctx context.Context) {
+	c := cron.New()
+	_, err := c.AddFunc("0 6 * * *", func() {
+		klog.Infof("执行每天凌晨 6 点任务...")
+		s.syncCounts(ctx)
+	})
+	if err != nil {
+		klog.Fatal("SyncCounts 定时任务配置错误:", err)
+	}
+	c.Start()
+	klog.Infof("starting daily counts syncer")
+
+	// 优雅关闭（可选）
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	c.Stop()
+	klog.Infof("定时任务(daily count)已停止")
+}
+
+func (s *ServerController) syncCounts(ctx context.Context) {
+
 }
 
 func (s *ServerController) syncPulls(ctx context.Context) {
