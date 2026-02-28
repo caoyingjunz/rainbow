@@ -408,22 +408,25 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 		klog.Fatal("定时任务配置错误:", err)
 	}
 	c.Start()
-	klog.Infof("starting cronjob controller")
+	klog.Infof("starting pull images syncer")
 
 	// 优雅关闭（可选）
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 	c.Stop()
-	klog.Infof("定时任务已停止")
+	klog.Infof("定时任务(pull images)已停止")
 }
 
 func (s *ServerController) syncPulls(ctx context.Context) {
-	_, err := s.factory.Image().List(ctx)
+	now := time.Now()
+
+	images, err := s.factory.Image().List(ctx, db.WithLastSyncBefore(now.Add(-30*time.Minute)))
 	if err != nil {
 		klog.Errorf("获取镜像列表失败 %v", err)
 		return
 	}
+	s.AfterListImages(ctx, images, time.Second*10)
 }
 
 func (s *ServerController) schedule(ctx context.Context) {

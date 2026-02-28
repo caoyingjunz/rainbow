@@ -57,6 +57,12 @@ func WithCreatedAfter(t time.Time) Options {
 	}
 }
 
+func WithLastSyncBefore(t time.Time) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("last_sync_time < ?", t)
+	}
+}
+
 func WithPublic() Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("is_public = 1")
