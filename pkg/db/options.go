@@ -33,6 +33,12 @@ func WithModifyOrderByDesc() Options {
 	}
 }
 
+func WithCreateOrderByASC() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("gmt_create ASC")
+	}
+}
+
 func WithCreateOrderByDesc() Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		return tx.Order("gmt_create DESC")
@@ -326,5 +332,17 @@ func WithLabel(labelId int64) Options {
 			return tx
 		}
 		return tx.Where("label_id = ?", labelId)
+	}
+}
+
+func WithOfficial() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("is_official = 1")
+	}
+}
+
+func WithNotOfficial() Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("is_official = 0")
 	}
 }

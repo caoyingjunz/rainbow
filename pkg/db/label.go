@@ -34,7 +34,7 @@ type LabelInterface interface {
 	ListImageLabelNames(ctx context.Context, imageId int64) ([]string, error)
 
 	ListLabelImages(ctx context.Context, labelIds []int64, page int, limit int) ([]model.Image, int64, error)
-	ListLabelPublicImages(ctx context.Context, labelIds []int64, query string, page int, limit int) ([]model.Image, int64, error)
+	ListLabelPublicImages(ctx context.Context, labelIds []int64, query string, userId string, trusted int, page int, limit int) ([]model.Image, int64, error)
 }
 
 func newLabel(db *gorm.DB) LabelInterface {
@@ -290,7 +290,7 @@ func (l *label) ListLabelImages(ctx context.Context, labelIds []int64, page int,
 	return images, total, nil
 }
 
-func (l *label) ListLabelPublicImages(ctx context.Context, labelIds []int64, query string, page int, limit int) ([]model.Image, int64, error) {
+func (l *label) ListLabelPublicImages(ctx context.Context, labelIds []int64, query string, userId string, trusted int, page int, limit int) ([]model.Image, int64, error) {
 	subQuery := l.db.WithContext(ctx).
 		Table("image_labels").
 		Select("image_id").
@@ -303,6 +303,16 @@ func (l *label) ListLabelPublicImages(ctx context.Context, labelIds []int64, que
 	if len(query) != 0 {
 		d = d.Where("name like ?", "%"+query+"%")
 	}
+	if len(userId) != 0 {
+		d = d.Where("user_id = ?", userId)
+	}
+
+	if trusted == 1 {
+		d = d.Where("is_official = ?", 1)
+	}
+	if trusted == 2 {
+		d = d.Where("is_official = ?", 0)
+	}
 
 	err := d.Model(&model.Image{}).Count(&total).Error
 	if err != nil {
@@ -311,7 +321,7 @@ func (l *label) ListLabelPublicImages(ctx context.Context, labelIds []int64, que
 
 	var images []model.Image
 	offset := (page - 1) * limit
-	if err = d.Offset(offset).Limit(limit).Order("gmt_modified DESC").Find(&images).Error; err != nil {
+	if err = d.Offset(offset).Limit(limit).Order("gmt_create ASC").Find(&images).Error; err != nil {
 		return nil, 0, err
 	}
 

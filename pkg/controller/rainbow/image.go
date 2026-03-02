@@ -266,8 +266,17 @@ func (s *ServerController) SearchPublicImages(ctx context.Context, listOption ty
 	}
 
 	opts := []db.Options{
+		db.WithUser(listOption.UserId),
 		db.WithNameLike(listOption.NameSelector),
 		db.WithPublic(),
+	}
+
+	// 判断用户类型
+	if listOption.Trusted == 1 {
+		opts = append(opts, db.WithOfficial())
+	}
+	if listOption.Trusted == 2 {
+		opts = append(opts, db.WithNotOfficial())
 	}
 
 	var err error
@@ -280,7 +289,7 @@ func (s *ServerController) SearchPublicImages(ctx context.Context, listOption ty
 
 	offset := (listOption.Page - 1) * listOption.Limit
 	opts = append(opts, []db.Options{
-		db.WithCreateOrderByDesc(),
+		db.WithCreateOrderByASC(),
 		db.WithOffset(offset),
 		db.WithLimit(listOption.Limit),
 	}...)
@@ -397,7 +406,7 @@ func (s *ServerController) SearchPublicImagesWithLabel(ctx context.Context, labe
 		},
 	}
 
-	images, total, err := s.factory.Label().ListLabelPublicImages(ctx, labelIds, listOption.NameSelector, listOption.Page, listOption.Limit)
+	images, total, err := s.factory.Label().ListLabelPublicImages(ctx, labelIds, listOption.NameSelector, listOption.UserId, listOption.Trusted, listOption.Page, listOption.Limit)
 	if err != nil {
 		klog.Errorf("获取 label image 失败 %v", err)
 		return nil, err
