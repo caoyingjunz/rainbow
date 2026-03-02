@@ -13,6 +13,8 @@ type Label struct {
 
 	Name   string  `gorm:"index:idx_name,unique" json:"name"` // k8s, db, ai等标识
 	Images []Image `json:"images,omitempty" gorm:"many2many:image_label;constraint:OnDelete:CASCADE"`
+
+	Description string `json:"description"`
 }
 
 func (l *Label) TableName() string {

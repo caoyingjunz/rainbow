@@ -40,7 +40,8 @@ type (
 	}
 
 	CreateLabelRequest struct {
-		Name string `json:"name" binding:"required"`
+		Name        string `json:"name" binding:"required"`
+		Description string `json:"description"`
 	}
 
 	CreateLogoRequest struct {
@@ -56,10 +57,10 @@ type (
 	}
 
 	UpdateLabelRequest struct {
-		Id              int64 `json:"id"`
-		ResourceVersion int64 `json:"resource_version"`
-
-		Name string `json:"name" binding:"required"`
+		Id              int64  `json:"id"`
+		ResourceVersion int64  `json:"resource_version"`
+		Name            string `json:"name" binding:"required"`
+		Description     string `json:"description"`
 	}
 
 	CreateTaskRequest struct {

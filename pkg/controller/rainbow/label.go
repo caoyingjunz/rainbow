@@ -31,7 +31,8 @@ func (s *ServerController) CreateLabel(ctx context.Context, req *types.CreateLab
 	}
 
 	if _, err := s.factory.Label().Create(ctx, &model.Label{
-		Name: req.Name,
+		Name:        req.Name,
+		Description: req.Description,
 	}); err != nil {
 		klog.Errorf("创建标签失败 %v", err)
 		return err
@@ -53,6 +54,7 @@ func (s *ServerController) DeleteLabel(ctx context.Context, labelId int64) error
 func (s *ServerController) UpdateLabel(ctx context.Context, req *types.UpdateLabelRequest) error {
 	updates := make(map[string]interface{})
 	updates["name"] = req.Name
+	updates["description"] = req.Description
 	return s.factory.Label().Update(ctx, req.Id, req.ResourceVersion, updates)
 }
 
