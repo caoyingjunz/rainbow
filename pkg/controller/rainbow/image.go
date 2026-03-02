@@ -320,6 +320,9 @@ func (s *ServerController) SearchPublicImages(ctx context.Context, listOption ty
 func (s *ServerController) ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
 	// 初始化分页属性
 	listOption.SetDefaultPageOption()
+	if listOption.ExtendLimit > 100 {
+		listOption.Limit = listOption.ExtendLimit
+	}
 
 	pageResult := types.PageResult{
 		PageRequest: types.PageRequest{

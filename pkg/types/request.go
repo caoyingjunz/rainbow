@@ -320,6 +320,7 @@ type (
 		CustomStatus string `form:"custom_status"`
 		LabelIds     string `form:"label_ids"`
 		Trusted      int    `form:"trusted"`
+		ExtendLimit  int    `form:"extend_limit"`
 	}
 
 	RemoteSearchRequest struct {
