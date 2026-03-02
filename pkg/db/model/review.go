@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	register(&Review{}, &Count{})
+	register(&Review{}, &Metrics{})
 }
 
 type Review struct {
@@ -30,7 +30,7 @@ func (t *Daily) TableName() string {
 	return "dailies"
 }
 
-type Count struct {
+type Metrics struct {
 	rainbow.Model
 
 	RecordTime time.Time `json:"record_time"`
@@ -40,6 +40,6 @@ type Count struct {
 	Image int64 `json:"image"`
 }
 
-func (s *Count) TableName() string {
-	return "counts"
+func (s *Metrics) TableName() string {
+	return "metrics"
 }

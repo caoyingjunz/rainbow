@@ -9,21 +9,21 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 )
 
-type CountInterface interface {
-	Create(ctx context.Context, object *model.Count) (*model.Count, error)
+type MetricsInterface interface {
+	Create(ctx context.Context, object *model.Metrics) (*model.Metrics, error)
 	Delete(ctx context.Context, opts ...Options) error
-	List(ctx context.Context, opts ...Options) ([]model.Count, error)
+	List(ctx context.Context, opts ...Options) ([]model.Metrics, error)
 }
 
-type count struct {
+type metrics struct {
 	db *gorm.DB
 }
 
-func newCount(db *gorm.DB) CountInterface {
-	return &count{db: db}
+func newMetrics(db *gorm.DB) MetricsInterface {
+	return &metrics{db: db}
 }
 
-func (c *count) Create(ctx context.Context, object *model.Count) (*model.Count, error) {
+func (c *metrics) Create(ctx context.Context, object *model.Metrics) (*model.Metrics, error) {
 	now := time.Now()
 	object.GmtCreate = now
 	object.GmtModified = now
@@ -34,12 +34,12 @@ func (c *count) Create(ctx context.Context, object *model.Count) (*model.Count, 
 	return object, nil
 }
 
-func (c *count) Delete(ctx context.Context, opts ...Options) error {
+func (c *metrics) Delete(ctx context.Context, opts ...Options) error {
 	return nil
 }
 
-func (c *count) List(ctx context.Context, opts ...Options) ([]model.Count, error) {
-	var audits []model.Count
+func (c *metrics) List(ctx context.Context, opts ...Options) ([]model.Metrics, error) {
+	var audits []model.Metrics
 	tx := c.db.WithContext(ctx)
 	for _, opt := range opts {
 		tx = opt(tx)
