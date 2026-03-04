@@ -313,7 +313,7 @@ func (s *ServerController) SearchPublicImages(ctx context.Context, listOption ty
 
 	pageResult.Items = objects
 
-	go s.AfterListImages(ctx, objects, 1*time.Second)
+	go s.AfterListImages(ctx, objects, 5*time.Second)
 	return pageResult, nil
 }
 
@@ -371,7 +371,9 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 
 	pageResult.Items = objects
 
-	go s.AfterListImages(ctx, objects, 1*time.Second)
+	if listOption.ExtendLimit == 0 {
+		go s.AfterListImages(ctx, objects, 5*time.Second)
+	}
 	return pageResult, nil
 }
 
@@ -418,7 +420,7 @@ func (s *ServerController) SearchPublicImagesWithLabel(ctx context.Context, labe
 	pageResult.Items = images
 	pageResult.Total = total
 
-	go s.AfterListImages(ctx, images, 1*time.Second)
+	go s.AfterListImages(ctx, images, 5*time.Second)
 	return pageResult, nil
 }
 
@@ -483,6 +485,7 @@ func (s *ServerController) AfterGetImage(ctx context.Context, object *model.Imag
 	if err := s.SyncInfoByRemoteImage(ctx, object); err != nil {
 		klog.Errorf("SyncInfoByRemoteImage 失败 %v", err)
 	}
+	klog.Infof("同步镜像(%s)的下载数同步完成", object.Name)
 }
 
 func (s *ServerController) UpdateTagFromRemote(ctx context.Context, newTag swrmodel.ShowReposTagResp, oldTag model.Tag) error {

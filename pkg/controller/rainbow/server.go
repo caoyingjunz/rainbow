@@ -453,7 +453,7 @@ func (s *ServerController) syncPulls(ctx context.Context) {
 		klog.Errorf("获取镜像列表失败 %v", err)
 		return
 	}
-	s.AfterListImages(ctx, images, time.Second*10)
+	s.AfterListImages(ctx, images, time.Second*1)
 }
 
 func (s *ServerController) schedule(ctx context.Context) {
