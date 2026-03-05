@@ -13,6 +13,7 @@ type MetricsInterface interface {
 	Create(ctx context.Context, object *model.Metrics) (*model.Metrics, error)
 	Delete(ctx context.Context, opts ...Options) error
 	List(ctx context.Context, opts ...Options) ([]model.Metrics, error)
+	CountMetrics(ctx context.Context, opts ...Options) (int64, error)
 }
 
 type metrics struct {
@@ -50,4 +51,18 @@ func (c *metrics) List(ctx context.Context, opts ...Options) ([]model.Metrics, e
 	}
 
 	return audits, nil
+}
+
+func (c *metrics) CountMetrics(ctx context.Context, opts ...Options) (int64, error) {
+	tx := c.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	var total int64
+	if err := tx.Model(&model.Metrics{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }

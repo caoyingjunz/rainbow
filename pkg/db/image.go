@@ -49,6 +49,7 @@ type ImageInterface interface {
 	GetTagWithArch(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error)
 
 	TagCount(ctx context.Context, opts ...Options) (int64, error)
+	PullAllCount(ctx context.Context) (int64, error)
 
 	CreateNamespace(ctx context.Context, object *model.Namespace) (*model.Namespace, error)
 	UpdateNamespace(ctx context.Context, namespaceId int64, resourceVersion int64, updates map[string]interface{}) error
@@ -267,6 +268,14 @@ func (a *image) TagCount(ctx context.Context, opts ...Options) (int64, error) {
 	}
 
 	return total, nil
+}
+
+func (a *image) PullAllCount(ctx context.Context) (int64, error) {
+	var count int64
+	if err := a.db.WithContext(ctx).Model(&model.Image{}).Select("SUM(pull)").Scan(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (a *image) GetByPath(ctx context.Context, path string, mirror string, opts ...Options) (*model.Image, error) {

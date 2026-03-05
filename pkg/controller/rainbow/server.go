@@ -180,6 +180,8 @@ type ServerInterface interface {
 	ListBuildMessages(ctx context.Context, buildId int64) (interface{}, error)
 	UpdateBuildStatus(ctx context.Context, req *types.UpdateBuildStatusRequest) error
 
+	ListMetrics(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)
 }
@@ -440,8 +442,30 @@ func (s *ServerController) startSyncCounts(ctx context.Context) {
 }
 
 func (s *ServerController) syncCounts(ctx context.Context) {
-	//TODO
-	klog.Infof("syncCounts TODO")
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	yesterdayStart := todayStart.AddDate(0, 0, -1)
+	recordDay := yesterdayStart.Format("2006-01-02")
+	recordTime := yesterdayStart
+
+	s.factory.Image().Count(ctx)
+	pullCount, err := s.factory.Image().PullAllCount(ctx)
+	if err != nil {
+		return
+	}
+	taskCount, err := s.factory.Task().Count(ctx, db.WithCreatedBefore(todayStart))
+	if err != nil {
+		return
+	}
+	imageCount, err := s.factory.Image().Count(ctx)
+	if err != nil {
+		return
+	}
+	_, err = s.factory.Metrics().Create(ctx, &model.Metrics{Pull: pullCount, Task: taskCount, Image: imageCount, RecordTime: recordTime, RecordDay: recordDay})
+	if err != nil {
+		return
+	}
+	klog.Infof("syncCounts")
 }
 
 func (s *ServerController) syncPulls(ctx context.Context) {
