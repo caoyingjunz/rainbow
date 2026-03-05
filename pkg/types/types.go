@@ -499,25 +499,25 @@ type GitHubRepository struct {
 }
 
 type GetRepositoryResult struct {
-	User                  string                `json:"user"`
-	Name                  string                `json:"name"`
-	Namespace             string                `json:"namespace"`
-	RepositoryType        string                `json:"repository_type"`
-	Status                int                   `json:"status"`
-	StatusDescription     string                `json:"status_description"`
-	Description           string                `json:"description"`
-	IsPrivate             bool                  `json:"is_private"`
-	IsAutomated           bool                  `json:"is_automated"`
-	StarCount             int                   `json:"star_count"`
-	PullCount             int64                 `json:"pull_count"`
-	LastUpdated           string                `json:"last_updated"`
-	LastModified          string                `json:"last_modified"`
-	DateRegistered        string                `json:"date_registered"`
-	CollaboratorCount     int                   `json:"collaborator_count"`
-	Affiliation           interface{}           `json:"affiliation"` // can be null
-	HubUser               string                `json:"hub_user"`
-	HasStarred            bool                  `json:"has_starred"`
-	FullDescription       string                `json:"full_description"`
+	User              string      `json:"user"`
+	Name              string      `json:"name"`
+	Namespace         string      `json:"namespace"`
+	RepositoryType    string      `json:"repository_type"`
+	Status            int         `json:"status"`
+	StatusDescription string      `json:"status_description"`
+	Description       string      `json:"description"`
+	IsPrivate         bool        `json:"is_private"`
+	IsAutomated       bool        `json:"is_automated"`
+	StarCount         int         `json:"star_count"`
+	PullCount         int64       `json:"pull_count"`
+	LastUpdated       string      `json:"last_updated"`
+	LastModified      string      `json:"last_modified"`
+	DateRegistered    string      `json:"date_registered"`
+	CollaboratorCount int         `json:"collaborator_count"`
+	Affiliation       interface{} `json:"affiliation"` // can be null
+	HubUser           string      `json:"hub_user"`
+	HasStarred        bool        `json:"has_starred"`
+	//FullDescription       string                `json:"full_description"`
 	Permissions           Permissions           `json:"permissions"`
 	MediaTypes            []string              `json:"media_types"`
 	ContentTypes          []string              `json:"content_types"`

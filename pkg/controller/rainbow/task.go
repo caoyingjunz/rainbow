@@ -349,7 +349,7 @@ func (s *ServerController) tryToUpdateImageInfo(ctx context.Context, imageId int
 
 	labels, err := s.factory.Label().ListImageLabelNames(ctx, imageId)
 	if err != nil {
-		klog.Errorf("tryToUpdateImageInfo 尝试获取镜像关联标签失败 %v", imageId, err)
+		klog.Errorf("tryToUpdateImageInfo 尝试获取镜像(%d)关联标签失败 %v", imageId, err)
 		return
 	}
 	if len(labels) != 0 {
@@ -376,8 +376,15 @@ func (s *ServerController) tryToUpdateImageInfo(ctx context.Context, imageId int
 		return
 	}
 
-	klog.Info("tryToUpdateImageInfo", namespace, name)
-	klog.Info("tryToUpdateImageInfo", remoteRepo)
+	desc := remoteRepo.Description
+	if len(desc) != 0 {
+		_ = s.factory.Image().UpdateWithoutLock(ctx, imageId, map[string]interface{}{"description": desc})
+	}
+
+	categoriesMap := make(map[string]bool)
+	for _, category := range remoteRepo.Categories {
+		categoriesMap[strings.ToLower(category.Name)] = true
+	}
 }
 
 func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error {

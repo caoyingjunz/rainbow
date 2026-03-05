@@ -71,8 +71,6 @@ func (s *AgentController) GetDockerRepository(ctx context.Context, req *types.Ca
 		return nil, err
 	}
 
-	klog.Infof("searchResp %+v", searchResp)
-
 	return json.Marshal(searchResp)
 }
 
