@@ -22,6 +22,9 @@ func (s *AgentController) ProcessSearch(ctx context.Context, req *types.CallSear
 		return s.SearchRepositoryTags(ctx, req)
 	case types.SearchTypeTagInfo:
 		return s.GetRepositoryTagInfo(ctx, req)
+	case types.GetTypeRepo:
+		// 获取镜像具体信息
+		return s.GetRepository(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unsupported search target type")
@@ -46,6 +49,33 @@ func (s *AgentController) SearchRepositories(ctx context.Context, req *types.Cal
 	return json.Marshal(css)
 }
 
+func (s *AgentController) GetRepository(ctx context.Context, req *types.CallSearchRequest) ([]byte, error) {
+	switch req.Hub {
+	case types.ImageHubDocker:
+		return s.GetDockerRepository(ctx, req)
+	}
+
+	return nil, fmt.Errorf("unsupported hub type %s", req.Hub)
+}
+
+func (s *AgentController) GetDockerRepository(ctx context.Context, req *types.CallSearchRequest) ([]byte, error) {
+	klog.Infof("获取 dockerhub 镜像 %s/%s", req.Namespace, req.Repository)
+	url := fmt.Sprintf("https://hub.docker.com/v2/namespaces/%s/repositories/%s", req.Namespace, req.Repository)
+
+	var searchResp types.GetRepositoryResult
+	httpClient := util.HttpClientV2{URL: url}
+	err := httpClient.Method(http.MethodGet).
+		WithTimeout(30 * time.Second).
+		Do(&searchResp)
+	if err != nil {
+		return nil, err
+	}
+
+	klog.Infof("searchResp %+v", searchResp)
+
+	return json.Marshal(searchResp)
+}
+
 func (s *AgentController) SearchRepositoryTags(ctx context.Context, req *types.CallSearchRequest) ([]byte, error) {
 	switch req.Hub {
 	case types.ImageHubDocker:
@@ -53,7 +83,6 @@ func (s *AgentController) SearchRepositoryTags(ctx context.Context, req *types.C
 	}
 
 	return nil, fmt.Errorf("unsupported hub type %s", req.Hub)
-
 }
 
 func (s *AgentController) GetRepositoryTagInfo(ctx context.Context, req *types.CallSearchRequest) ([]byte, error) {

@@ -287,6 +287,9 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 			imageId = oldImage.Id
 		}
 
+		// 尝试从从远端获取镜像信息，并同步到 pixiuHub
+		go s.tryToUpdateImageInfo(ctx, imageId, path)
+
 		// 版本需要和任务关联
 		for _, tag := range tags {
 			oldTag, tagErr := s.factory.Image().GetTagWithArch(ctx, imageId, tag, req.Architecture, false)
@@ -332,6 +335,49 @@ func (s *ServerController) CreateImageWithTag(ctx context.Context, taskId int64,
 	}
 
 	return nil
+}
+
+func (s *ServerController) tryToUpdateImageInfo(ctx context.Context, imageId int64, path string) {
+	image, err := s.factory.Image().GetBy(ctx, db.WithId(imageId))
+	if err != nil {
+		klog.Errorf("tryToUpdateImageInfo 尝试获取镜像(%d)失败 %v", imageId, err)
+		return
+	}
+	if len(image.Description) != 0 {
+		return
+	}
+
+	labels, err := s.factory.Label().ListImageLabelNames(ctx, imageId)
+	if err != nil {
+		klog.Errorf("tryToUpdateImageInfo 尝试获取镜像关联标签失败 %v", imageId, err)
+		return
+	}
+	if len(labels) != 0 {
+		return
+	}
+
+	var (
+		namespace string
+		name      string
+	)
+	parts := strings.Split(path, "/")
+	if len(parts) > 1 {
+		namespace, name = parts[len(parts)-2], parts[len(parts)-1]
+	} else {
+		namespace, name = "library", parts[len(parts)-1]
+	}
+
+	remoteRepo, err := s.GetRepository(ctx, types.CallSearchRequest{
+		Namespace:  namespace,
+		Repository: name,
+	})
+	if err != nil {
+		klog.Errorf("获取远端镜像(%s/%s)失败 %v", namespace, name, err)
+		return
+	}
+
+	klog.Info("tryToUpdateImageInfo", namespace, name)
+	klog.Info("tryToUpdateImageInfo", remoteRepo)
 }
 
 func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error {

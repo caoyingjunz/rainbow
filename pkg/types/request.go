@@ -377,8 +377,8 @@ type (
 		ClientId string `json:"client_id" form:"client_id"` // 指定后端执行 clientId
 
 		Hub        string `json:"hub" form:"hub"`
-		SearchType int    `json:"search_type" form:"search_type"` // 0 模糊搜索 1 精准查询
-		TargetType int    `json:"target_type" form:"target_type"` //  搜索资源类型，0 镜像，1 tag
+		SearchType int    `json:"search_type" form:"search_type"` // 搜索类型，镜像搜索，kubernetesTag 等
+		TargetType int    `json:"target_type" form:"target_type"` // 目标类型，搜索镜像，搜索镜像版本，查询镜像详情
 
 		Namespace  string `json:"namespace" form:"namespace"`
 		Repository string `json:"repository" form:"repository"`

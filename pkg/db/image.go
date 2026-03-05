@@ -19,6 +19,8 @@ type ImageInterface interface {
 	Get(ctx context.Context, imageId int64, del bool) (*model.Image, error)
 	List(ctx context.Context, opts ...Options) ([]model.Image, error)
 
+	UpdateWithoutLock(ctx context.Context, imageId int64, updates map[string]interface{}) error
+
 	GetImageWithTagsCount(ctx context.Context, imageId int64, del bool) (*model.Image, error)
 	ListWithTagsCount(ctx context.Context, opts ...Options) ([]model.Image, error)
 	CreateFlow(ctx context.Context, object *model.Downflow) error
@@ -73,6 +75,19 @@ func (a *image) Create(ctx context.Context, object *model.Image) (*model.Image, 
 		return nil, err
 	}
 	return object, nil
+}
+
+func (a *image) UpdateWithoutLock(ctx context.Context, imageId int64, updates map[string]interface{}) error {
+	updates["gmt_modified"] = time.Now()
+	f := a.db.WithContext(ctx).Model(&model.Image{}).Where("id = ?", imageId).Updates(updates)
+	if f.Error != nil {
+		return f.Error
+	}
+	if f.RowsAffected == 0 {
+		return fmt.Errorf("record not updated")
+	}
+
+	return nil
 }
 
 func (a *image) Update(ctx context.Context, imageId int64, resourceVersion int64, updates map[string]interface{}) error {

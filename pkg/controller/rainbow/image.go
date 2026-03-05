@@ -436,7 +436,7 @@ func (s *ServerController) isDefaultRepo(regId int64) bool {
 	return regId == *RegistryId
 }
 
-func IsDurationExceeded(t time.Time, duration time.Duration) bool {
+func (s *ServerController) isDurationExceeded(t time.Time, duration time.Duration) bool {
 	now := time.Now()
 	return now.Sub(t) > duration
 }
@@ -470,22 +470,26 @@ func (s *ServerController) GetImage(ctx context.Context, imageId int64) (interfa
 
 // AfterGetImage 获取镜像后，尝试更新属性
 func (s *ServerController) AfterGetImage(ctx context.Context, object *model.Image) {
-	// 如果 30 分钟内已更新，则直接返回
-	if !IsDurationExceeded(object.LastSyncTime, 30*time.Minute) {
-		klog.V(1).Infof("镜像(%s/%s) 30分钟内进行过同步，无需重复执行", object.Namespace, object.Name)
-		return
-	}
 	// 非官方内置仓库，无需更新
 	if !s.isDefaultRepo(object.RegisterId) {
-		klog.V(1).Infof("非官方镜像，无需同步")
+		klog.V(0).Infof("非官方镜像，无需同步")
 		return
 	}
 
-	klog.Infof("即将开始同步镜像(%s)的下载数", object.Name)
-	if err := s.SyncInfoByRemoteImage(ctx, object); err != nil {
-		klog.Errorf("SyncInfoByRemoteImage 失败 %v", err)
+	klog.Infof("镜像(%s/%s)状态将被同步", object.Namespace, object.Name)
+	// 如果 30 分钟内已更新，则直接返回
+	if !s.isDurationExceeded(object.LastSyncTime, 30*time.Minute) {
+		klog.V(0).Infof("镜像(%s/%s) 30分钟内已同步或者正在同步，忽略", object.Namespace, object.Name)
+		return
 	}
-	klog.Infof("同步镜像(%s)的下载数同步完成", object.Name)
+	_ = s.factory.Image().UpdateWithoutLock(ctx, object.Id, map[string]interface{}{"last_sync_time": time.Now()})
+
+	klog.Infof("即将开始同步镜像(%s/%s)的下载数", object.Namespace, object.Name)
+	if err := s.SyncInfoByRemoteImage(ctx, object); err != nil {
+		klog.Errorf("镜像 (%s/%s) SyncInfoByRemoteImage 失败 %v", object.Namespace, object.Name, err)
+		return
+	}
+	klog.Infof("同步镜像(%s/%s)的下载数同步完成", object.Namespace, object.Name)
 }
 
 func (s *ServerController) UpdateTagFromRemote(ctx context.Context, newTag swrmodel.ShowReposTagResp, oldTag model.Tag) error {
@@ -519,10 +523,10 @@ func (s *ServerController) UpdateImageInfoFromRemote(ctx context.Context, newIma
 
 	if len(updates) == 0 {
 		klog.Infof("无镜像变化，仅更新同步时间，避免频繁调用外部API")
+		return nil
 	}
 
-	updates["last_sync_time"] = time.Now()
-	return s.factory.Image().Update(ctx, old.Id, old.ResourceVersion, updates)
+	return s.factory.Image().UpdateWithoutLock(ctx, old.Id, updates)
 }
 
 // SyncInfoByRemoteImage 获取远端镜像属性且保存

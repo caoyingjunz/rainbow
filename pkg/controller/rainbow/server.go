@@ -289,7 +289,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 		return err
 	}
 	// 启动 rainbow 检查进程
-	go s.startRainbowdHeartbeat(ctx)
+	//go s.startRainbowdHeartbeat(ctx)
 
 	return nil
 }

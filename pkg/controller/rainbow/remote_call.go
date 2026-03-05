@@ -175,6 +175,33 @@ func (s *ServerController) GetRepositoryTagInfo(ctx context.Context, req types.C
 	return infoResp, nil
 }
 
+func (s *ServerController) GetRepository(ctx context.Context, req types.CallSearchRequest) (*types.GetRepositoryResult, error) {
+	s.setRepoHubType(&req)
+	req.SetNamespace()
+
+	key := uuid.NewString()
+	req.TargetType = types.GetTypeRepo
+	data, err := json.Marshal(types.CallMetaRequest{
+		Type:              types.CallSearchType,
+		Uid:               key,
+		CallSearchRequest: &req,
+	})
+	if err != nil {
+		klog.Errorf("序列化(%v)失败 %v", req, err)
+		return nil, err
+	}
+
+	val, err := s.Call(ctx, req.ClientId, key, data)
+	if err != nil {
+		return nil, err
+	}
+	var resp types.GetRepositoryResult
+	if err = json.Unmarshal(val, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (s *ServerController) sendMessage(ctx context.Context, clientId string, data []byte) error {
 	tags := "all"
 	if len(clientId) != 0 {
