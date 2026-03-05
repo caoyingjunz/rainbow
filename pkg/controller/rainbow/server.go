@@ -276,7 +276,7 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.schedule(ctx)
 	go s.sync(ctx)
 	go s.startSyncDailyPulls(ctx)
-	go s.startSyncCounts(ctx)
+	go s.startSyncMetrics(ctx)
 	go s.startAgentHeartbeat(ctx)
 	go s.startSyncKubernetesTags(ctx)
 	go s.startSubscribeController(ctx)
@@ -421,51 +421,24 @@ func (s *ServerController) startSyncDailyPulls(ctx context.Context) {
 	klog.Infof("定时任务(pull images)已停止")
 }
 
-func (s *ServerController) startSyncCounts(ctx context.Context) {
+func (s *ServerController) startSyncMetrics(ctx context.Context) {
 	c := cron.New()
 	_, err := c.AddFunc("0 6 * * *", func() {
 		klog.Infof("执行每天凌晨 6 点任务...")
-		s.syncCounts(ctx)
+		s.syncMetrics(ctx)
 	})
 	if err != nil {
-		klog.Fatal("SyncCounts 定时任务配置错误:", err)
+		klog.Fatal("Sync metrics 定时任务配置错误:", err)
 	}
 	c.Start()
-	klog.Infof("starting daily counts syncer")
+	klog.Infof("starting daily metrics syncer")
 
 	// 优雅关闭（可选）
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 	c.Stop()
-	klog.Infof("定时任务(daily count)已停止")
-}
-
-func (s *ServerController) syncCounts(ctx context.Context) {
-	now := time.Now()
-	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	yesterdayStart := todayStart.AddDate(0, 0, -1)
-	recordDay := yesterdayStart.Format("2006-01-02")
-	recordTime := yesterdayStart
-
-	s.factory.Image().Count(ctx)
-	pullCount, err := s.factory.Image().PullAllCount(ctx)
-	if err != nil {
-		return
-	}
-	taskCount, err := s.factory.Task().Count(ctx, db.WithCreatedBefore(todayStart))
-	if err != nil {
-		return
-	}
-	imageCount, err := s.factory.Image().Count(ctx)
-	if err != nil {
-		return
-	}
-	_, err = s.factory.Metrics().Create(ctx, &model.Metrics{Pull: pullCount, Task: taskCount, Image: imageCount, RecordTime: recordTime, RecordDay: recordDay})
-	if err != nil {
-		return
-	}
-	klog.Infof("syncCounts")
+	klog.Infof("定时任务(daily metrics)已停止")
 }
 
 func (s *ServerController) syncPulls(ctx context.Context) {

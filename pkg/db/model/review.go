@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 )
 
@@ -33,12 +31,12 @@ func (t *Daily) TableName() string {
 type Metrics struct {
 	rainbow.Model
 
-	RecordTime time.Time `json:"record_time"`
-
-	Pull      int64  `json:"pull"`
-	Task      int64  `json:"task"`
-	Image     int64  `json:"image"`
 	RecordDay string `json:"record_day"`
+
+	Pull  int64 `json:"pull"`
+	Task  int64 `json:"task"`
+	Image int64 `json:"image"`
+	Tags  int64 `json:"tags"`
 }
 
 func (s *Metrics) TableName() string {
