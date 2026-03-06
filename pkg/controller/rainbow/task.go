@@ -385,6 +385,23 @@ func (s *ServerController) tryToUpdateImageInfo(ctx context.Context, imageId int
 	for _, category := range remoteRepo.Categories {
 		categoriesMap[strings.ToLower(category.Name)] = true
 	}
+	if len(categoriesMap) == 0 {
+		return
+	}
+
+	allLabels, err := s.factory.Label().List(ctx)
+	if err != nil {
+		return
+	}
+	var newBindLabels []int64
+	for _, label := range allLabels {
+		if categoriesMap[strings.ToLower(label.Name)] {
+			newBindLabels = append(newBindLabels, label.Id)
+		}
+	}
+	if err = s.BindImageLabels(ctx, imageId, types.BindImageLabels{OP: 0, LabelIds: newBindLabels}); err != nil {
+		klog.Errorf("绑定镜像(%d)标签失败 %v", imageId, err)
+	}
 }
 
 func (s *ServerController) UpdateTask(ctx context.Context, req *types.UpdateTaskRequest) error {
