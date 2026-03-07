@@ -194,12 +194,12 @@ func WithUser(userId string) Options {
 	}
 }
 
-func WithAkLike(ak string) Options {
+func WithAccessKeyLike(ak string) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if len(ak) == 0 {
 			return tx
 		}
-		return tx.Where("ak like ?", "%"+ak+"%")
+		return tx.Where("access_key like ?", "%"+ak+"%")
 	}
 }
 

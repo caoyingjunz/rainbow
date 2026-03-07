@@ -69,7 +69,7 @@ func (s *ServerController) ListAccesses(ctx context.Context, listOption types.Li
 	}
 	opts := []db.Options{
 		db.WithUser(listOption.UserId),
-		db.WithAkLike(listOption.NameSelector),
+		db.WithAccessKeyLike(listOption.NameSelector),
 	}
 
 	var err error
@@ -80,7 +80,7 @@ func (s *ServerController) ListAccesses(ctx context.Context, listOption types.Li
 	}
 	offset := (listOption.Page - 1) * listOption.Limit
 	opts = append(opts, []db.Options{
-		db.WithModifyOrderByDesc(),
+		db.WithCreateOrderByASC(),
 		db.WithOffset(offset),
 		db.WithLimit(listOption.Limit),
 	}...)
