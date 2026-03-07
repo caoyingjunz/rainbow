@@ -14,7 +14,7 @@ func (s *ServerController) SearchRepo(ctx context.Context, listOption types.List
 	}
 	arch := listOption.Arch
 	if len(arch) == 0 {
-		arch = "linux/amd64"
+		arch = defaultArch
 	}
 
 	obj, err := s.factory.Image().GetTagBy(ctx, db.WithArchitecture(arch), db.WithPath(path), db.WithName(tag))
