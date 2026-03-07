@@ -167,6 +167,13 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		userRoute.GET("", cr.listUsers)
 	}
 
+	accessRoute := httpEngine.Group("/rainbow/access")
+	{
+		accessRoute.POST("", cr.createAccess)
+		accessRoute.DELETE("/:accessKey", cr.deleteAccess)
+		accessRoute.GET("", cr.listAccesses)
+	}
+
 	syncRoute := httpEngine.Group("/rainbow/sync")
 	{
 		syncRoute.POST("/users", cr.createOrUpdateUsers)

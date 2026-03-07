@@ -173,6 +173,11 @@ type (
 		Target     string `json:"target"`
 	}
 
+	CreateAccessRequest struct {
+		UserId     string  `json:"user_id" binding:"required"`
+		ExpireTime *string `json:"expire_time"`
+	}
+
 	BindImageLabels struct {
 		OP       int     `json:"op"` // add or delete, 默认添加
 		LabelIds []int64 `json:"label_ids"`

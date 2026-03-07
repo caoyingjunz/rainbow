@@ -182,6 +182,10 @@ type ServerInterface interface {
 
 	ListMetrics(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	CreateAccess(ctx context.Context, req *types.CreateAccessRequest) error
+	DeleteAccess(ctx context.Context, ak string) error
+	ListAccesses(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)
 }
