@@ -186,6 +186,8 @@ type ServerInterface interface {
 	DeleteAccess(ctx context.Context, ak string) error
 	ListAccesses(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	SearchRepo(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)
 }

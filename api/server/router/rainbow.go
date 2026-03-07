@@ -20,12 +20,34 @@ func NewRouter(o *options.ServerOptions) {
 }
 
 func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
-	metricsRoute := httpEngine.Group("/api/v1/metrics")
+	// v2
+	routeV2 := httpEngine.Group("/api/v2")
 	{
-		// TODO
-		metricsRoute.GET("/active-users/daily", cr.getDailyMetrics)
+		// 指标
+		metricsRoute := routeV2.Group("/metrics")
+		{
+			metricsRoute.GET("/active-users/daily", cr.getDailyMetrics)
+		}
+
+		// 任务
+		taskV2Route := routeV2.Group("/tasks")
+		{
+			taskV2Route.POST("", cr.createTask)
+		}
+
+		// 镜像
+		imageRoute := routeV2.Group("/images")
+		{
+			imageRoute.GET("/:Id", cr.getImage)
+		}
+
+		searchRoute := routeV2.Group("/search")
+		{
+			searchRoute.GET("/repos", cr.searchRepo)
+		}
 	}
 
+	// v1
 	taskRoute := httpEngine.Group("/rainbow/tasks")
 	{
 		taskRoute.POST("", cr.createTask)
