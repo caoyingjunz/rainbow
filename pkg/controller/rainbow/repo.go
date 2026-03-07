@@ -2,16 +2,24 @@ package rainbow
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
 func (s *ServerController) SearchRepo(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
-	targetRepo := listOption.NameSelector
+	path, tag, err := ParseImageItem(listOption.NameSelector)
+	if err != nil {
+		return nil, err
+	}
+	arch := listOption.Arch
+	if len(arch) == 0 {
+		arch = "linux/amd64"
+	}
 
-	fmt.Println("targetRepo", targetRepo)
-
-	fmt.Println("arch", listOption.Arch)
-	return nil, nil
+	obj, err := s.factory.Image().GetTagBy(ctx, db.WithArchitecture(arch), db.WithPath(path), db.WithName(tag))
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
 }

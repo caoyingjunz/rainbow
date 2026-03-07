@@ -212,6 +212,15 @@ func WithArch(arch string) Options {
 	}
 }
 
+func WithArchitecture(arch string) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		if len(arch) == 0 {
+			return tx
+		}
+		return tx.Where("architecture = ?", arch)
+	}
+}
+
 func WithTask(taskId int64) Options {
 	return func(tx *gorm.DB) *gorm.DB {
 		if taskId == 0 {
