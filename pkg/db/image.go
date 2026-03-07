@@ -47,6 +47,7 @@ type ImageInterface interface {
 	ListTags(ctx context.Context, opts ...Options) ([]model.Tag, error)
 
 	GetTagWithArch(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error)
+	GetTagBy(ctx context.Context, opts ...Options) (*model.Tag, error)
 
 	TagCount(ctx context.Context, opts ...Options) (int64, error)
 	PullAllCount(ctx context.Context) (int64, error)
@@ -355,6 +356,20 @@ func (a *image) ListTags(ctx context.Context, opts ...Options) ([]model.Tag, err
 		return nil, err
 	}
 	return audits, nil
+}
+
+func (a *image) GetTagBy(ctx context.Context, opts ...Options) (*model.Tag, error) {
+	var audit model.Tag
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.WithContext(ctx).First(&audit).Error; err != nil {
+		return nil, err
+	}
+
+	return &audit, nil
 }
 
 func (a *image) GetTag(ctx context.Context, tagId int64, del bool) (*model.Tag, error) {

@@ -326,6 +326,7 @@ type (
 		LabelIds     string `form:"label_ids"`
 		Trusted      int    `form:"trusted"`
 		ExtendLimit  int    `form:"extend_limit"`
+		Arch         string `form:"arch"`
 	}
 
 	RemoteSearchRequest struct {

@@ -17,9 +17,9 @@ limitations under the License.
 package db
 
 import (
-	"github.com/caoyingjunz/rainbow/pkg/db/model"
-
 	"gorm.io/gorm"
+
+	"github.com/caoyingjunz/rainbow/pkg/db/model"
 )
 
 type migrator struct {
