@@ -32,7 +32,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		// 任务
 		taskV2Route := routeV2.Group("/tasks")
 		{
-			taskV2Route.POST("", cr.createTask)
+			taskV2Route.POST("", cr.createTaskV2)
 		}
 
 		// 镜像

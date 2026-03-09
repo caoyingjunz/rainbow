@@ -48,6 +48,8 @@ type ServerInterface interface {
 	GetTask(ctx context.Context, taskId int64) (interface{}, error)
 	UpdateTaskStatus(ctx context.Context, req *types.UpdateTaskStatusRequest) error
 
+	CreateTaskV2(ctx *gin.Context, req *types.CreateTaskRequest) error
+
 	CreateSubscribe(ctx context.Context, req *types.CreateSubscribeRequest) error
 	ListSubscribes(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 	UpdateSubscribe(ctx context.Context, req *types.UpdateSubscribeRequest) error

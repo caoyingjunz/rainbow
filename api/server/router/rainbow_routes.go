@@ -145,6 +145,25 @@ func (cr *rainbowRouter) createTask(c *gin.Context) {
 	httputils.SetSuccess(c, resp)
 }
 
+func (cr *rainbowRouter) createTaskV2(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var (
+		req types.CreateTaskRequest
+		err error
+	)
+	if err = httputils.ShouldBindAny(c, &req, nil, nil); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+	if err = cr.c.Server().CreateTask(c, &req); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}
+
 func (cr *rainbowRouter) updateTask(c *gin.Context) {
 	resp := httputils.NewResponse()
 

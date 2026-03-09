@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
@@ -97,6 +98,10 @@ func (s *ServerController) validateUserQuota(ctx context.Context, req *types.Cre
 		}
 	}
 	return nil
+}
+
+func (s *ServerController) CreateTaskV2(ctx *gin.Context, req *types.CreateTaskRequest) error {
+	return s.CreateTask(ctx, req)
 }
 
 func (s *ServerController) CreateTask(ctx context.Context, req *types.CreateTaskRequest) error {
