@@ -120,13 +120,13 @@ func (o *PullOptions) Run() error {
 // SearchRepo 搜索镜像是否存在缓存，如果存在，则直接 pull，如果不存在则先构成缓存，然后再pull，最后进行tag
 func (o *PullOptions) pullAndCacheOne(repo string) error {
 	// TODO
-	// 检查是否本地已存在镜像
+	// 1. 检查是否本地已存在镜像
 
 	// 2. 执行 pull
 	existsRepo, err := o.SearchRepo(repo)
 	if err != nil {
 		if ErrorIsNotFound(err) {
-			return o.CacheAndPull(repo)
+			return o.cacheAndPull(repo)
 		}
 		return err
 	}
@@ -158,6 +158,7 @@ func (o *PullOptions) pull(tag *model.Tag) error {
 	return nil
 }
 
-func (o *PullOptions) CacheAndPull(repo string) error {
+// 构造并等待缓存完成
+func (o *PullOptions) cacheAndPull(repo string) error {
 	return nil
 }
