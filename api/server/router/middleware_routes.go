@@ -35,7 +35,7 @@ func SignatureMiddleware(o *options.ServerOptions) gin.HandlerFunc {
 		if strings.HasPrefix(c.Request.URL.String(), "/api/v2") {
 			// 目前仅对 /api/v2 的资源进行签名校验
 			if err := signatureutil.VerifySignature(c, o.Factory); err != nil {
-				httputils.AbortFailedWithCode(c, http.StatusUnauthorized, fmt.Errorf("invalid signature %v", err))
+				httputils.AbortFailedWithCode(c, http.StatusUnauthorized, err)
 				return
 			}
 		}

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/caoyingjunz/rainbow/pkg/util/signatureutil"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -34,8 +35,9 @@ type TaskResult struct {
 }
 
 type PullOptions struct {
-	baseURL string
-	cfg     *config.Config
+	baseURL   string
+	signature string
+	cfg       *config.Config
 
 	// flag
 	Platform string
@@ -76,8 +78,8 @@ func (o *PullOptions) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	o.cfg = cfg
-
 	o.Repos = args
+
 	return nil
 }
 
@@ -101,6 +103,11 @@ func (o *PullOptions) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *PullOptions) Run() error {
+	// 完成客户端证书
+	o.signature = signatureutil.GenerateSignature(
+		map[string]string{"action": "pullOrCacheRepo", "accessKey": o.cfg.Auth.AccessKey},
+		[]byte(o.cfg.Auth.SecretKey))
+
 	diff := len(o.Repos)
 	errCh := make(chan error, diff)
 
@@ -149,6 +156,10 @@ func (o *PullOptions) SearchRepo(repo string) (*model.Tag, error) {
 	httpClient := util.HttpClientV2{URL: url}
 	if err := httpClient.Method(http.MethodGet).
 		WithTimeout(5 * time.Second).
+		WithHeader(map[string]string{
+			"X-ACCESS-KEY":  o.cfg.Auth.AccessKey,
+			"Authorization": o.signature,
+		}).
 		Do(&result); err != nil {
 		return nil, err
 	}
@@ -199,6 +210,7 @@ func (o *PullOptions) buildCache(repo string) error {
 	httpClient := util.HttpClientV2{URL: url}
 	if err := httpClient.Method(http.MethodPost).
 		WithTimeout(5 * time.Second).
+		WithHeader(map[string]string{"X-ACCESS-KEY": o.cfg.Auth.AccessKey, "Authorization": o.signature}).
 		WithBody(bytes.NewBuffer(data)).
 		Do(&result); err != nil {
 		return err
