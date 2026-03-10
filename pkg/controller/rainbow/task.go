@@ -101,8 +101,13 @@ func (s *ServerController) validateUserQuota(ctx context.Context, req *types.Cre
 }
 
 func (s *ServerController) CreateTaskV2(ctx *gin.Context, req *types.CreateTaskRequest) error {
-	fmt.Println("req", req)
+	obj, err := s.factory.Access().Get(ctx, ctx.GetHeader("X-ACCESS-KEY"))
+	if err != nil {
+		return err
+	}
 
+	req.UserId = obj.UserId
+	req.UserName = obj.UserName
 	return s.CreateTask(ctx, req)
 }
 
