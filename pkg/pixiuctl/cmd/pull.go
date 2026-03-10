@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caoyingjunz/rainbow/pkg/util/signatureutil"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -17,6 +16,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/pixiuctl/config"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/docker"
+	"github.com/caoyingjunz/rainbow/pkg/util/signatureutil"
 )
 
 const (
