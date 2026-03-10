@@ -17,14 +17,29 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/caoyingjunz/rainbow/cmd/app/options"
+	"github.com/caoyingjunz/rainbow/pkg/util/signatureutil"
 )
 
 func NewMiddlewares(o *options.ServerOptions) {
 	o.HttpEngine.Use(
+		SignatureMiddleware(o),
 		Authentication(o),
 		UserRateLimiter(o),
 		Limiter(o),
 	)
+}
+
+func SignatureMiddleware(o *options.ServerOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 对 /api/v2 开头的 api 进行签名校验
+		if strings.HasPrefix(c.Request.URL.String(), "/api/v2") {
+			// 目前仅对 /api/v2 的资源进行签名校验
+			if err := signatureutil.VerifySignature(c, o.Factory); err != nil {
+				httputils.AbortFailedWithCode(c, http.StatusUnauthorized, fmt.Errorf("invalid signature %v", err))
+				return
+			}
+		}
+	}
 }
 
 // Authentication 身份认证

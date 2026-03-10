@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -13,16 +15,22 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/pixiuctl/config"
 	"github.com/caoyingjunz/rainbow/pkg/util"
+	"github.com/caoyingjunz/rainbow/pkg/util/docker"
 )
 
 const (
-	baseURL = "http://peng:8090"
+	baseURL = "http://127.0.0.1:8090"
 )
 
 type RepoResult struct {
 	Code    int       `json:"code"`
 	Result  model.Tag `json:"result,omitempty"`
 	Message string    `json:"message,omitempty"`
+}
+
+type TaskResult struct {
+	Code    int    `json:"code"`
+	Message string `json:"message,omitempty"`
 }
 
 type PullOptions struct {
@@ -152,13 +160,56 @@ func (o *PullOptions) SearchRepo(repo string) (*model.Tag, error) {
 }
 
 // 下载镜像
-// 重命名镜像
-// 删除mirror镜像
+// 重命名镜像，删除 mirror 镜像
 func (o *PullOptions) pull(tag *model.Tag) error {
-	return nil
+	sourceImage := tag.Mirror + ":" + tag.Name
+	targetImage := tag.Path + ":" + tag.Name
+
+	if err := docker.PullImage(sourceImage); err != nil {
+		return err
+	}
+	return docker.TagImage(sourceImage, targetImage)
 }
 
 // 构造并等待缓存完成
 func (o *PullOptions) cacheAndPull(repo string) error {
-	return nil
+	if err := o.buildCache(repo); err != nil {
+		return err
+	}
+	cache, err := o.waitForCached(repo)
+	if err != nil {
+		return err
+	}
+
+	return o.pull(cache)
+}
+
+func (o *PullOptions) buildCache(repo string) error {
+	data, err1 := json.Marshal(map[string]interface{}{
+		"name":         "PixiuHub-" + repo + "-加速",
+		"architecture": o.Platform,
+		"images":       []string{repo},
+	})
+	if err1 != nil {
+		return err1
+	}
+
+	var result TaskResult
+	url := fmt.Sprintf("%s/api/v2/tasks", o.baseURL)
+	httpClient := util.HttpClientV2{URL: url}
+	if err := httpClient.Method(http.MethodPost).
+		WithTimeout(5 * time.Second).
+		WithBody(bytes.NewBuffer(data)).
+		Do(&result); err != nil {
+		return err
+	}
+	if result.Code == 200 {
+		return nil
+	}
+	return fmt.Errorf("%s", result.Message)
+}
+
+func (o *PullOptions) waitForCached(repo string) (*model.Tag, error) {
+
+	return nil, nil
 }

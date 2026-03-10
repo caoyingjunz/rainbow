@@ -156,7 +156,7 @@ func (cr *rainbowRouter) createTaskV2(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-	if err = cr.c.Server().CreateTask(c, &req); err != nil {
+	if err = cr.c.Server().CreateTaskV2(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)
 		return
 	}

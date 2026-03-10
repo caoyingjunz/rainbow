@@ -165,7 +165,7 @@ func (s *ServerController) ListUsers(ctx context.Context, listOption types.ListO
 	}
 	offset := (listOption.Page - 1) * listOption.Limit
 	opts = append(opts, []db.Options{
-		db.WithModifyOrderByDesc(),
+		db.WithCreateOrderByDesc(),
 		db.WithOffset(offset),
 		db.WithLimit(listOption.Limit),
 	}...)

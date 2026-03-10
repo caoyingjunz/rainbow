@@ -101,6 +101,8 @@ func (s *ServerController) validateUserQuota(ctx context.Context, req *types.Cre
 }
 
 func (s *ServerController) CreateTaskV2(ctx *gin.Context, req *types.CreateTaskRequest) error {
+	fmt.Println("req", req)
+
 	return s.CreateTask(ctx, req)
 }
 
