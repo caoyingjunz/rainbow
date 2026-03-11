@@ -175,6 +175,7 @@ type (
 
 	CreateAccessRequest struct {
 		UserId     string  `json:"user_id" binding:"required"`
+		UserName   string  `json:"user_name"`
 		ExpireTime *string `json:"expire_time"`
 	}
 
@@ -327,6 +328,7 @@ type (
 		Trusted      int    `form:"trusted"`
 		ExtendLimit  int    `form:"extend_limit"`
 		Arch         string `form:"arch"`
+		AccessKey    string `form:"access_key"`
 	}
 
 	RemoteSearchRequest struct {

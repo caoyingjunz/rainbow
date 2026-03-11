@@ -2,8 +2,6 @@ package rainbow
 
 import (
 	"context"
-	"time"
-
 	"github.com/caoyingjunz/rainbow/pkg/db/model/rainbow"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"k8s.io/klog/v2"
@@ -14,20 +12,7 @@ import (
 )
 
 func (s *ServerController) CreateAccess(ctx context.Context, req *types.CreateAccessRequest) error {
-	now := time.Now()
-
-	var err error
-
-	expireTime := now.AddDate(0, 1, 0)
-	if req.ExpireTime != nil {
-		expireTime, err = parseTime(*req.ExpireTime)
-		if err != nil {
-			klog.Errorf("解析 ak/sk 过期时间失败: %v", err)
-			return err
-		}
-	}
-
-	ak, err := util.GenerateAK("")
+	ak, err := util.GenerateAK("pixiu")
 	if err != nil {
 		klog.Errorf("创建ak失败 %v", err)
 		return err
@@ -38,19 +23,33 @@ func (s *ServerController) CreateAccess(ctx context.Context, req *types.CreateAc
 		return err
 	}
 
-	_, err = s.factory.Access().Create(ctx, &model.Access{
+	obj := &model.Access{
 		UserModel: rainbow.UserModel{
 			UserId: req.UserId,
 		},
-		AccessKey:  ak,
-		SecretKey:  sk,
-		ExpireTime: expireTime,
-	})
-	if err != nil {
+		AccessKey: ak,
+		SecretKey: sk,
+	}
+	if len(req.UserName) == 0 {
+		userObj, err := s.factory.Task().GetUser(ctx, req.UserId)
+		if err == nil {
+			obj.UserName = userObj.Name
+		}
+	}
+
+	if req.ExpireTime != nil {
+		expireTime, err := parseTime(*req.ExpireTime)
+		if err != nil {
+			klog.Errorf("解析 ak/sk 过期时间失败: %v", err)
+			return err
+		}
+		obj.ExpireTime = &expireTime
+	}
+
+	if _, err = s.factory.Access().Create(ctx, obj); err != nil {
 		klog.Errorf("创建 ak/sk 失败 %v", err)
 		return err
 	}
-
 	return nil
 }
 

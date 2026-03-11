@@ -49,6 +49,8 @@ type ImageInterface interface {
 	GetTagWithArch(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error)
 	GetTagBy(ctx context.Context, opts ...Options) (*model.Tag, error)
 
+	SearchTags(ctx context.Context, name, arch, path, userID string) ([]model.Tag, error)
+
 	TagCount(ctx context.Context, opts ...Options) (int64, error)
 	PullAllCount(ctx context.Context) (int64, error)
 
@@ -183,6 +185,25 @@ func (a *image) List(ctx context.Context, opts ...Options) ([]model.Image, error
 	}
 
 	return audits, nil
+}
+
+func (a *image) SearchTags(ctx context.Context, name, arch, path, userID string) ([]model.Tag, error) {
+	var tags []model.Tag
+
+	subQuery := a.db.Model(&model.Image{}).
+		Where("user_id = ? OR is_official = ?", userID, true).
+		Select("id, CASE WHEN user_id = ? THEN 1 ELSE 0 END AS priority", userID)
+
+	err := a.db.Table("tags").
+		Select("tags.*").
+		Joins("JOIN (?) AS img ON tags.image_id = img.id", subQuery).
+		Where("tags.path = ?", path).
+		Where("tags.name = ?", name).
+		Where("tags.architecture = ?", arch).
+		Order("img.priority DESC, tags.id DESC"). // 优先 priority=1 的记录，同组内按 tag.id 倒序（可自定义）
+		Find(&tags).Error
+
+	return tags, err
 }
 
 func (a *image) ListWithTagsCount(ctx context.Context, opts ...Options) ([]model.Image, error) {

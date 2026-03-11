@@ -29,6 +29,12 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 			metricsRoute.GET("/active-users/daily", cr.getDailyMetrics)
 		}
 
+		// 通过 ak 获取用户信息
+		userRouteV2 := routeV2.Group("/users")
+		{
+			userRouteV2.GET("", cr.getUserInfoByAccessKey)
+		}
+
 		// 任务
 		taskV2Route := routeV2.Group("/tasks")
 		{

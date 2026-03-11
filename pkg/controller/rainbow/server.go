@@ -140,6 +140,7 @@ type ServerInterface interface {
 	DeleteUser(ctx context.Context, userId string) error
 
 	CreateOrUpdateUsers(ctx context.Context, req *types.CreateUsersRequest) error
+	GetUserInfoByAccessKey(ctx *gin.Context, listOption types.ListOptions) (*model.User, error)
 
 	CreateNotify(ctx context.Context, req *types.CreateNotificationRequest) error
 	UpdateNotify(ctx context.Context, req *types.UpdateNotificationRequest) error
@@ -188,7 +189,7 @@ type ServerInterface interface {
 	DeleteAccess(ctx context.Context, ak string) error
 	ListAccesses(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
-	SearchRepo(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+	SearchRepo(ctx *gin.Context, listOption types.ListOptions) (interface{}, error)
 
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)

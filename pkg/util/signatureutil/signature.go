@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/gin-gonic/gin"
@@ -41,10 +42,18 @@ func GenerateSignature(params map[string]string, secret []byte) string {
 
 func VerifySignature(c *gin.Context, f db.ShareDaoFactory) error {
 	accessKay := c.GetHeader("X-ACCESS-KEY")
+	if len(accessKay) == 0 {
+		return fmt.Errorf("missing AccessKay")
+	}
+
 	obj, err := f.Access().Get(c, accessKay)
 	if err != nil {
 		klog.Errorf("获取 ak(%s) sk 记录失败 %v", accessKay, err)
-		return fmt.Errorf("invalid accessKay")
+		return fmt.Errorf("invalid AccessKay")
+	}
+	// 判断ak sk是否已过期或者关闭
+	if obj.ExpireTime != nil && obj.ExpireTime.Before(time.Now()) {
+		return fmt.Errorf("expireTime AccessKay")
 	}
 
 	expected := GenerateSignature(
@@ -55,5 +64,5 @@ func VerifySignature(c *gin.Context, f db.ShareDaoFactory) error {
 		return nil
 	}
 
-	return fmt.Errorf("invaild signature")
+	return fmt.Errorf("invaild Signature")
 }

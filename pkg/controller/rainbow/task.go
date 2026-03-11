@@ -99,15 +99,15 @@ func (s *ServerController) validateUserQuota(ctx context.Context, req *types.Cre
 	}
 	return nil
 }
+func (s *ServerController) GetUserInfoByAccessKey(ctx *gin.Context, listOption types.ListOptions) (*model.User, error) {
+	obj, err := s.factory.Access().Get(ctx, listOption.AccessKey)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetUser(ctx, obj.UserId)
+}
 
 func (s *ServerController) CreateTaskV2(ctx *gin.Context, req *types.CreateTaskRequest) error {
-	obj, err := s.factory.Access().Get(ctx, ctx.GetHeader("X-ACCESS-KEY"))
-	if err != nil {
-		return err
-	}
-
-	req.UserId = obj.UserId
-	req.UserName = obj.UserName
 	return s.CreateTask(ctx, req)
 }
 
