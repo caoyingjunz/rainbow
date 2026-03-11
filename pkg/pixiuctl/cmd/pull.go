@@ -10,17 +10,19 @@ import (
 
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/pixiuctl/config"
+	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
 	"github.com/caoyingjunz/rainbow/pkg/util/docker"
 	"github.com/caoyingjunz/rainbow/pkg/util/signatureutil"
 )
 
 const (
-	baseURL = "http://127.0.0.1:8090"
+	baseURL = "http://peng:8090"
 )
 
 type RepoResult struct {
@@ -270,12 +272,40 @@ func (o *PullOptions) buildCache(repo string) error {
 		return err
 	}
 	if result.Code == 200 {
+		klog.Infof("镜像(%s)缓存构建中，请稍等", repo)
 		return nil
 	}
 	return fmt.Errorf("%s", result.Message)
 }
 
 func (o *PullOptions) waitForCached(repo string) (*model.Tag, error) {
+	// 创建一个计时器用于超时控制
+	timeoutTimer := time.NewTimer(10 * time.Minute)
+	defer timeoutTimer.Stop()
 
-	return nil, nil
+	// 创建一个 ticker 用于定期轮询
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeoutTimer.C:
+			// 超时退出
+			return nil, fmt.Errorf("构建(%s)缓存已超时，请稍后再试或调整超时时间再试", repo)
+		case <-ticker.C:
+			// 执行轮询：获取镜像当前状态
+			cacheTag, err := o.SearchRepo(repo)
+			if err != nil {
+				klog.V(1).Infof("获取构建失败(%v)，等待下一次查询", err)
+				continue
+			}
+
+			if cacheTag.Status == types.SyncImageComplete {
+				return cacheTag, nil
+			}
+			if cacheTag.Status == types.SyncImageError {
+				return nil, fmt.Errorf("缓存构建失败，更多信息参考 https://hub.pixiuio.com/")
+			}
+		}
+	}
 }
