@@ -245,6 +245,7 @@ func (o *PullOptions) cacheAndPull(repo string) error {
 		return err
 	}
 
+	klog.Infof("缓存构建完成")
 	return o.pull(cache)
 }
 
@@ -272,7 +273,7 @@ func (o *PullOptions) buildCache(repo string) error {
 		return err
 	}
 	if result.Code == 200 {
-		klog.Infof("镜像(%s)缓存构建中，请稍等", repo)
+		klog.Infof("镜像缓存构建中，请稍等")
 		return nil
 	}
 	return fmt.Errorf("%s", result.Message)
