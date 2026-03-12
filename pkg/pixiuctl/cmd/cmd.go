@@ -28,6 +28,7 @@ Find more information at: https://hub.pixiuio.com`,
 
 	// Add subcommands
 	cmd.AddCommand(NewPullCommand())
+	cmd.AddCommand(NewConfigCommand())
 
 	// Global config file flag for all subcommands.
 	homeDir, err1 := os.UserHomeDir()
