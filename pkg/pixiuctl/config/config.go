@@ -19,7 +19,7 @@ type AuthConfig struct {
 }
 
 type DefaultConfig struct {
-	URL     string `yaml:"url"`
+	URL     string `yaml:"url,omitempty"`
 	Timeout int    `yaml:"timeout"` // 单位是分钟
 }
 

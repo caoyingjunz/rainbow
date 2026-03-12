@@ -73,7 +73,6 @@ func (o *ConfigInitOptions) Run(cmd *cobra.Command) error {
 
 	cfg := &pixiucfg.Config{
 		Default: &pixiucfg.DefaultConfig{
-			URL:     baseURL,
 			Timeout: o.timeout,
 		},
 		Auth: &pixiucfg.AuthConfig{
@@ -86,7 +85,6 @@ func (o *ConfigInitOptions) Run(cmd *cobra.Command) error {
 		return err
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "pixiuctl config 已生成到: %s\n", configFile)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "pixiuctl config saved to: %s\n", configFile)
 	return nil
 }
-
