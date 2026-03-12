@@ -17,10 +17,10 @@ func NewDefaultPixiuCtlCommand() *cobra.Command {
 func NewPixiuCtlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pixiuctl",
-		Short: "pixiuctl controls the PixiuHub cluster manager",
-		Long: `pixiuctl controls the PixiuHub cluster manager.
+		Short: "pixiuctl controls the PixiuHub cluster",
+		Long: `pixiuctl controls the PixiuHub cluster.
 
-Find more information at: https://github.com/caoyingjunz/rainbow`,
+Find more information at: https://hub.pixiuio.com`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},

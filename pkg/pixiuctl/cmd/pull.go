@@ -43,8 +43,9 @@ type UserResult struct {
 }
 
 type PullOptions struct {
-	baseURL string
-	cfg     *config.Config
+	baseURL     string
+	waitTimeout time.Duration
+	cfg         *config.Config
 
 	accessKey string
 	signature string
@@ -59,13 +60,14 @@ type PullOptions struct {
 
 func NewPullCommand() *cobra.Command {
 	o := &PullOptions{
-		baseURL: baseURL,
+		baseURL:     baseURL,
+		waitTimeout: 10 * time.Minute,
 	}
 
 	cmd := &cobra.Command{
 		Use:   "pull [image]",
-		Short: "Pull images from remote registry",
-		Long:  `Pull images from remote registry to local storage.`,
+		Short: "Pull and cache images from PixiuHub(https://hub.pixiuio.com)",
+		Long:  `Pull and cache images from PixiuHub(https://hub.pixiuio.com) to local storage.`,
 		//Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(cmd, args))
@@ -90,6 +92,13 @@ func (o *PullOptions) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	o.cfg = cfg
+	if o.cfg.Default != nil && len(o.cfg.Default.URL) != 0 {
+		o.baseURL = o.cfg.Default.URL
+	}
+	if o.cfg.Default != nil && o.cfg.Default.Timeout > 0 {
+		o.waitTimeout = time.Duration(o.cfg.Default.Timeout) * time.Minute
+	}
+
 	o.Repos = args
 
 	return nil
@@ -245,7 +254,7 @@ func (o *PullOptions) cacheAndPull(repo string) error {
 		return err
 	}
 
-	klog.Infof("缓存构建完成")
+	klog.Infof("image cache completed")
 	return o.pull(cache)
 }
 
@@ -273,7 +282,7 @@ func (o *PullOptions) buildCache(repo string) error {
 		return err
 	}
 	if result.Code == 200 {
-		klog.Infof("镜像缓存构建中，请稍等")
+		klog.Infof("building cache, please wait...")
 		return nil
 	}
 	return fmt.Errorf("%s", result.Message)
@@ -281,7 +290,7 @@ func (o *PullOptions) buildCache(repo string) error {
 
 func (o *PullOptions) waitForCached(repo string) (*model.Tag, error) {
 	// 创建一个计时器用于超时控制
-	timeoutTimer := time.NewTimer(10 * time.Minute)
+	timeoutTimer := time.NewTimer(o.waitTimeout)
 	defer timeoutTimer.Stop()
 
 	// 创建一个 ticker 用于定期轮询

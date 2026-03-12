@@ -9,12 +9,18 @@ import (
 )
 
 type Config struct {
-	Auth *AuthConfig `yaml:"auth"`
+	Default *DefaultConfig `yaml:"default"`
+	Auth    *AuthConfig    `yaml:"auth"`
 }
 
 type AuthConfig struct {
 	AccessKey string `yaml:"access_key"`
 	SecretKey string `yaml:"secret_key"`
+}
+
+type DefaultConfig struct {
+	URL     string `yaml:"url"`
+	Timeout int    `yaml:"timeout"` // 单位是分钟
 }
 
 func LoadConfig(path string) (*Config, error) {
