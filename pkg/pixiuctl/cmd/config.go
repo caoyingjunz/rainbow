@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 
 	pixiucfg "github.com/caoyingjunz/rainbow/pkg/pixiuctl/config"
 )
@@ -23,6 +24,7 @@ func NewConfigCommand() *cobra.Command {
 	}
 
 	cfgCmd.AddCommand(newConfigInitCommand())
+	cfgCmd.AddCommand(newConfigShowCommand())
 
 	return cfgCmd
 }
@@ -44,6 +46,47 @@ func newConfigInitCommand() *cobra.Command {
 
 	return cmd
 }
+
+// newConfigShowCommand shows current pixiuctl configuration.
+func newConfigShowCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show",
+		Short: "Show current pixiuctl configuration",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// 使用 root 命令上的 --configFile 作为配置文件路径（默认为 ~/.pixiu/config）
+			configFile, err := cmd.Root().PersistentFlags().GetString("configFile")
+			if err != nil {
+				return err
+			}
+			if configFile == "" {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return err
+				}
+				configFile = filepath.Join(homeDir, ".pixiu", "config")
+			}
+
+			cfg, err := pixiucfg.LoadConfig(configFile)
+			if err != nil {
+				return err
+			}
+
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "config file: %s\n\n", configFile)
+
+			data, err := yaml.Marshal(cfg)
+			if err != nil {
+				return err
+			}
+
+			_, err = out.Write(data)
+			return err
+		},
+	}
+
+	return cmd
+}
+
 
 func (o *ConfigInitOptions) Run(cmd *cobra.Command) error {
 	if len(o.accessKey) == 0 {
