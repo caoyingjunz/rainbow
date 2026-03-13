@@ -87,7 +87,6 @@ func newConfigShowCommand() *cobra.Command {
 	return cmd
 }
 
-
 func (o *ConfigInitOptions) Run(cmd *cobra.Command) error {
 	if len(o.accessKey) == 0 {
 		return fmt.Errorf("access-key 必须指定")
