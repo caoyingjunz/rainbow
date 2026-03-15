@@ -19,12 +19,6 @@ type RegistryListResult struct {
 	Message string           `json:"message,omitempty"`
 }
 
-type RegistryResult struct {
-	Code    int            `json:"code"`
-	Result  model.Registry `json:"result,omitempty"`
-	Message string         `json:"message,omitempty"`
-}
-
 type RegisterOptions struct {
 	baseURL string
 	cfg     *config.Config
