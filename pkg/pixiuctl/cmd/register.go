@@ -20,15 +20,15 @@ const (
 )
 
 type RegistryListResult struct {
-	Code    int             `json:"code"`
+	Code    int              `json:"code"`
 	Result  []model.Registry `json:"result,omitempty"`
-	Message string          `json:"message,omitempty"`
+	Message string           `json:"message,omitempty"`
 }
 
 type RegistryResult struct {
-	Code    int           `json:"code"`
+	Code    int            `json:"code"`
 	Result  model.Registry `json:"result,omitempty"`
-	Message string        `json:"message,omitempty"`
+	Message string         `json:"message,omitempty"`
 }
 
 type RegisterOptions struct {
