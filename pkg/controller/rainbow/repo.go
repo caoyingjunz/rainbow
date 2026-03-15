@@ -2,6 +2,7 @@ package rainbow
 
 import (
 	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/caoyingjunz/rainbow/pkg/types"
