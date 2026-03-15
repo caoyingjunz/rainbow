@@ -53,6 +53,7 @@ type PullOptions struct {
 
 	// flag
 	Platform string
+	Rewrite  bool
 
 	Repos []string
 
@@ -78,6 +79,7 @@ func NewPullCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.Platform, "platform", "linux/amd64", "Platform for the image (e.g. linux/amd64, linux/arm64)")
+	cmd.Flags().BoolVar(&o.Rewrite, "rewrite", false, "Rewrite mode")
 
 	return cmd
 }
@@ -176,6 +178,11 @@ func (o *PullOptions) preRun() error {
 
 // SearchRepo 搜索镜像是否存在缓存，如果存在，则直接 pull，如果不存在则先构成缓存，然后再pull，最后进行tag
 func (o *PullOptions) pullAndCacheOne(repo string) error {
+	if o.Rewrite {
+		klog.Infof("rewirting cache")
+		return o.cacheAndPull(repo)
+	}
+
 	// 1. 执行 pull
 	existsRepo, err := o.SearchRepo(repo)
 	if err != nil {
@@ -187,7 +194,8 @@ func (o *PullOptions) pullAndCacheOne(repo string) error {
 
 	// 2. 首次状态异常，则重新触发构建
 	if existsRepo.Status == types.SyncImageError {
-		return o.reCacheAndPull(repo)
+		klog.Infof("going rebuild cache")
+		return o.cacheAndPull(repo)
 	}
 	if existsRepo.Status == types.SyncImageComplete {
 		return o.pull(existsRepo)
@@ -273,10 +281,6 @@ func (o *PullOptions) waitAndPull(repo string) error {
 
 	klog.Infof("image cache completed")
 	return o.pull(cache)
-}
-
-func (o *PullOptions) reCacheAndPull(repo string) error {
-	return o.cacheAndPull(repo)
 }
 
 func (o *PullOptions) buildCache(repo string) error {
