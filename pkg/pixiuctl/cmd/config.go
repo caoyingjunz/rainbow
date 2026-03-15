@@ -35,6 +35,14 @@ func newConfigInitCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize pixiuctl configuration file",
+		Example: `  # 使用默认配置文件路径（~/.pixiu/config）初始化
+  pixiuctl config init --access-key <your-access-key> --secret-key <your-secret-key>
+
+  # 指定超时时间（分钟）
+  pixiuctl config init --access-key <your-access-key> --secret-key <your-secret-key> --timeout 15
+
+  # 指定配置文件路径
+  pixiuctl --configFile /path/to/config config init --access-key <your-access-key> --secret-key <your-secret-key>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.Run(cmd)
 		},
