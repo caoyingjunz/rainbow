@@ -46,7 +46,7 @@ func NewRegisterCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "register",
-		Short: "Manage registries",
+		Short: "Manage PixiuHub registries",
 		Long:  `List and show registry information from PixiuHub.`,
 	}
 
@@ -109,7 +109,7 @@ func (o *RegisterOptions) ListRegistries() ([]model.Registry, error) {
 
 // GetRegistry 调用 /api/v2/registries/:id 获取单个 registry（若服务端提供该接口则使用，否则可先仅实现 list）
 func (o *RegisterOptions) GetRegistry(id int64) (*model.Registry, error) {
-	url := fmt.Sprintf("%s/rainbow/registries/%d", o.baseURL, id)
+	url := fmt.Sprintf("%s/api/v2/registries/%d", o.baseURL, id)
 
 	var result RegistryResult
 	httpClient := util.HttpClientV2{URL: url}
@@ -133,7 +133,7 @@ func NewRegisterListCommand(o *RegisterOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List registries",
-		Long:  `List registries from PixiuHub via /api/v2/registries.`,
+		Long:  `List registries from PixiuHub.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(cmd, args))
 			cmdutil.CheckErr(o.initAuth())
