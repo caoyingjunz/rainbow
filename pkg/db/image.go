@@ -196,7 +196,7 @@ func (a *image) SearchTags(ctx context.Context, name, arch, path, userID string)
 		Where("tags.name = ?", name).
 		Where("tags.architecture = ?", arch).
 		Find(&tags).Error; err != nil {
-		klog.Warningf("执行失败，会从官方里继续搜索")
+		klog.Warningf("搜索为空，继续搜索官方镜像")
 	}
 	// 如果本地存在，及时是状态异常，已返回
 	if len(tags) != 0 {

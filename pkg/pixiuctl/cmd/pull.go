@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -175,10 +176,7 @@ func (o *PullOptions) preRun() error {
 
 // SearchRepo 搜索镜像是否存在缓存，如果存在，则直接 pull，如果不存在则先构成缓存，然后再pull，最后进行tag
 func (o *PullOptions) pullAndCacheOne(repo string) error {
-	// TODO
-	// 1. 检查是否本地已存在镜像
-
-	// 2. 执行 pull
+	// 1. 执行 pull
 	existsRepo, err := o.SearchRepo(repo)
 	if err != nil {
 		if ErrorIsNotFound(err) {
@@ -187,7 +185,15 @@ func (o *PullOptions) pullAndCacheOne(repo string) error {
 		return err
 	}
 
-	return o.pull(existsRepo)
+	// 2. 首次状态异常，则重新触发构建
+	if existsRepo.Status == types.SyncImageError {
+		return o.reCacheAndPull(repo)
+	}
+	if existsRepo.Status == types.SyncImageComplete {
+		return o.pull(existsRepo)
+	}
+
+	return o.waitAndPull(repo)
 }
 
 func (o *PullOptions) SearchRepo(repo string) (*model.Tag, error) {
@@ -258,6 +264,21 @@ func (o *PullOptions) cacheAndPull(repo string) error {
 	return o.pull(cache)
 }
 
+func (o *PullOptions) waitAndPull(repo string) error {
+	klog.Infof("waiting for cache completed")
+	cache, err := o.waitForCached(repo)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("image cache completed")
+	return o.pull(cache)
+}
+
+func (o *PullOptions) reCacheAndPull(repo string) error {
+	return o.cacheAndPull(repo)
+}
+
 func (o *PullOptions) buildCache(repo string) error {
 	data, err1 := json.Marshal(map[string]interface{}{
 		"name":         "PixiuHub-" + repo + "-加速",
@@ -314,7 +335,12 @@ func (o *PullOptions) waitForCached(repo string) (*model.Tag, error) {
 				return cacheTag, nil
 			}
 			if cacheTag.Status == types.SyncImageError {
-				return nil, fmt.Errorf("缓存构建失败，更多信息参考 https://hub.pixiuio.com/")
+				msg := cacheTag.Message
+				parts := strings.Split(msg, "msg=")
+				if len(parts) == 2 {
+					msg = parts[1]
+				}
+				return nil, fmt.Errorf("%s\n更多信息参考 https://hub.pixiuio.com/", msg)
 			}
 		}
 	}
