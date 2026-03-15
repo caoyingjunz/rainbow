@@ -66,6 +66,17 @@ func NewPullCommand() *cobra.Command {
 		Use:   "pull [image]",
 		Short: "Pull and cache images from PixiuHub(https://hub.pixiuio.com)",
 		Long:  `Pull and cache images from PixiuHub(https://hub.pixiuio.com) to local storage.`,
+		Example: `  # 拉取单个镜像
+  pixiuctl pull nginx:latest
+
+  # 拉取多个镜像
+  pixiuctl pull nginx:latest redis:alpine
+
+  # 指定架构拉取
+  pixiuctl pull nginx --platform linux/arm64
+
+  # 强制重建缓存后拉取
+  pixiuctl pull nginx --rewrite`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
 				_ = cmd.Help()
