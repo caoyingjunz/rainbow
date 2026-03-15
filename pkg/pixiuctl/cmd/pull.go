@@ -70,8 +70,11 @@ func NewPullCommand() *cobra.Command {
 		Use:   "pull [image]",
 		Short: "Pull and cache images from PixiuHub(https://hub.pixiuio.com)",
 		Long:  `Pull and cache images from PixiuHub(https://hub.pixiuio.com) to local storage.`,
-		//Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 0 {
+				cmd.Help()
+				return
+			}
 			cmdutil.CheckErr(o.Complete(cmd, args))
 			cmdutil.CheckErr(o.Validate(cmd, args))
 			cmdutil.CheckErr(o.Run())
@@ -79,7 +82,7 @@ func NewPullCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.Platform, "platform", "linux/amd64", "Platform for the image (e.g. linux/amd64, linux/arm64)")
-	cmd.Flags().BoolVar(&o.Rewrite, "rewrite", false, "Rewrite mode")
+	cmd.Flags().BoolVar(&o.Rewrite, "rewrite", false, "Rewrite the repo even if it exists")
 
 	return cmd
 }
