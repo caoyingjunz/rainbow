@@ -22,10 +22,6 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/util/signatureutil"
 )
 
-const (
-	baseURL = "http://peng:8090"
-)
-
 type RepoResult struct {
 	Code    int       `json:"code"`
 	Result  model.Tag `json:"result,omitempty"`
@@ -72,7 +68,7 @@ func NewPullCommand() *cobra.Command {
 		Long:  `Pull and cache images from PixiuHub(https://hub.pixiuio.com) to local storage.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
-				cmd.Help()
+				_ = cmd.Help()
 				return
 			}
 			cmdutil.CheckErr(o.Complete(cmd, args))
