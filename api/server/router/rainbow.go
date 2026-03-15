@@ -35,6 +35,11 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 			userRouteV2.GET("", cr.getUserInfoByAccessKey)
 		}
 
+		registryRouteV2 := routeV2.Group("/registries")
+		{
+			registryRouteV2.GET("", cr.listRegistries)
+		}
+
 		// 任务
 		taskV2Route := routeV2.Group("/tasks")
 		{
