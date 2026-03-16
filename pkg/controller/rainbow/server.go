@@ -82,6 +82,8 @@ type ServerInterface interface {
 	GetImage(ctx context.Context, imageId int64) (interface{}, error)
 	ListImages(ctx context.Context, listOption types.ListOptions) (interface{}, error)
 
+	ListImagesForClient(ctx context.Context, listOption types.ListOptions) (interface{}, error)
+
 	ListImageTags(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error)
 
 	ListImagesByIds(ctx context.Context, ids []int64) (interface{}, error)

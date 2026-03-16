@@ -50,6 +50,7 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		imageRoute := routeV2.Group("/images")
 		{
 			imageRoute.GET("/:Id", cr.getImage)
+			imageRoute.GET("", cr.listImagesForClient)
 		}
 
 		searchRoute := routeV2.Group("/search")

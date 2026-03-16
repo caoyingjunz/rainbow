@@ -28,11 +28,6 @@ type RepoResult struct {
 	Message string    `json:"message,omitempty"`
 }
 
-type TaskResult struct {
-	Code    int    `json:"code"`
-	Message string `json:"message,omitempty"`
-}
-
 type UserResult struct {
 	Code    int        `json:"code"`
 	Result  model.User `json:"result"`
@@ -285,7 +280,7 @@ func (o *PullOptions) buildCache(repo string) error {
 		return err1
 	}
 
-	var result TaskResult
+	var result CreateResult
 	url := fmt.Sprintf("%s/api/v2/tasks", o.baseURL)
 	httpClient := util.HttpClientV2{URL: url}
 	if err := httpClient.Method(http.MethodPost).

@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
@@ -34,17 +32,4 @@ func GetUserInfoByAccessKey(baseURL, accessKey, signature string) (*model.User, 
 	}
 
 	return nil, fmt.Errorf("%s", result.Message)
-}
-
-func PrintTable(registries []model.Registry) {
-	// 使用 tabwriter 对齐输出
-	const padding = 2
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
-	defer w.Flush()
-
-	fmt.Fprintln(w, "NAME\tID\tCREATED")
-	for _, r := range registries {
-		created := r.GmtCreate.Format("2006-01-02 15:04:05")
-		fmt.Fprintf(w, "%s\t%d\t%s\n", r.Name, r.Id, created)
-	}
 }

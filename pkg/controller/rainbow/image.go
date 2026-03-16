@@ -377,6 +377,36 @@ func (s *ServerController) ListImages(ctx context.Context, listOption types.List
 	return pageResult, nil
 }
 
+func (s *ServerController) ListImagesForClient(ctx context.Context, listOption types.ListOptions) (interface{}, error) {
+	// 初始化分页属性
+	listOption.SetDefaultPageOption()
+	if listOption.ExtendLimit > 100 {
+		listOption.Limit = listOption.ExtendLimit
+	}
+
+	opts := []db.Options{ // 先写条件，再写排序，再偏移，再设置每页数量
+		db.WithUser(listOption.UserId),
+		db.WithNameLike(listOption.NameSelector),
+		db.WithNamespace(listOption.Namespace),
+	}
+
+	offset := (listOption.Page - 1) * listOption.Limit
+	opts = append(opts, []db.Options{
+		db.WithCreateOrderByDesc(),
+		db.WithOffset(offset),
+		db.WithLimit(listOption.Limit),
+	}...)
+
+	objects, err := s.factory.Image().ListWithTagsCount(ctx, opts...) // 优化成不带版本列表以加速显示
+	if err != nil {
+		return nil, err
+	}
+	if listOption.ExtendLimit == 0 {
+		go s.AfterListImages(ctx, objects, 5*time.Second)
+	}
+	return objects, nil
+}
+
 func (s *ServerController) AfterListImages(ctx context.Context, objects []model.Image, interval time.Duration) {
 	klog.Infof("开启延迟更新镜像列表属性，镜像数 %d", len(objects))
 	for _, obj := range objects {
