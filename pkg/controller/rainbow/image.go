@@ -175,9 +175,29 @@ func (s *ServerController) CalculateImageSize(ctx context.Context, imageId int64
 	})
 }
 
+func (s *ServerController) afterDeleteImage(ctx context.Context, delImage *model.Image) {
+	klog.Infof("开始延迟删除远端仓库镜像(%s)", delImage.Name)
+	if !s.isDefaultRepo(delImage.RegisterId) {
+		return
+	}
+
+	name := delImage.Name
+	if strings.Contains(name, "/") {
+		name = strings.ReplaceAll(name, "/", "$")
+	}
+	_, err := SwrClient.DeleteRepo(&swrmodel.DeleteRepoRequest{
+		Namespace:  HuaweiNamespace,
+		Repository: name,
+	})
+	if err != nil {
+		klog.Warningf("删除远端镜像失败 %v", err)
+	}
+
+	klog.Infof("完成延迟删除远端仓库镜像(%s)", delImage.Name)
+}
+
 // DeleteImage 删除镜像和对应的tags
 func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error {
-	// 获取镜像信息，检查是否被锁定
 	image, err := s.factory.Image().Get(ctx, imageId, false)
 	if err != nil {
 		klog.Errorf("获取镜像(%d)失败: %v", imageId, err)
@@ -187,34 +207,18 @@ func (s *ServerController) DeleteImage(ctx context.Context, imageId int64) error
 		return fmt.Errorf("镜像被锁定，不允许删除")
 	}
 
-	if err := s.factory.Image().Delete(ctx, imageId); err != nil {
+	if err = s.factory.Image().Delete(ctx, imageId); err != nil {
 		return fmt.Errorf("删除镜像 %d 失败 %v", imageId, err)
 	}
-
-	delImage, err := s.factory.Image().Get(ctx, imageId, true)
-	if err != nil {
-		klog.Errorf("获取已删除镜像 %d 失败: %v", imageId, err)
-		return nil
+	// 软删除关联的tags
+	if err = s.factory.Image().DeleteTagBy(ctx, db.WithImage(imageId)); err != nil {
+		klog.Errorf("删除镜像(%d)关联版本失败，非主流程，忽略", imageId)
 	}
 
-	if !s.isDefaultRepo(delImage.RegisterId) {
-		return nil
-	}
-
-	name := delImage.Name
-	if strings.Contains(name, "/") {
-		name = strings.ReplaceAll(name, "/", "$")
-	}
-	_, err = SwrClient.DeleteRepo(&swrmodel.DeleteRepoRequest{
-		Namespace:  HuaweiNamespace,
-		Repository: name,
-	})
-	if err != nil {
-		klog.Warningf("删除远端镜像失败 %v", err)
-	}
-
+	go s.afterDeleteImage(ctx, image)
 	return nil
 }
+
 func (s *ServerController) ListImageTags(ctx context.Context, imageId int64, listOption types.ListOptions) (interface{}, error) {
 	listOption.SetDefaultPageOption()
 
@@ -506,10 +510,10 @@ func (s *ServerController) AfterGetImage(ctx context.Context, object *model.Imag
 		return
 	}
 
-	klog.Infof("镜像(%s/%s)状态将被同步", object.Namespace, object.Name)
+	klog.Infof("镜像(%s)状态将被同步", object.Name)
 	// 如果 30 分钟内已更新，则直接返回
 	if !s.isDurationExceeded(object.LastSyncTime, 30*time.Minute) {
-		klog.V(0).Infof("镜像(%s/%s) 30分钟内已同步或者正在同步，忽略", object.Namespace, object.Name)
+		klog.V(0).Infof("镜像(%s) 30分钟内已同步或者正在同步，忽略", object.Name)
 		return
 	}
 	_ = s.factory.Image().UpdateWithoutLock(ctx, object.Id, map[string]interface{}{"last_sync_time": time.Now()})
@@ -654,6 +658,26 @@ func (s *ServerController) makeRemoteImageName(imageName string) string {
 	return imageName
 }
 
+func (s *ServerController) afterDeleteImageTag(ctx context.Context, image *model.Image, delTag *model.Tag) {
+	klog.Infof("开始延迟清理远程镜像版本%s:%s", image.Name, delTag.Name)
+	if !s.isDefaultRepo(image.RegisterId) {
+		return
+	}
+
+	request := &swrmodel.DeleteRepoTagRequest{
+		Namespace:  HuaweiNamespace,
+		Repository: s.makeRemoteImageName(image.Name),
+		Tag:        delTag.Name,
+	}
+	_, err := SwrClient.DeleteRepoTag(request)
+	if err != nil {
+		klog.Errorf("删除远程镜像 %s tag(%s) 失败 %v", image.Name, delTag.Name, err)
+		return
+	}
+
+	klog.Infof("完成延迟清理远程镜像版本%s:%s", image.Name, delTag.Name)
+}
+
 func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, tagId int64) error {
 	err := s.factory.Image().DeleteTag(ctx, tagId)
 	if err != nil {
@@ -671,20 +695,7 @@ func (s *ServerController) DeleteImageTag(ctx context.Context, imageId int64, ta
 		return nil
 	}
 
-	if !s.isDefaultRepo(image.RegisterId) {
-		return nil
-	}
-
-	request := &swrmodel.DeleteRepoTagRequest{
-		Namespace:  HuaweiNamespace,
-		Repository: s.makeRemoteImageName(image.Name),
-		Tag:        delTag.Name,
-	}
-	klog.V(1).Infof("即将删除远端镜像 %v", request)
-	_, err = SwrClient.DeleteRepoTag(request)
-	if err != nil {
-		klog.Errorf("删除远程镜像 %s tag(%s) 失败 %v", image.Name, delTag.Name, err)
-	}
+	go s.afterDeleteImageTag(ctx, image, delTag)
 
 	return s.CalculateImageSize(ctx, imageId)
 }

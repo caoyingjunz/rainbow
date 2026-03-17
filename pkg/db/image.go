@@ -48,6 +48,7 @@ type ImageInterface interface {
 
 	GetTagWithArch(ctx context.Context, imageId int64, name string, arch string, del bool) (*model.Tag, error)
 	GetTagBy(ctx context.Context, opts ...Options) (*model.Tag, error)
+	DeleteTagBy(ctx context.Context, opts ...Options) error
 
 	SearchTags(ctx context.Context, name, arch, path, userID string) ([]model.Tag, error)
 
@@ -119,8 +120,7 @@ func (a *image) CreateInBatch(ctx context.Context, objects []model.Image) error 
 }
 
 func (a *image) Delete(ctx context.Context, imageId int64) error {
-	var audit model.Image
-	if err := a.db.Clauses(clause.Returning{}).Select("Tags").Where("id = ?", imageId).Delete(&audit).Error; err != nil {
+	if err := a.db.Where("id = ?", imageId).Delete(&model.Image{}).Error; err != nil {
 		return err
 	}
 
@@ -377,6 +377,19 @@ func (a *image) CreateTagsInBatch(ctx context.Context, objects []model.Tag) erro
 func (a *image) DeleteTag(ctx context.Context, tagId int64) error {
 	var audit model.Tag
 	if err := a.db.Clauses(clause.Returning{}).Where("id = ?", tagId).Delete(&audit).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *image) DeleteTagBy(ctx context.Context, opts ...Options) error {
+	var audit model.Tag
+	tx := a.db.WithContext(ctx)
+	for _, opt := range opts {
+		tx = opt(tx)
+	}
+
+	if err := tx.WithContext(ctx).Delete(&audit).Error; err != nil {
 		return err
 	}
 	return nil

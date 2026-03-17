@@ -67,6 +67,12 @@ func (s *ServerController) CreateOrUpdateUser(ctx context.Context, user *types.C
 		if old.PaymentType != user.PaymentType {
 			updates["payment_type"] = user.PaymentType
 		}
+		if old.Role != user.Role {
+			updates["role"] = user.Role
+		}
+		if old.Email != user.Email {
+			updates["email"] = user.Email
+		}
 
 		if user.PaymentType == PackagePaymentType {
 			et, err := parseTime(*user.ExpireTime)
@@ -116,6 +122,8 @@ func (s *ServerController) CreateUser(ctx context.Context, req *types.CreateUser
 		UserId:      req.UserId,
 		UserType:    req.UserType,
 		PaymentType: req.PaymentType,
+		Role:        req.Role,
+		Email:       req.Email,
 	}
 
 	if req.Sync {

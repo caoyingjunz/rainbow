@@ -701,7 +701,6 @@ func (cr *rainbowRouter) updateImage(c *gin.Context) {
 		httputils.SetFailed(c, resp, err)
 		return
 	}
-
 	req.Id = idMeta.ID
 	if err = cr.c.Server().UpdateImage(c, &req); err != nil {
 		httputils.SetFailed(c, resp, err)

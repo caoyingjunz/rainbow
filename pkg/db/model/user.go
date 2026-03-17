@@ -15,12 +15,14 @@ type User struct {
 
 	UserId string `gorm:"type:varchar(255);uniqueIndex:idx_user" json:"user_id"` // 用户ID
 	Name   string `json:"name"`                                                  // 用户名
+	Role   int    `json:"role"`                                                  // 用户角色，0 普通用户， 1 管理员
 
 	UserType    int       `json:"user_type"`                                                                              // 0 个人版，1 专有版
 	PaymentType int       `json:"payment_type"`                                                                           // 付费模式 0 按量付费， 1 包年包月
 	ExpireTime  time.Time `gorm:"column:expire_time;type:datetime;default:current_timestamp;not null" json:"expire_time"` // 包年包月时到期时间
 	RemainCount int       `json:"remain_count"`                                                                           // 按量付费时剩余次数
 	EnableChart bool      `json:"enable_chart"`                                                                           // 启用 chart 仓库
+	Email       string    `json:"email"`                                                                                  // 用户邮箱
 }
 
 func (t *User) TableName() string {

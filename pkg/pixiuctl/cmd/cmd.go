@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	baseURL = "http://peng:8090"
+	baseURL = "http://14.103.206.75:8090"
 )
 
 func NewDefaultPixiuCtlCommand() *cobra.Command {
