@@ -160,9 +160,18 @@ func (s *ServerController) ListUsers(ctx context.Context, listOption types.ListO
 			Limit: listOption.Limit,
 		},
 	}
+
 	opts := []db.Options{
-		db.WithUser(listOption.UserId),
 		db.WithNameLike(listOption.NameSelector),
+	}
+	if listOption.Role == 0 || listOption.Role == 1 {
+		opts = append(opts, db.WithRole(listOption.Role))
+	}
+	if listOption.UserType == 0 || listOption.UserType == 1 {
+		opts = append(opts, db.WithUserType(listOption.UserType))
+	}
+	if listOption.PaymentType == 0 || listOption.PaymentType == 1 {
+		opts = append(opts, db.WithPaymentType(listOption.PaymentType))
 	}
 
 	var err error

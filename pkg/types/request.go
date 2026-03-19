@@ -331,6 +331,10 @@ type (
 		ExtendLimit  int    `form:"extend_limit"`
 		Arch         string `form:"arch"`
 		AccessKey    string `form:"access_key"`
+		Role         int    `form:"role"`
+		SortBy       string `form:"sort_by"`
+		UserType     int    `form:"user_type"`
+		PaymentType  int    `form:"payment_type"` // 付费模式 0 按量付费， 1 包年包月
 	}
 
 	RemoteSearchRequest struct {

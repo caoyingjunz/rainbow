@@ -335,12 +335,15 @@ func WithStatus(status string) Options {
 	}
 }
 
-func WithType(Type string) Options {
+func WithUserType(userType int) Options {
 	return func(tx *gorm.DB) *gorm.DB {
-		if len(Type) == 0 {
-			return tx
-		}
-		return tx.Where("Type = ?", Type)
+		return tx.Where("user_type = ?", userType)
+	}
+}
+
+func WithPaymentType(payType int) Options {
+	return func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("payment_type = ?", payType)
 	}
 }
 
