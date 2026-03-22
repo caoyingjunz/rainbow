@@ -246,6 +246,44 @@ func (s *ServerController) doSearch(ctx context.Context, clientId string, key st
 	return sr.Result, nil
 }
 
+// CallV2 使用 redis 作为中间件
+func (s *ServerController) CallV2(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
+	if err := s.sendMessageV2(ctx, clientId, key, data); err != nil {
+		return nil, err
+	}
+
+	val, err := s.GetResult(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	var sr types.CallResult
+	if err = json.Unmarshal([]byte(val), &sr); err != nil {
+		klog.Errorf("反序列化（%v）失败 %v", val, err)
+		return nil, err
+	}
+	if sr.StatusCode != 0 {
+		klog.Errorf("远程调用失败 %v", err)
+		return nil, fmt.Errorf(sr.ErrMessage)
+	}
+
+	return sr.Result, nil
+}
+
+func (s *ServerController) sendMessageV2(ctx context.Context, clientId string, key string, data []byte) error {
+	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Set(ctx, key, data, 30*time.Second)
+		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", clientId), "set")
+		return nil
+	}); err != nil {
+		klog.Errorf("sendMessageV2 临时存储失败 %v", err)
+		return err
+	}
+
+	klog.V(0).Infof("set req to redis success, clientId=%s, key=%s", clientId, key)
+	return nil
+}
+
+// Call 使用 rocketmq 作为中间件
 func (s *ServerController) Call(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
 	if err := s.sendMessage(ctx, clientId, data); err != nil {
 		return nil, err
