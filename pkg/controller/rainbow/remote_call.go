@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"k8s.io/klog/v2"
 
 	pb "github.com/caoyingjunz/rainbow/api/rpc/proto"
+	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 )
 
@@ -105,7 +107,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Cal
 		return nil, err
 	}
 
-	val, err := s.Call(ctx, req.ClientId, key, data)
+	val, err := s.CallV2(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +138,7 @@ func (s *ServerController) SearchRepositoryTags(ctx context.Context, req types.C
 		return nil, err
 	}
 
-	val, err := s.Call(ctx, req.ClientId, key, data)
+	val, err := s.CallV2(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +166,7 @@ func (s *ServerController) GetRepositoryTagInfo(ctx context.Context, req types.C
 		return nil, err
 	}
 
-	val, err := s.Call(ctx, req.ClientId, key, data)
+	val, err := s.CallV2(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +193,7 @@ func (s *ServerController) GetRepository(ctx context.Context, req types.CallSear
 		return nil, err
 	}
 
-	val, err := s.Call(ctx, req.ClientId, key, data)
+	val, err := s.CallV2(ctx, req.ClientId, key, data)
 	if err != nil {
 		return nil, err
 	}
@@ -246,8 +248,31 @@ func (s *ServerController) doSearch(ctx context.Context, clientId string, key st
 	return sr.Result, nil
 }
 
+func (s *ServerController) getActiveNodeName(ctx context.Context) (string, error) {
+	agents, err := s.factory.Agent().List(ctx, db.WithStatus("在线"))
+	if err != nil {
+		return "", err
+	}
+	if len(agents) == 0 {
+		return "", fmt.Errorf("no agent found")
+	}
+
+	index := rand.Intn(len(agents))
+	return agents[index].Name, nil
+}
+
 // CallV2 使用 redis 作为中间件
 func (s *ServerController) CallV2(ctx context.Context, clientId string, key string, data []byte) ([]byte, error) {
+	// 填充 clientId
+	if len(clientId) == 0 {
+		var err error
+		clientId, err = s.getActiveNodeName(ctx)
+		if err != nil {
+			return nil, err
+		}
+		klog.V(0).Infof("agent(%s) selected", clientId)
+	}
+
 	if err := s.sendMessageV2(ctx, clientId, key, data); err != nil {
 		return nil, err
 	}
@@ -270,16 +295,18 @@ func (s *ServerController) CallV2(ctx context.Context, clientId string, key stri
 }
 
 func (s *ServerController) sendMessageV2(ctx context.Context, clientId string, key string, data []byte) error {
+	reqKey := fmt.Sprintf("req-%s", key)
+
 	if _, err := s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.Set(ctx, key, data, 30*time.Second)
-		pipe.Publish(ctx, fmt.Sprintf("__keyspace@0__:%s", clientId), "set")
+		pipe.Set(ctx, reqKey, data, 30*time.Second)
+		pipe.Publish(ctx, fmt.Sprintf("__nodekey@0__:%s", clientId), reqKey)
 		return nil
 	}); err != nil {
 		klog.Errorf("sendMessageV2 临时存储失败 %v", err)
 		return err
 	}
 
-	klog.V(0).Infof("set req to redis success, clientId=%s, key=%s", clientId, key)
+	klog.V(0).Infof("save req cache to redis success, clientId=%s, key=%s", clientId, reqKey)
 	return nil
 }
 

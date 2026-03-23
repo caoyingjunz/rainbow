@@ -3,11 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
-
-	"github.com/apache/rocketmq-client-go/v2"
-	"github.com/apache/rocketmq-client-go/v2/consumer"
-	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"k8s.io/klog/v2"
 
@@ -37,34 +32,34 @@ func main() {
 		}
 	}
 
-	rocketmqCfg := opts.ComponentConfig.Rocketmq
-	c, err := rocketmq.NewPushConsumer(
-		consumer.WithNameServer(rocketmqCfg.NameServers), // NameServer地址
-		consumer.WithCredentials(primitive.Credentials{AccessKey: rocketmqCfg.Credential.AccessKey, SecretKey: rocketmqCfg.Credential.SecretKey}),
-		consumer.WithGroupName(rocketmqCfg.GroupName),
-		consumer.WithConsumeFromWhere(consumer.ConsumeFromFirstOffset),
-	)
-	if err != nil {
-		klog.Fatalf("new rocketmq consumer error: %s", err.Error())
-	}
-
-	err = c.Subscribe(rocketmqCfg.Topic, consumer.MessageSelector{
-		Type:       consumer.TAG,
-		Expression: fmt.Sprintf("%s || all", opts.ComponentConfig.Agent.Name), // 只订阅指定自身或者未指定的agent
-	},
-		opts.Controller.Agent().Subscribe,
-	)
-	if err != nil {
-		klog.Fatalf("订阅主题失败: %v", err)
-	}
-
-	err = c.Start()
-	if err != nil {
-		klog.Fatalf("启动消费者失败: %v", err)
-	}
-	defer func() {
-		_ = c.Shutdown()
-	}()
+	//rocketmqCfg := opts.ComponentConfig.Rocketmq
+	//c, err := rocketmq.NewPushConsumer(
+	//	consumer.WithNameServer(rocketmqCfg.NameServers), // NameServer地址
+	//	consumer.WithCredentials(primitive.Credentials{AccessKey: rocketmqCfg.Credential.AccessKey, SecretKey: rocketmqCfg.Credential.SecretKey}),
+	//	consumer.WithGroupName(rocketmqCfg.GroupName),
+	//	consumer.WithConsumeFromWhere(consumer.ConsumeFromFirstOffset),
+	//)
+	//if err != nil {
+	//	klog.Fatalf("new rocketmq consumer error: %s", err.Error())
+	//}
+	//
+	//err = c.Subscribe(rocketmqCfg.Topic, consumer.MessageSelector{
+	//	Type:       consumer.TAG,
+	//	Expression: fmt.Sprintf("%s || all", opts.ComponentConfig.Agent.Name), // 只订阅指定自身或者未指定的agent
+	//},
+	//	opts.Controller.Agent().Subscribe,
+	//)
+	//if err != nil {
+	//	klog.Fatalf("订阅主题失败: %v", err)
+	//}
+	//
+	//err = c.Start()
+	//if err != nil {
+	//	klog.Fatalf("启动消费者失败: %v", err)
+	//}
+	//defer func() {
+	//	_ = c.Shutdown()
+	//}()
 
 	select {}
 	//r := gin.Default()

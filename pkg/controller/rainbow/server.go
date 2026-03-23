@@ -292,10 +292,10 @@ func (s *ServerController) Run(ctx context.Context, workers int) error {
 	go s.startSyncKubernetesTags(ctx)
 	go s.startSubscribeController(ctx)
 
-	klog.Infof("starting rocketmq producer")
-	if err := s.Producer.Start(); err != nil {
-		return err
-	}
+	//klog.Infof("starting rocketmq producer")
+	//if err := s.Producer.Start(); err != nil {
+	//	return err
+	//}
 	// 初始化 agent 属性
 	klog.Infof("starting register rainbowd")
 	if err := s.RegisterRainbowd(ctx); err != nil {

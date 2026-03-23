@@ -141,7 +141,7 @@ func (s *AgentController) process(ctx context.Context, date []byte) error {
 		return err
 	}
 
-	klog.Infof("调用(%s)结果已暂存, key(%s)", reqMeta.CallGithubRequest.Repo, reqMeta.Uid)
+	klog.Infof("调用结果已暂存, 缓存key(%s)", reqMeta.Uid)
 	return nil
 }
 
@@ -155,12 +155,53 @@ func (s *AgentController) Run(ctx context.Context, workers int) error {
 	go s.getNextWorkItems(ctx)
 	go s.startSyncActionUsage(ctx)
 	go s.startGC(ctx)
+	go s.startSubscribe(ctx)
 
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, s.worker, 1*time.Second)
 	}
 
 	return nil
+}
+
+func (s *AgentController) startSubscribe(ctx context.Context) {
+	klog.Infof("Starting redis subscribe controller")
+
+	channel := fmt.Sprintf("__nodekey@0__:%s", s.name) // Redis 通知频道格式
+	pubSub := s.redisClient.Subscribe(ctx, channel)
+	defer pubSub.Close()
+
+	// 等待订阅确认
+	if _, err := pubSub.Receive(ctx); err != nil {
+		klog.Errorf("subscribe failed: %v", err)
+		return
+	}
+
+	ch := pubSub.Channel()
+	for {
+		select {
+		case msg := <-ch:
+			// msg.Payload 是生产者 Publish 发送的消息内容（建议为数据键）
+			key := msg.Payload
+
+			// 根据数据键获取实际数据
+			data, err := s.redisClient.Get(ctx, key).Bytes()
+			if err == redis.Nil {
+				klog.Warningf("data not found for key: %s", key)
+				continue
+			} else if err != nil {
+				klog.Errorf("get data error: %v", err)
+				continue
+			}
+			klog.Infof("received key=%s, data=%s", key, string(data))
+			if err = s.process(ctx, data); err != nil {
+				klog.Errorf("处理接受失败 %v", err)
+			}
+		case <-ctx.Done():
+			klog.Info("subscriber stopped")
+			return
+		}
+	}
 }
 
 func (s *AgentController) startGC(ctx context.Context) {
@@ -309,7 +350,7 @@ type UsageItem struct {
 }
 
 func (s *AgentController) startHeartbeat(ctx context.Context) {
-	klog.Infof("启动 agent 心跳检测")
+	klog.Infof("Starting agent heartbeat")
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
