@@ -299,11 +299,16 @@ type (
 		Type   string       `json:"type"` // 修复资源类型
 		UserId string       `json:"user_id"`
 		Image  FixImageSpec `json:"image"`
+		Tag    FixTagSpec   `json:"tag"`
 	}
 
 	FixImageSpec struct {
 		Name      string `json:"name"`
 		Namespace string `json:"namespace"`
+	}
+
+	FixTagSpec struct {
+		Method string `json:"method"`
 	}
 
 	// PageRequest 分页配置

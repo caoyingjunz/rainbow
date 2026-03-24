@@ -10,6 +10,7 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/db"
 	"github.com/caoyingjunz/rainbow/pkg/db/model"
 	"github.com/caoyingjunz/rainbow/pkg/types"
+	"github.com/caoyingjunz/rainbow/pkg/util/errors"
 )
 
 func (s *ServerController) Fix(ctx context.Context, req *types.FixRequest) (interface{}, error) {
@@ -20,7 +21,50 @@ func (s *ServerController) Fix(ctx context.Context, req *types.FixRequest) (inte
 		return s.getImages(ctx, req)
 	case "allImages":
 		return s.fixAllImages(ctx)
+	case "allTags":
+		return s.fixAllTags(ctx, req.Tag.Method)
 	}
+	return nil, nil
+}
+
+func (s *ServerController) fixAllTags(ctx context.Context, method string) (interface{}, error) {
+	tagCount, err := s.factory.Image().TagCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	klog.Infof("发现镜像版本数 %d", tagCount)
+
+	var deleteTags []model.Tag
+
+	tags, err := s.factory.Image().ListTags(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, tag := range tags {
+		//klog.Infof("版本(%s:%s)即将被检查", tag.Path, tag.Name)
+		_, err = s.factory.Image().GetBy(ctx, db.WithId(tag.ImageId))
+		if err == nil {
+			continue
+		}
+		if !errors.IsNotFound(err) {
+			klog.Warningf("获取版本(%s)对应镜像失败 %v", tag.Path, err)
+			continue
+		}
+
+		deleteTags = append(deleteTags, tag)
+	}
+
+	for _, delTag := range deleteTags {
+		klog.Infof("版本(%s:%s)上层镜像已被清理 tagid(%d)，即将被删除", delTag.Path, delTag.Name, delTag.Id)
+		// 上层镜像已被清理，需要同步删除tag
+		if method == "delete" {
+			if err = s.factory.Image().DeleteTagBy(ctx, db.WithId(delTag.Id)); err != nil {
+				klog.Warningf("删除版本(%s:%s)失败 %v", delTag.Path, delTag.Name, err)
+			}
+		}
+	}
+	klog.Infof("删除总数 %d", len(deleteTags))
+
 	return nil, nil
 }
 
