@@ -55,7 +55,13 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 
 		searchRoute := routeV2.Group("/search")
 		{
+			// 直接 pull 搜索 tag
 			searchRoute.GET("/repos", cr.searchRepo)
+
+			// 远端搜索，支持 dockerhub
+			searchRoute.GET("/repositories", cr.searchRepositories)
+			searchRoute.GET("/repositories/tags", cr.searchRepositoryTags)
+			searchRoute.GET("/repositories/:namespace/:name/tags/:tag", cr.getRepositoryTagInfo)
 		}
 	}
 

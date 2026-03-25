@@ -32,6 +32,8 @@ Find more information at: https://hub.pixiuio.com`,
 
 	// Add subcommands
 	cmd.AddCommand(NewPullCommand())
+	cmd.AddCommand(NewSearchCommand())
+	cmd.AddCommand(NewLsCommand())
 	cmd.AddCommand(NewTaskCommand())
 	cmd.AddCommand(NewImageCommand())
 	cmd.AddCommand(NewRegisterCommand())

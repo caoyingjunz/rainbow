@@ -94,6 +94,7 @@ func (s *ServerController) SearchRepositories(ctx context.Context, req types.Cal
 	}
 	s.setRepoHubType(&req)
 	req.SetNamespace()
+	req.SetDefaultPageOption()
 
 	req.TargetType = types.SearchTypeRepo
 	key := uuid.NewString()
