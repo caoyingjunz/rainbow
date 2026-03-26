@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -497,4 +498,29 @@ func (s *ServerController) extractToken(c *gin.Context) (string, error) {
 	//}
 	//
 	//return fields[1], nil
+}
+
+var pixiuCtlBinaryNamePattern = regexp.MustCompile(`^pixiuctl-[A-Za-z0-9_.-]+-[A-Za-z0-9_.-]+$`)
+
+func (s *ServerController) DownloadPixiuctl(ctx *gin.Context, version, filename string) (string, error) {
+	if version == "." || version == "" {
+		return "", fmt.Errorf("invalid version")
+	}
+	if !pixiuCtlBinaryNamePattern.MatchString(filename) {
+		return "", fmt.Errorf("invalid filename, expected pixiuctl-<os>-<arch>")
+	}
+
+	fullPath := filepath.Join(s.cfg.Server.DownloadDir, version, filename)
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("pixiuctl file not found")
+		}
+		return "", fmt.Errorf("stat file failed: %v", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("invalid pixiuctl path")
+	}
+
+	return fullPath, nil
 }

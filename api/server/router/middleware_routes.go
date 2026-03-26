@@ -31,6 +31,9 @@ func NewMiddlewares(o *options.ServerOptions) {
 
 func SignatureMiddleware(o *options.ServerOptions) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if isPublicDownloadPath(c.Request.URL.Path) {
+			return
+		}
 		// 对 /api/v2 开头的 api 进行签名校验
 		if strings.HasPrefix(c.Request.URL.String(), "/api/v2") {
 			// 目前仅对 /api/v2 的资源进行签名校验
@@ -52,6 +55,10 @@ func Authentication(o *options.ServerOptions) gin.HandlerFunc {
 			return
 		}
 
+		if isPublicDownloadPath(c.Request.URL.Path) {
+			return
+		}
+
 		accessKey := c.GetHeader("accessKey")
 		if accessKey != auth.AccessKey {
 			httputils.AbortFailedWithCode(c, http.StatusUnauthorized, fmt.Errorf("invalid Access Key"))
@@ -70,6 +77,10 @@ func Authentication(o *options.ServerOptions) gin.HandlerFunc {
 			return
 		}
 	}
+}
+
+func isPublicDownloadPath(path string) bool {
+	return strings.HasPrefix(path, "/api/v2/pixiuctl/")
 }
 
 func verifyTimeStamp(timestamp string) error {

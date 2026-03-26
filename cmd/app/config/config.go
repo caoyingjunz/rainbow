@@ -9,6 +9,7 @@ const (
 	DefaultUserRateLimitCapacity       = 100
 
 	defaultRainbowdTemplateDir = "/data/template"
+	defaultDownloadDir         = "/data/pixiuctl"
 )
 
 // SetDefaults 设置配置的默认值
@@ -30,6 +31,9 @@ func (c *Config) SetDefaults() {
 	}
 	if c.RateLimit.SpecialRateLimit.RateLimitedPath == nil {
 		c.RateLimit.SpecialRateLimit.RateLimitedPath = []string{DefaultSpecialRateLimitedPath}
+	}
+	if len(c.Server.DownloadDir) == 0 {
+		c.Server.DownloadDir = defaultDownloadDir
 	}
 }
 
@@ -68,8 +72,9 @@ type DefaultOption struct {
 }
 
 type ServerOption struct {
-	Auth   Auth   `yaml:"auth"`
-	Harbor Harbor `yaml:"harbor"`
+	DownloadDir string `yaml:"download_dir"`
+	Auth        Auth   `yaml:"auth"`
+	Harbor      Harbor `yaml:"harbor"`
 }
 
 type RainbowdOption struct {

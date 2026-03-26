@@ -92,9 +92,9 @@ func (o *Options) Complete() error {
 		return err
 	}
 
-	if err := o.registerProducer(); err != nil {
-		return err
-	}
+	//if err := o.registerProducer(); err != nil {
+	//	return err
+	//}
 
 	// 注册 chart repo 客户端
 	if err := o.registerChartAPI(); err != nil {

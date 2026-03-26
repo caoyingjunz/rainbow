@@ -63,6 +63,12 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 			searchRoute.GET("/repositories/tags", cr.searchRepositoryTags)
 			searchRoute.GET("/repositories/:namespace/:name/tags/:tag", cr.getRepositoryTagInfo)
 		}
+
+		// 客户端下载
+		pixiuctlRoute := routeV2.Group("/pixiuctl")
+		{
+			pixiuctlRoute.GET("/:version/:filename", cr.downloadPixiuctl)
+		}
 	}
 
 	// v1
