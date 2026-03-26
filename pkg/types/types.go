@@ -542,3 +542,8 @@ type ImmutableTagsSettings struct {
 	Enabled bool     `json:"enabled"`
 	Rules   []string `json:"rules"`
 }
+
+type PixiuctlDownloadItem struct {
+	Version string   `json:"version"`
+	Items   []string `json:"items"`
+}

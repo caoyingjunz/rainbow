@@ -31,7 +31,7 @@ func NewMiddlewares(o *options.ServerOptions) {
 
 func SignatureMiddleware(o *options.ServerOptions) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if isPublicDownloadPath(c.Request.URL.Path) {
+		if isPublicPath(c.Request.URL.Path) {
 			return
 		}
 		// 对 /api/v2 开头的 api 进行签名校验
@@ -55,7 +55,7 @@ func Authentication(o *options.ServerOptions) gin.HandlerFunc {
 			return
 		}
 
-		if isPublicDownloadPath(c.Request.URL.Path) {
+		if isPublicPath(c.Request.URL.Path) {
 			return
 		}
 
@@ -79,8 +79,8 @@ func Authentication(o *options.ServerOptions) gin.HandlerFunc {
 	}
 }
 
-func isPublicDownloadPath(path string) bool {
-	return strings.HasPrefix(path, "/api/v2/pixiuctl/")
+func isPublicPath(path string) bool {
+	return strings.HasPrefix(path, "/api/v2/pixiuctls")
 }
 
 func verifyTimeStamp(timestamp string) error {

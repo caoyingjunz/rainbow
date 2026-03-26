@@ -65,8 +65,9 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		}
 
 		// 客户端下载
-		pixiuctlRoute := routeV2.Group("/pixiuctl")
+		pixiuctlRoute := routeV2.Group("/pixiuctls")
 		{
+			pixiuctlRoute.GET("", cr.listPixiuctls)
 			pixiuctlRoute.GET("/:version/:filename", cr.downloadPixiuctl)
 		}
 	}

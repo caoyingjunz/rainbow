@@ -26,3 +26,15 @@ func (cr *rainbowRouter) downloadPixiuctl(c *gin.Context) {
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.File(fullPath)
 }
+
+func (cr *rainbowRouter) listPixiuctls(c *gin.Context) {
+	resp := httputils.NewResponse()
+
+	var err error
+	if resp.Result, err = cr.c.Server().ListPixiuctls(c); err != nil {
+		httputils.SetFailed(c, resp, err)
+		return
+	}
+
+	httputils.SetSuccess(c, resp)
+}

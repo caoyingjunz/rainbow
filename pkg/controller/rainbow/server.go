@@ -194,6 +194,7 @@ type ServerInterface interface {
 	SearchRepo(ctx *gin.Context, listOption types.ListOptions) (interface{}, error)
 
 	DownloadPixiuctl(ctx *gin.Context, version, filename string) (string, error)
+	ListPixiuctls(ctx *gin.Context) ([]types.PixiuctlDownloadItem, error)
 
 	Run(ctx context.Context, workers int) error
 	Stop(ctx context.Context)

@@ -5,6 +5,8 @@ default:
   push_images: false
 
 server:
+  # pixiuctl 二进制下载地址
+  download_dir: /tmp/pixiuctl
   harbor:
     url: https://registry.pixiuio.com
     namespace: chartrepo
