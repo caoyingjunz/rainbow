@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -18,8 +19,17 @@ import (
 	"github.com/caoyingjunz/rainbow/pkg/pixiuctl/config"
 	"github.com/caoyingjunz/rainbow/pkg/types"
 	"github.com/caoyingjunz/rainbow/pkg/util"
+	"github.com/caoyingjunz/rainbow/pkg/util/ctrutil"
 	"github.com/caoyingjunz/rainbow/pkg/util/docker"
 	"github.com/caoyingjunz/rainbow/pkg/util/signatureutil"
+)
+
+const (
+	driverAuto   = "auto"
+	driverDocker = "docker"
+	driverCtr    = "ctr"
+
+	defaultCtrNamespace = "k8s.io"
 )
 
 type RepoResult struct {
@@ -43,8 +53,12 @@ type PullOptions struct {
 	signature string
 
 	// flag
-	Platform string
-	Rewrite  bool
+	Platform  string
+	Rewrite   bool
+	Driver    string
+	Namespace string
+
+	resolvedDriver string
 
 	Repos []string
 
@@ -55,12 +69,17 @@ func NewPullCommand() *cobra.Command {
 	o := &PullOptions{
 		baseURL:     baseURL,
 		waitTimeout: 10 * time.Minute,
+		Driver:      driverAuto,
+		Namespace:   defaultCtrNamespace,
 	}
 
 	cmd := &cobra.Command{
 		Use:   "pull [image]",
 		Short: "Pull and cache images from PixiuHub(https://hub.pixiuio.com)",
-		Long:  `Pull and cache images from PixiuHub(https://hub.pixiuio.com) to local storage.`,
+		Long: `Pull and cache images from PixiuHub(https://hub.pixiuio.com) to local storage.
+
+Use --driver to choose the local runtime: auto (default) picks docker if available, else ctr;
+--driver docker uses docker pull; --driver ctr uses ctr images pull with --namespace (default k8s.io).`,
 		Example: `  # 拉取单个镜像
   pixiuctl pull nginx:latest
 
@@ -71,7 +90,10 @@ func NewPullCommand() *cobra.Command {
   pixiuctl pull nginx --platform linux/arm64
 
   # 强制重建缓存后拉取
-  pixiuctl pull nginx --rewrite`,
+  pixiuctl pull nginx --rewrite
+
+  # 使用 containerd ctr 并指定命名空间
+  pixiuctl pull nginx:latest --driver ctr --namespace k8s.io`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
 				_ = cmd.Help()
@@ -85,6 +107,8 @@ func NewPullCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.Platform, "platform", "linux/amd64", "Platform for the image (e.g. linux/amd64, linux/arm64)")
 	cmd.Flags().BoolVar(&o.Rewrite, "rewrite", false, "Rewrite the repo even if it exists")
+	cmd.Flags().StringVarP(&o.Driver, "driver", "d", driverAuto, "Local pull driver: auto (prefer docker, then ctr), docker, or ctr")
+	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", defaultCtrNamespace, "containerd namespace for ctr (only used when --driver is ctr or resolves to ctr)")
 
 	return cmd
 }
@@ -109,7 +133,41 @@ func (o *PullOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	o.Repos = args
 
+	if err = o.resolveDriver(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (o *PullOptions) resolveDriver() error {
+	d := strings.ToLower(strings.TrimSpace(o.Driver))
+	switch d {
+	case driverAuto:
+		if _, err := exec.LookPath(driverDocker); err == nil {
+			o.resolvedDriver = driverDocker
+			return nil
+		}
+		if _, err := exec.LookPath(driverCtr); err == nil {
+			o.resolvedDriver = driverCtr
+			return nil
+		}
+		return fmt.Errorf("未在 PATH 中找到 docker 或 ctr，请安装其一或显式指定 --driver")
+	case driverDocker:
+		if _, err := exec.LookPath(driverDocker); err != nil {
+			return fmt.Errorf("指定了 --driver docker 但未找到 docker 可执行文件: %w", err)
+		}
+		o.resolvedDriver = driverDocker
+		return nil
+	case driverCtr:
+		if _, err := exec.LookPath(driverCtr); err != nil {
+			return fmt.Errorf("指定了 --driver ctr 但未找到 ctr 可执行文件: %w", err)
+		}
+		o.resolvedDriver = driverCtr
+		return nil
+	default:
+		return fmt.Errorf("--driver 必须是 auto、docker 或 ctr，当前为 %q", o.Driver)
+	}
 }
 
 // Validate makes sure that provided values for command-line options are valid
@@ -126,6 +184,10 @@ func (o *PullOptions) Validate(cmd *cobra.Command, args []string) error {
 	}
 	if len(o.cfg.Auth.SecretKey) == 0 {
 		return fmt.Errorf("配置文件缺少 auth.secret_key")
+	}
+
+	if o.resolvedDriver != driverCtr && o.Namespace != defaultCtrNamespace {
+		return fmt.Errorf("--namespace 仅在与 containerd ctr 一起使用时生效（--driver ctr 或 auto 解析为 ctr），当前驱动为 %s", o.resolvedDriver)
 	}
 
 	return nil
@@ -236,10 +298,18 @@ func (o *PullOptions) pull(tag *model.Tag) error {
 	sourceImage := tag.Mirror + ":" + tag.Name
 	targetImage := tag.Path + ":" + tag.Name
 
-	if err := docker.PullImage(sourceImage); err != nil {
-		return err
+	switch o.resolvedDriver {
+	case driverCtr:
+		if err := ctrutil.PullImage(o.Namespace, sourceImage); err != nil {
+			return err
+		}
+		return ctrutil.TagAndRemoveSource(o.Namespace, sourceImage, targetImage)
+	default:
+		if err := docker.PullImage(sourceImage); err != nil {
+			return err
+		}
+		return docker.TagImage(sourceImage, targetImage)
 	}
-	return docker.TagImage(sourceImage, targetImage)
 }
 
 // 构造并等待缓存完成

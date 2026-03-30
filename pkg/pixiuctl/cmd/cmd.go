@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	baseURL = "http://registry-2.pixiuio.com:8090"
+	baseURL = "https://registry-1.pixiuio.com"
 )
 
 func NewDefaultPixiuCtlCommand() *cobra.Command {
