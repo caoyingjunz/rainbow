@@ -36,6 +36,7 @@ Find more information at: https://hub.pixiuio.com`,
 	cmd.AddCommand(NewLsCommand())
 	cmd.AddCommand(NewTaskCommand())
 	cmd.AddCommand(NewImageCommand())
+	cmd.AddCommand(NewParseCommand())
 	cmd.AddCommand(NewRegisterCommand())
 	cmd.AddCommand(NewConfigCommand())
 	cmd.AddCommand(NewVersionCommand())
