@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -57,6 +60,20 @@ type ImageListResult struct {
 	ListResult `json:",inline"`
 
 	Result []model.Image `json:"result,omitempty"`
+}
+
+type TagPageData struct {
+	Page    int         `json:"page"`
+	Limit   int         `json:"limit"`
+	Total   int64       `json:"total"`
+	Items   []model.Tag `json:"items,omitempty"`
+	Message string      `json:"message,omitempty"`
+}
+
+type ImageTagListResult struct {
+	ListResult `json:",inline"`
+
+	Result TagPageData `json:"result,omitempty"`
 }
 
 func NewPixiuHubClient(url, accessKey, secretKey string) (*PixiuHubClient, error) {
@@ -143,6 +160,30 @@ func (pc *PixiuHubClient) ListImages(page, pageSize int) ([]model.Image, error) 
 	}
 	if result.Code == 200 {
 		return result.Result, nil
+	}
+	return nil, fmt.Errorf("%s", result.Message)
+}
+
+func (pc *PixiuHubClient) ListImageTags(imageID int64, page, limit int, quary string) ([]model.Tag, error) {
+	var result ImageTagListResult
+
+	q := url.Values{}
+	q.Set("page", strconv.Itoa(page))
+	q.Set("limit", strconv.Itoa(limit))
+	if quary = strings.TrimSpace(quary); quary != "" {
+		q.Set("nameSelector", quary)
+	}
+
+	apiURL := fmt.Sprintf("%s/api/v2/images/%d/tags?%s", pc.baseURL, imageID, q.Encode())
+	httpClient := util.HttpClientV2{URL: apiURL}
+	if err := httpClient.Method("GET").
+		WithTimeout(5 * time.Second).
+		WithHeader(map[string]string{"X-ACCESS-KEY": pc.accessKey, "Authorization": pc.signature}).
+		Do(&result); err != nil {
+		return nil, err
+	}
+	if result.Code == 200 {
+		return result.Result.Items, nil
 	}
 	return nil, fmt.Errorf("%s", result.Message)
 }

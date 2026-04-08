@@ -61,7 +61,7 @@ func NewLsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.Limit, "limit", 10, "Maximum number of tag results (1-100)")
-	cmd.Flags().StringVar(&o.Query, "query", "", "Tag name selector, e.g. v1 or alpine")
+	cmd.Flags().StringVarP(&o.Query, "query", "q", "", "Tag name selector, e.g. v1 or alpine")
 
 	return cmd
 }
@@ -140,7 +140,7 @@ func (o *LsOptions) Run(imageRepo string) error {
 		return fmt.Errorf("ls failed with code %d", result.Code)
 	}
 
-	printTagResults(result.Result)
+	printTagResults(imageRepo, result.Result)
 	return nil
 }
 
@@ -152,7 +152,7 @@ func parseImageRepo(imageRepo string) (string, string) {
 	return parts[0], strings.Join(parts[1:], "/")
 }
 
-func printTagResults(result types.CommonSearchTagResult) {
+func printTagResults(imageRepo string, result types.CommonSearchTagResult) {
 	if len(result.TagResult) == 0 {
 		fmt.Fprintln(os.Stdout, "No tags found.")
 		return
@@ -162,8 +162,9 @@ func printTagResults(result types.CommonSearchTagResult) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
 	defer w.Flush()
 
-	fmt.Fprintln(w, "TAG\tSIZE\tLAST_MODIFIED\tDIGEST")
+	fmt.Fprintln(w, "TAG\tSIZE\tLAST_MODIFIED\tDIGEST\tPULL_COMMAND")
 	for _, t := range result.TagResult {
-		fmt.Fprintf(w, "%s\t%d\t%s\t%s\n", t.Name, t.Size, t.LastModified, t.ManifestDigest)
+		pullCmd := fmt.Sprintf("pixiuctl pull %s:%s", imageRepo, t.Name)
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n", t.Name, t.Size, t.LastModified, t.ManifestDigest, pullCmd)
 	}
 }

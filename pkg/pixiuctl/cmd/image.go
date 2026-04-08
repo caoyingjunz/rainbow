@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/spf13/cobra"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
@@ -13,8 +15,10 @@ type ImageOptions struct {
 	cfg     *config.Config
 
 	// flags
-	Page     int
-	PageSize int
+	Page   int
+	Limit  int
+	Output string
+	All    bool
 }
 
 func NewImageCommand() *cobra.Command {
@@ -29,6 +33,7 @@ func NewImageCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(NewImageListCommand(o))
+	cmd.AddCommand(NewImageShowCommand(o))
 
 	return cmd
 }
@@ -60,6 +65,11 @@ func (o *ImageOptions) Validate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("配置文件缺少 auth.secret_key")
 	}
 
+	out := strings.TrimSpace(o.Output)
+	if out != "" && !strings.EqualFold(out, "wide") {
+		return fmt.Errorf("--output 仅支持 wide，当前为 %q", o.Output)
+	}
+
 	return nil
 }
 
@@ -68,12 +78,15 @@ func (o *ImageOptions) RunImageList() error {
 	if err != nil {
 		return err
 	}
-	result, err := pc.ListImages(o.Page, o.PageSize)
+	if o.All {
+		o.Limit = 999
+	}
+	result, err := pc.ListImages(o.Page, o.Limit)
 	if err != nil {
 		return err
 	}
 
-	PrintImagesTable(result)
+	PrintImagesTable(result, o.Output)
 	return nil
 }
 
@@ -91,7 +104,9 @@ func NewImageListCommand(o *ImageOptions) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.Page, "page", 1, "Page number")
-	cmd.Flags().IntVar(&o.PageSize, "page-size", 10, "Page size")
+	cmd.Flags().IntVar(&o.Limit, "limit", 10, "Maximum number of images per page")
+	cmd.Flags().BoolVarP(&o.All, "all", "a", false, "List all images (sets --limit to 999)")
+	cmd.Flags().StringVarP(&o.Output, "output", "o", "", "Output format. Use 'wide' to append REPO column")
 
 	return cmd
 }
