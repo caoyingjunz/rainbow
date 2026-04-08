@@ -8,7 +8,7 @@ import (
 
 const (
 	// Version is the pixiuctl client version.
-	Version = "pixiuctl version 0.2.2"
+	Version = "pixiuctl version 0.2.3"
 )
 
 // NewVersionCommand prints the pixiuctl version.
