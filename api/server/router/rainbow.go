@@ -173,11 +173,11 @@ func (cr *rainbowRouter) initRoutes(httpEngine *gin.Engine) {
 		searchRoute.GET("/images", cr.searchImages)
 	}
 
-	collectRoute := httpEngine.Group("/rainbow/collections")
-	{
-		collectRoute.GET("", cr.getCollections)
-		collectRoute.POST("/add/review", cr.AddDailyReview)
-	}
+	//collectRoute := httpEngine.Group("/rainbow/collections")
+	//{
+	//	collectRoute.GET("", cr.getCollections)
+	//	collectRoute.POST("/add/review", cr.AddDailyReview)
+	//}
 
 	labelRoute := httpEngine.Group("/rainbow/labels")
 	{
